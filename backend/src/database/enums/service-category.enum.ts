@@ -1,0 +1,15 @@
+export enum ServiceCategory {
+  PLUMBER = 'plumber',
+  ELECTRICIAN = 'electrician',
+  AC_REPAIR = 'ac_repair',
+  CLEANING = 'cleaning',
+  CARPENTER = 'carpenter',
+  MECHANIC = 'mechanic',
+  PAINTER = 'painter',
+  ALUMINUM_WORK = 'aluminum_work',
+  CAMERA_INSTALLATION = 'camera_installation',
+  TV_INSTALLATION = 'tv_installation',
+  SATELLITE_INSTALLATION = 'satellite_installation',
+  CONSTRUCTION = 'construction',
+  BLACKSMITH = 'blacksmith',
+}

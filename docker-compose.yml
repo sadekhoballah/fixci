@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: fixci
       POSTGRES_DB: fixci
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - fixci-postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -22,7 +22,7 @@ services:
     container_name: fixci-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - fixci-redis-data:/data
     healthcheck:
