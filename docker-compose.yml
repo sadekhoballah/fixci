@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: fixci-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fixci
+      POSTGRES_PASSWORD: fixci
+      POSTGRES_DB: fixci
+    ports:
+      - "5432:5432"
+    volumes:
+      - fixci-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fixci -d fixci"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: fixci-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - fixci-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  fixci-postgres-data:
+  fixci-redis-data:
