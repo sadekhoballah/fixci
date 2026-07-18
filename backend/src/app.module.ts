@@ -4,11 +4,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { appDataSourceOptions } from './config/data-source';
+import { RedisModule } from './redis/redis.module';
+import { MatchingModule } from './matching/matching.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRoot(appDataSourceOptions),
+    RedisModule,
+    MatchingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
