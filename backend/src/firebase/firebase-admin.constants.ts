@@ -1,0 +1,1 @@
+export const FIREBASE_ADMIN_APP = Symbol('FIREBASE_ADMIN_APP');

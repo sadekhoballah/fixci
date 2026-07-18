@@ -6,6 +6,9 @@ import { AppService } from './app.service';
 import { appDataSourceOptions } from './config/data-source';
 import { RedisModule } from './redis/redis.module';
 import { MatchingModule } from './matching/matching.module';
+import { UsersModule } from './users/users.module';
+import { UploadsModule } from './uploads/uploads.module';
+import { FirebaseAdminModule } from './firebase/firebase-admin.module';
 
 @Module({
   imports: [
@@ -13,6 +16,9 @@ import { MatchingModule } from './matching/matching.module';
     TypeOrmModule.forRoot(appDataSourceOptions),
     RedisModule,
     MatchingModule,
+    UsersModule,
+    UploadsModule,
+    FirebaseAdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+import '../../../core/media/id_card_picker.dart';
 import '../../../core/models/service_category.dart';
 import '../../../core/models/user_role.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../onboarding_controller.dart';
+import '../onboarding_state.dart';
+import 'otp_verification_screen.dart';
 import 'registration_success_screen.dart';
 
 class RegistrationScreen extends ConsumerStatefulWidget {
@@ -16,15 +20,33 @@ class RegistrationScreen extends ConsumerStatefulWidget {
 
 class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   final _fullNameController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _experienceController = TextEditingController();
 
   @override
   void dispose() {
     _fullNameController.dispose();
-    _phoneController.dispose();
     _experienceController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit(
+    BuildContext context,
+    OnboardingState state,
+    OnboardingController controller,
+  ) async {
+    if (!state.isPhoneVerified) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => OtpVerificationScreen(phone: state.phone),
+        ),
+      );
+      return;
+    }
+    final succeeded = await controller.submitRegistration();
+    if (!context.mounted || !succeeded) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const RegistrationSuccessScreen()),
+    );
   }
 
   @override
@@ -55,10 +77,10 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 decoration: const InputDecoration(labelText: 'Nom complet'),
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: _phoneController,
-                onChanged: controller.setPhone,
-                keyboardType: TextInputType.phone,
+              IntlPhoneField(
+                initialCountryCode: 'CI',
+                onChanged: (phoneNumber) =>
+                    controller.setPhone(phoneNumber.completeNumber),
                 decoration: const InputDecoration(
                   labelText: 'Numéro de téléphone',
                 ),
@@ -91,20 +113,21 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _IdCardPicker(
-                  attached: state.idCardAttached,
-                  onTap: controller.toggleIdCardAttached,
+                _IdCardPicker(state: state, controller: controller),
+              ],
+              if (state.submissionError != null) ...[
+                const SizedBox(height: 16),
+                Text(
+                  state.submissionError!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ],
               const SizedBox(height: 32),
               PrimaryButton(
-                label: "S'inscrire",
-                onPressed: state.isRegistrationComplete
-                    ? () => Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (_) => const RegistrationSuccessScreen(),
-                        ),
-                      )
+                label: state.isSubmitting ? 'Inscription...' : "S'inscrire",
+                onPressed:
+                    state.isRegistrationComplete && !state.isSubmitting
+                    ? () => _submit(context, state, controller)
                     : null,
               ),
               const SizedBox(height: 24),
@@ -117,40 +140,106 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
 }
 
 class _IdCardPicker extends StatelessWidget {
-  const _IdCardPicker({required this.attached, required this.onTap});
+  const _IdCardPicker({required this.state, required this.controller});
 
-  final bool attached;
-  final VoidCallback onTap;
+  final OnboardingState state;
+  final OnboardingController controller;
 
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(color: colorScheme.outlineVariant),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
+  Future<void> _showSourceSheet(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              attached ? Icons.check_circle : Icons.badge_outlined,
-              color: attached ? Colors.green : colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                attached
-                    ? "Pièce d'identité ajoutée"
-                    : "Ajouter votre pièce d'identité",
+            if (idCardCameraSupported)
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Prendre une photo'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  controller.pickIdCardFromCamera();
+                },
               ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choisir depuis la galerie'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                controller.pickIdCardFromGallery();
+              },
             ),
           ],
         ),
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final attached = state.idCardAttached;
+    final uploading = state.isUploadingIdCard;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: uploading ? null : () => _showSourceSheet(context),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border.all(color: colorScheme.outlineVariant),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (attached && state.idCardPreviewBytes != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      state.idCardPreviewBytes!,
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                else if (uploading)
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  Icon(
+                    Icons.badge_outlined,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    uploading
+                        ? 'Envoi en cours...'
+                        : attached
+                        ? "Pièce d'identité ajoutée"
+                        : "Ajouter votre pièce d'identité",
+                  ),
+                ),
+                if (attached && !uploading)
+                  const Icon(Icons.check_circle, color: Colors.green),
+              ],
+            ),
+          ),
+        ),
+        if (state.idCardUploadError != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            state.idCardUploadError!,
+            style: TextStyle(color: colorScheme.error, fontSize: 13),
+          ),
+        ],
+      ],
     );
   }
 }

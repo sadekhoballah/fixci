@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>FixCi a besoin de la caméra pour photographier votre pièce d'identité.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>FixCi a besoin d'accéder à vos photos pour joindre votre pièce d'identité.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

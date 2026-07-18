@@ -21,6 +21,9 @@ export class User {
   @Column({ type: 'enum', enum: UserRole, enumName: 'user_role_enum' })
   role: UserRole;
 
+  @Column({ name: 'phone_verified', type: 'boolean', default: false })
+  phoneVerified: boolean;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

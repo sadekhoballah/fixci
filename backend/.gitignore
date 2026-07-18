@@ -2,6 +2,9 @@
 /dist
 /node_modules
 
+# user-uploaded files (stored on disk in dev; served via /uploads)
+/uploads
+
 # logs
 logs
 *.log
@@ -10,6 +13,9 @@ npm-debug.log*
 # env
 .env
 .env.*.local
+
+# Firebase Admin SDK service account credentials — never commit these
+firebase-service-account*.json
 
 # IDE
 .idea

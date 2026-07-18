@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import '../../core/models/service_category.dart';
 import '../../core/models/user_role.dart';
 
@@ -8,7 +9,15 @@ class OnboardingState {
     this.phone = '',
     this.serviceCategory,
     this.experienceDetails = '',
-    this.idCardAttached = false,
+    this.idCardStorageKey,
+    this.idCardPreviewBytes,
+    this.isUploadingIdCard = false,
+    this.idCardUploadError,
+    this.verifiedPhone,
+    this.firebaseIdToken,
+    this.isSubmitting = false,
+    this.submissionError,
+    this.registrationSucceeded = false,
   });
 
   final UserRole? role;
@@ -16,7 +25,23 @@ class OnboardingState {
   final String phone;
   final ServiceCategory? serviceCategory;
   final String experienceDetails;
-  final bool idCardAttached;
+  final String? idCardStorageKey;
+  final Uint8List? idCardPreviewBytes;
+  final bool isUploadingIdCard;
+  final String? idCardUploadError;
+  // The phone number that was successfully OTP-verified, and the Firebase ID
+  // token proving it (null on the dev-bypass path — see
+  // core/auth/dev_bypass_phone_verification_service.dart). setPhone() clears
+  // both if the user edits the number after verifying it.
+  final String? verifiedPhone;
+  final String? firebaseIdToken;
+  final bool isSubmitting;
+  final String? submissionError;
+  final bool registrationSucceeded;
+
+  bool get idCardAttached => idCardStorageKey != null;
+
+  bool get isPhoneVerified => verifiedPhone != null && verifiedPhone == phone;
 
   bool get isRegistrationComplete {
     if (phone.trim().isEmpty) return false;
@@ -30,7 +55,20 @@ class OnboardingState {
     String? phone,
     ServiceCategory? serviceCategory,
     String? experienceDetails,
-    bool? idCardAttached,
+    String? idCardStorageKey,
+    bool clearIdCard = false,
+    Uint8List? idCardPreviewBytes,
+    bool? isUploadingIdCard,
+    String? idCardUploadError,
+    bool clearIdCardUploadError = false,
+    String? verifiedPhone,
+    bool clearVerifiedPhone = false,
+    String? firebaseIdToken,
+    bool clearFirebaseIdToken = false,
+    bool? isSubmitting,
+    String? submissionError,
+    bool clearSubmissionError = false,
+    bool? registrationSucceeded,
   }) {
     return OnboardingState(
       role: role ?? this.role,
@@ -38,7 +76,28 @@ class OnboardingState {
       phone: phone ?? this.phone,
       serviceCategory: serviceCategory ?? this.serviceCategory,
       experienceDetails: experienceDetails ?? this.experienceDetails,
-      idCardAttached: idCardAttached ?? this.idCardAttached,
+      idCardStorageKey: clearIdCard
+          ? null
+          : (idCardStorageKey ?? this.idCardStorageKey),
+      idCardPreviewBytes: clearIdCard
+          ? null
+          : (idCardPreviewBytes ?? this.idCardPreviewBytes),
+      isUploadingIdCard: isUploadingIdCard ?? this.isUploadingIdCard,
+      idCardUploadError: clearIdCardUploadError
+          ? null
+          : (idCardUploadError ?? this.idCardUploadError),
+      verifiedPhone: clearVerifiedPhone
+          ? null
+          : (verifiedPhone ?? this.verifiedPhone),
+      firebaseIdToken: clearFirebaseIdToken
+          ? null
+          : (firebaseIdToken ?? this.firebaseIdToken),
+      isSubmitting: isSubmitting ?? this.isSubmitting,
+      submissionError: clearSubmissionError
+          ? null
+          : (submissionError ?? this.submissionError),
+      registrationSucceeded:
+          registrationSucceeded ?? this.registrationSucceeded,
     );
   }
 }
