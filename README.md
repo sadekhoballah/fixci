@@ -2,7 +2,7 @@
 
 On-demand marketplace connecting clients with home-service craftsmen
 (plumbers, electricians, AC technicians, carpenters, mechanics, painters,
-and more) — Yango-style automatic matching instead of manual browsing.
+and more) — style automatic matching instead of manual browsing.
 Launching in Abidjan, Côte d'Ivoire.
 
 ## Structure
