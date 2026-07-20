@@ -41,6 +41,7 @@ class RoleSelectionScreen extends ConsumerWidget {
                 subtitle: UserRole.client.description,
                 selected: state.role == UserRole.client,
                 onTap: () => controller.selectRole(UserRole.client),
+                illustrationAsset: 'assets/role_icons/client.png',
               ),
               const SizedBox(height: 16),
               RoleCard(
@@ -49,6 +50,7 @@ class RoleSelectionScreen extends ConsumerWidget {
                 subtitle: UserRole.craftsman.description,
                 selected: state.role == UserRole.craftsman,
                 onTap: () => controller.selectRole(UserRole.craftsman),
+                illustrationAsset: 'assets/role_icons/artisan.png',
               ),
               const Spacer(),
               PrimaryButton(

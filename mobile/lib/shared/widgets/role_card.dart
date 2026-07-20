@@ -8,6 +8,7 @@ class RoleCard extends StatelessWidget {
     required this.subtitle,
     required this.selected,
     required this.onTap,
+    this.illustrationAsset,
   });
 
   final IconData icon;
@@ -15,6 +16,7 @@ class RoleCard extends StatelessWidget {
   final String subtitle;
   final bool selected;
   final VoidCallback onTap;
+  final String? illustrationAsset;
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +71,14 @@ class RoleCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (selected) Icon(Icons.check_circle, color: colorScheme.primary),
+            if (illustrationAsset != null) ...[
+              const SizedBox(width: 12),
+              Image.asset(illustrationAsset!, width: 56, height: 56),
+            ],
+            if (selected) ...[
+              const SizedBox(width: 8),
+              Icon(Icons.check_circle, color: colorScheme.primary),
+            ],
           ],
         ),
       ),
