@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
 import 'role_selection_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -13,7 +12,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), _goToRoleSelection);
+    Future.delayed(const Duration(seconds: 3), _goToRoleSelection);
   }
 
   void _goToRoleSelection() {
@@ -26,17 +25,9 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
-      body: const Center(
-        child: Text(
-          'FixCi',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 40,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1,
-          ),
-        ),
+      backgroundColor: const Color(0xFFA70804),
+      body: SizedBox.expand(
+        child: Image.asset('assets/splash/splash.png', fit: BoxFit.contain),
       ),
     );
   }

@@ -140,9 +140,8 @@ void main() {
     'client registration succeeds and navigates to the client home screen',
     (tester) async {
       await tester.pumpWidget(buildApp());
-      expect(find.text('FixCi'), findsOneWidget);
 
-      await tester.pumpAndSettle(const Duration(seconds: 3));
+      await tester.pumpAndSettle(const Duration(seconds: 4));
       expect(find.text('Qui êtes-vous ?'), findsOneWidget);
 
       await tester.tap(find.text('Client'));
@@ -179,7 +178,7 @@ void main() {
     'craftsman registration requires a service category before submitting',
     (tester) async {
       await tester.pumpWidget(buildApp());
-      await tester.pumpAndSettle(const Duration(seconds: 3));
+      await tester.pumpAndSettle(const Duration(seconds: 4));
 
       await tester.tap(find.text('Artisan'));
       await tester.pump();
@@ -221,7 +220,7 @@ void main() {
     'craftsman can attach an id card and it uploads before submitting',
     (tester) async {
       await tester.pumpWidget(buildApp());
-      await tester.pumpAndSettle(const Duration(seconds: 3));
+      await tester.pumpAndSettle(const Duration(seconds: 4));
 
       await tester.tap(find.text('Artisan'));
       await tester.pump();
@@ -269,7 +268,7 @@ void main() {
       await tester.pumpWidget(
         buildApp(apiClient: apiClient, tooSmallIdCard: true),
       );
-      await tester.pumpAndSettle(const Duration(seconds: 3));
+      await tester.pumpAndSettle(const Duration(seconds: 4));
 
       await tester.tap(find.text('Artisan'));
       await tester.pump();
@@ -298,7 +297,7 @@ void main() {
     'id card upload failure shows an inline error and does not mark attached',
     (tester) async {
       await tester.pumpWidget(buildApp(failUpload: true));
-      await tester.pumpAndSettle(const Duration(seconds: 3));
+      await tester.pumpAndSettle(const Duration(seconds: 4));
 
       await tester.tap(find.text('Artisan'));
       await tester.pump();
@@ -323,7 +322,7 @@ void main() {
     'succeeds, and stays on the OTP screen',
     (tester) async {
       await tester.pumpWidget(buildApp(failRegister: true));
-      await tester.pumpAndSettle(const Duration(seconds: 3));
+      await tester.pumpAndSettle(const Duration(seconds: 4));
 
       await tester.tap(find.text('Client'));
       await tester.pump();

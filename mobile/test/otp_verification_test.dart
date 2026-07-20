@@ -87,7 +87,7 @@ void main() {
 
   Future<void> goToOtpScreen(WidgetTester tester, {String phone = '+2250700000099'}) async {
     await tester.pumpWidget(buildApp(_FakePhoneVerificationService()));
-    await tester.pumpAndSettle(const Duration(seconds: 3));
+    await tester.pumpAndSettle(const Duration(seconds: 4));
 
     await tester.tap(find.text('Client'));
     await tester.pump();
@@ -162,7 +162,7 @@ void main() {
     await tester.pumpWidget(
       buildApp(_FakePhoneVerificationService(failSend: true)),
     );
-    await tester.pumpAndSettle(const Duration(seconds: 3));
+    await tester.pumpAndSettle(const Duration(seconds: 4));
 
     await tester.tap(find.text('Client'));
     await tester.pump();
