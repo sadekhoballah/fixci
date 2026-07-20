@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,9 +7,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/app.dart';
 import 'package:mobile/core/auth/phone_verification_provider.dart';
 import 'package:mobile/core/auth/phone_verification_service.dart';
+import 'package:mobile/core/auth/session_storage.dart';
+import 'package:mobile/core/media/id_card_picker.dart';
+import 'package:mobile/core/models/user_role.dart';
 import 'package:mobile/core/network/api_client.dart';
 import 'package:mobile/features/onboarding/onboarding_controller.dart';
 import 'package:mobile/features/onboarding/onboarding_repository.dart';
+
+// A real 400x300 PNG — plausible ID-card-ish dimensions, passes validation
+// (mirrors the constant in widget_test.dart).
+const _plausibleIdCardPngBase64 =
+    'iVBORw0KGgoAAAANSUhEUgAAAZAAAAEsAQMAAADXeXeBAAAAIGNIUk0AAHomAACAhAAA'
+    '+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGUExURYfO6/////E3Kz4AAAABYkt'
+    'HRAH/Ai3eAAAAB3RJTUUH6gcSCyoLx9crAQAAACZJREFUaN7twTEBAAAAwqD1T20JT6'
+    'AAAAAAAAAAAAAAAAAAAICnATvEAAEnf54JAAAAAElFTkSuQmCC';
 
 const _correctCode = '123456';
 
@@ -71,7 +84,37 @@ class _FakeApiClient extends ApiClient {
     List<int> bytes,
     String filename, {
     String? contentTypeHeader,
-  }) => throw UnimplementedError('Not exercised in this test file');
+  }) async {
+    if (path == '/uploads/id-card') {
+      return {'storageKey': 'id-cards/fake.png'};
+    }
+    throw UnimplementedError('Unexpected path in fake client: $path');
+  }
+}
+
+class _FakeIdCardPicker implements IdCardPicker {
+  @override
+  Future<PickedImage?> pickFromGallery() async => PickedImage(
+    bytes: base64Decode(_plausibleIdCardPngBase64),
+    filename: 'id.png',
+    mimeType: 'image/png',
+  );
+
+  @override
+  Future<PickedImage?> pickFromCamera() => pickFromGallery();
+}
+
+// A no-op stand-in for the real shared_preferences-backed SessionStorage —
+// avoids touching the plugin's method channel, which isn't mocked in
+// `flutter test`.
+class _FakeSessionStorage implements SessionStorage {
+  UserRole? _role;
+
+  @override
+  Future<void> saveRole(UserRole role) async => _role = role;
+
+  @override
+  Future<UserRole?> loadRole() async => _role;
 }
 
 void main() {
@@ -80,9 +123,22 @@ void main() {
       overrides: [
         apiClientProvider.overrideWithValue(_FakeApiClient()),
         phoneVerificationServiceProvider.overrideWithValue(phoneService),
+        idCardPickerProvider.overrideWithValue(_FakeIdCardPicker()),
+        sessionStorageProvider.overrideWithValue(_FakeSessionStorage()),
       ],
       child: const FixCiApp(),
     );
+  }
+
+  Future<void> attachIdCard(WidgetTester tester) async {
+    await tester.ensureVisible(find.text("Ajouter votre pièce d'identité"));
+    await tester.tap(find.text("Ajouter votre pièce d'identité"));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choisir depuis la galerie'));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 300)),
+    );
+    await tester.pumpAndSettle();
   }
 
   Future<void> goToOtpScreen(WidgetTester tester, {String phone = '+2250700000099'}) async {
@@ -95,11 +151,21 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(
+      find.widgetWithText(TextField, 'Prénom (comme sur votre pièce d\'identité)'),
+      'Aya',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Nom de famille (comme sur votre pièce d\'identité)'),
+      'Kone',
+    );
+    await tester.enterText(
       find.widgetWithText(TextField, 'Numéro de téléphone'),
       phone,
     );
     await tester.pump();
+    await attachIdCard(tester);
 
+    await tester.ensureVisible(find.text("S'inscrire"));
     await tester.tap(find.text("S'inscrire"));
     await tester.pumpAndSettle();
   }
@@ -115,7 +181,7 @@ void main() {
     await tester.tap(find.text('Vérifier'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Bienvenue !'), findsOneWidget);
+    expect(find.text('Bienvenue, Aya Kone !'), findsOneWidget);
   });
 
   testWidgets('wrong code shows an inline error and stays on the OTP screen', (
@@ -138,7 +204,7 @@ void main() {
     await tester.tap(find.text('Vérifier'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Bienvenue !'), findsOneWidget);
+    expect(find.text('Bienvenue, Aya Kone !'), findsOneWidget);
   });
 
   testWidgets('resend is disabled during the cooldown window', (
@@ -170,10 +236,21 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(
+      find.widgetWithText(TextField, 'Prénom (comme sur votre pièce d\'identité)'),
+      'Aya',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Nom de famille (comme sur votre pièce d\'identité)'),
+      'Kone',
+    );
+    await tester.enterText(
       find.widgetWithText(TextField, 'Numéro de téléphone'),
       '+2250700000098',
     );
     await tester.pump();
+    await attachIdCard(tester);
+
+    await tester.ensureVisible(find.text("S'inscrire"));
     await tester.tap(find.text("S'inscrire"));
     await tester.pumpAndSettle();
 

@@ -1,4 +1,5 @@
 import {
+  Column,
   CreateDateColumn,
   Entity,
   JoinColumn,
@@ -16,6 +17,17 @@ export class ClientProfile {
   @OneToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
+
+  @Column({
+    name: 'id_card_storage_key',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  idCardStorageKey: string | null;
+
+  @Column({ name: 'id_verified', type: 'boolean', default: false })
+  idVerified: boolean;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

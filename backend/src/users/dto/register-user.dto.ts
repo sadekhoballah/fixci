@@ -1,5 +1,6 @@
 import {
   IsEnum,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
@@ -15,10 +16,10 @@ export class RegisterUserDto {
   })
   phone: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
   @MaxLength(120)
-  fullName?: string;
+  fullName: string;
 
   @IsEnum(UserRole)
   role: UserRole;
@@ -27,15 +28,16 @@ export class RegisterUserDto {
   @IsEnum(ServiceCategory)
   serviceCategory?: ServiceCategory;
 
-  @IsOptional()
+  @ValidateIf((dto: RegisterUserDto) => dto.role === UserRole.CRAFTSMAN)
+  @IsNotEmpty()
   @IsString()
   @MaxLength(2000)
   experienceDetails?: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
   @MaxLength(255)
-  idCardStorageKey?: string;
+  idCardStorageKey: string;
 
   @IsOptional()
   @IsString()

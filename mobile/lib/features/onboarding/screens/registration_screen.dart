@@ -19,12 +19,14 @@ class RegistrationScreen extends ConsumerStatefulWidget {
 }
 
 class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
-  final _fullNameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _experienceController = TextEditingController();
 
   @override
   void dispose() {
-    _fullNameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _experienceController.dispose();
     super.dispose();
   }
@@ -72,9 +74,19 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               ),
               const SizedBox(height: 24),
               TextField(
-                controller: _fullNameController,
-                onChanged: controller.setFullName,
-                decoration: const InputDecoration(labelText: 'Nom complet'),
+                controller: _firstNameController,
+                onChanged: controller.setFirstName,
+                decoration: const InputDecoration(
+                  labelText: 'Prénom (comme sur votre pièce d\'identité)',
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _lastNameController,
+                onChanged: controller.setLastName,
+                decoration: const InputDecoration(
+                  labelText: 'Nom de famille (comme sur votre pièce d\'identité)',
+                ),
               ),
               const SizedBox(height: 16),
               IntlPhoneField(
@@ -108,13 +120,13 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   onChanged: controller.setExperienceDetails,
                   maxLines: 3,
                   decoration: const InputDecoration(
-                    labelText: 'Expérience (facultatif)',
+                    labelText: 'Expérience',
                     hintText: "Ex : 5 ans d'expérience en plomberie",
                   ),
                 ),
-                const SizedBox(height: 16),
-                _IdCardPicker(state: state, controller: controller),
               ],
+              const SizedBox(height: 16),
+              _IdCardPicker(state: state, controller: controller),
               if (state.submissionError != null) ...[
                 const SizedBox(height: 16),
                 Text(

@@ -37,9 +37,7 @@ class RegistrationSuccessScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                state.fullName.isEmpty
-                    ? 'Bienvenue !'
-                    : 'Bienvenue, ${state.fullName} !',
+                'Bienvenue, ${state.fullName} !',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 22,

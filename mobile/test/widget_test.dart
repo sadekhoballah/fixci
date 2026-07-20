@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/app.dart';
 import 'package:mobile/core/auth/dev_bypass_phone_verification_service.dart';
+import 'package:mobile/core/auth/session_storage.dart';
 import 'package:mobile/core/media/id_card_picker.dart';
+import 'package:mobile/core/models/user_role.dart';
 import 'package:mobile/core/network/api_client.dart';
 import 'package:mobile/features/onboarding/onboarding_repository.dart';
 
@@ -115,6 +117,19 @@ class _FakeIdCardPicker implements IdCardPicker {
   Future<PickedImage?> pickFromCamera() => pickFromGallery();
 }
 
+// A no-op stand-in for the real shared_preferences-backed SessionStorage —
+// avoids touching the plugin's method channel, which isn't mocked in
+// `flutter test`.
+class _FakeSessionStorage implements SessionStorage {
+  UserRole? _role;
+
+  @override
+  Future<void> saveRole(UserRole role) async => _role = role;
+
+  @override
+  Future<UserRole?> loadRole() async => _role;
+}
+
 void main() {
   Widget buildApp({
     _FakeApiClient? apiClient,
@@ -131,9 +146,37 @@ void main() {
         idCardPickerProvider.overrideWithValue(
           _FakeIdCardPicker(tooSmall: tooSmallIdCard),
         ),
+        sessionStorageProvider.overrideWithValue(_FakeSessionStorage()),
       ],
       child: const FixCiApp(),
     );
+  }
+
+  Future<void> fillIdentity(
+    WidgetTester tester, {
+    required String phone,
+  }) async {
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Prénom (comme sur votre pièce d\'identité)'),
+      'Aya',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Nom de famille (comme sur votre pièce d\'identité)'),
+      'Kone',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Numéro de téléphone'),
+      phone,
+    );
+    await tester.pump();
+  }
+
+  Future<void> attachIdCard(WidgetTester tester) async {
+    await tester.ensureVisible(find.text("Ajouter votre pièce d'identité"));
+    await tester.tap(find.text("Ajouter votre pièce d'identité"));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choisir depuis la galerie'));
+    await _waitForAsyncImageWork(tester);
   }
 
   testWidgets(
@@ -152,17 +195,15 @@ void main() {
       expect(find.text('Vos informations'), findsOneWidget);
       expect(find.text('Catégorie de service'), findsNothing);
 
-      await tester.enterText(
-        find.widgetWithText(TextField, 'Numéro de téléphone'),
-        '+2250700000000',
-      );
-      await tester.pump();
+      await fillIdentity(tester, phone: '+2250700000000');
+      await attachIdCard(tester);
 
+      await tester.ensureVisible(find.text("S'inscrire"));
       await tester.tap(find.text("S'inscrire"));
       await tester.pumpAndSettle();
       await _verifyPhoneViaOtp(tester);
 
-      expect(find.text('Bienvenue !'), findsOneWidget);
+      expect(find.text('Bienvenue, Aya Kone !'), findsOneWidget);
 
       await tester.tap(find.text('Continuer'));
       await tester.pumpAndSettle();
@@ -187,11 +228,13 @@ void main() {
 
       expect(find.text('Votre profil artisan'), findsOneWidget);
 
+      await fillIdentity(tester, phone: '+2250700000000');
       await tester.enterText(
-        find.widgetWithText(TextField, 'Numéro de téléphone'),
-        '+2250700000000',
+        find.widgetWithText(TextField, 'Expérience'),
+        "5 ans d'expérience en plomberie",
       );
       await tester.pump();
+      await attachIdCard(tester);
 
       final disabledButton = tester.widget<ElevatedButton>(
         find.ancestor(
@@ -227,9 +270,10 @@ void main() {
       await tester.tap(find.text('Continuer'));
       await tester.pumpAndSettle();
 
+      await fillIdentity(tester, phone: '+2250700000001');
       await tester.enterText(
-        find.widgetWithText(TextField, 'Numéro de téléphone'),
-        '+2250700000001',
+        find.widgetWithText(TextField, 'Expérience'),
+        "5 ans d'expérience en électricité",
       );
       await tester.tap(find.text('Catégorie de service'));
       await tester.pumpAndSettle();
@@ -238,10 +282,7 @@ void main() {
 
       expect(find.text("Ajouter votre pièce d'identité"), findsOneWidget);
 
-      await tester.tap(find.text("Ajouter votre pièce d'identité"));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Choisir depuis la galerie'));
-      await _waitForAsyncImageWork(tester);
+      await attachIdCard(tester);
 
       expect(find.text("Pièce d'identité ajoutée"), findsOneWidget);
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
@@ -251,7 +292,7 @@ void main() {
       await tester.pumpAndSettle();
       await _verifyPhoneViaOtp(tester);
 
-      expect(find.text('Bienvenue !'), findsOneWidget);
+      expect(find.text('Bienvenue, Aya Kone !'), findsOneWidget);
 
       await tester.tap(find.text('Continuer'));
       await tester.pumpAndSettle();
@@ -329,12 +370,10 @@ void main() {
       await tester.tap(find.text('Continuer'));
       await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.widgetWithText(TextField, 'Numéro de téléphone'),
-        '+2250700000000',
-      );
-      await tester.pump();
+      await fillIdentity(tester, phone: '+2250700000000');
+      await attachIdCard(tester);
 
+      await tester.ensureVisible(find.text("S'inscrire"));
       await tester.tap(find.text("S'inscrire"));
       await tester.pumpAndSettle();
       await _verifyPhoneViaOtp(tester);

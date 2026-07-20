@@ -1,25 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/auth/session_storage.dart';
+import '../../../core/models/user_role.dart';
+import '../../client_home/screens/client_home_screen.dart';
+import '../../craftsman_home/screens/craftsman_dashboard_screen.dart';
 import 'role_selection_screen.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 3), _goToRoleSelection);
+    _prepareNextScreen();
   }
 
-  void _goToRoleSelection() {
+  Future<void> _prepareNextScreen() async {
+    final results = await Future.wait([
+      ref.read(sessionStorageProvider).loadRole(),
+      Future<void>.delayed(const Duration(seconds: 3)),
+    ]);
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
-    );
+    final role = results[0] as UserRole?;
+    final destination = switch (role) {
+      UserRole.client => const ClientHomeScreen(),
+      UserRole.craftsman => const CraftsmanDashboardScreen(),
+      null => const RoleSelectionScreen(),
+    };
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => destination));
   }
 
   @override

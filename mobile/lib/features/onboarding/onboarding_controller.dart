@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/auth/session_storage.dart';
 import '../../core/media/id_card_picker.dart';
 import '../../core/media/image_validation.dart';
 import '../../core/models/service_category.dart';
@@ -16,8 +17,12 @@ class OnboardingController extends Notifier<OnboardingState> {
     state = state.copyWith(role: role);
   }
 
-  void setFullName(String value) {
-    state = state.copyWith(fullName: value);
+  void setFirstName(String value) {
+    state = state.copyWith(firstName: value);
+  }
+
+  void setLastName(String value) {
+    state = state.copyWith(lastName: value);
   }
 
   void setPhone(String value) {
@@ -104,6 +109,7 @@ class OnboardingController extends Notifier<OnboardingState> {
     try {
       await ref.read(onboardingRepositoryProvider).registerUser(state);
       state = state.copyWith(isSubmitting: false, registrationSucceeded: true);
+      await ref.read(sessionStorageProvider).saveRole(state.role!);
       return true;
     } on ApiException catch (e) {
       state = state.copyWith(isSubmitting: false, submissionError: e.message);

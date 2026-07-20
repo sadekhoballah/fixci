@@ -5,7 +5,8 @@ import '../../core/models/user_role.dart';
 class OnboardingState {
   const OnboardingState({
     this.role,
-    this.fullName = '',
+    this.firstName = '',
+    this.lastName = '',
     this.phone = '',
     this.serviceCategory,
     this.experienceDetails = '',
@@ -21,7 +22,8 @@ class OnboardingState {
   });
 
   final UserRole? role;
-  final String fullName;
+  final String firstName;
+  final String lastName;
   final String phone;
   final ServiceCategory? serviceCategory;
   final String experienceDetails;
@@ -43,15 +45,26 @@ class OnboardingState {
 
   bool get isPhoneVerified => verifiedPhone != null && verifiedPhone == phone;
 
+  // Every field is required — mirrors the ID card the photo is meant to
+  // match, so first/last name are collected (and validated) separately
+  // rather than as one freeform "full name" box.
+  String get fullName => '$firstName $lastName'.trim();
+
   bool get isRegistrationComplete {
+    if (firstName.trim().isEmpty) return false;
+    if (lastName.trim().isEmpty) return false;
     if (phone.trim().isEmpty) return false;
-    if (role == UserRole.craftsman) return serviceCategory != null;
+    if (!idCardAttached) return false;
+    if (role == UserRole.craftsman) {
+      return serviceCategory != null && experienceDetails.trim().isNotEmpty;
+    }
     return true;
   }
 
   OnboardingState copyWith({
     UserRole? role,
-    String? fullName,
+    String? firstName,
+    String? lastName,
     String? phone,
     ServiceCategory? serviceCategory,
     String? experienceDetails,
@@ -72,7 +85,8 @@ class OnboardingState {
   }) {
     return OnboardingState(
       role: role ?? this.role,
-      fullName: fullName ?? this.fullName,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
       phone: phone ?? this.phone,
       serviceCategory: serviceCategory ?? this.serviceCategory,
       experienceDetails: experienceDetails ?? this.experienceDetails,

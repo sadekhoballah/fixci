@@ -43,6 +43,8 @@ describe('UsersService', () => {
     const user = await service.register({
       phone: '+2250700000010',
       role: UserRole.CLIENT,
+      fullName: 'Aya Kone',
+      idCardStorageKey: 'id-cards/aya.png',
     });
 
     expect(phoneTokenVerifier.verifyPhoneToken).not.toHaveBeenCalled();
@@ -55,6 +57,8 @@ describe('UsersService', () => {
     const user = await service.register({
       phone: '+2250700000011',
       role: UserRole.CLIENT,
+      fullName: 'Aya Kone',
+      idCardStorageKey: 'id-cards/aya.png',
       firebaseIdToken: 'valid-token',
     });
 
@@ -76,6 +80,8 @@ describe('UsersService', () => {
       service.register({
         phone: '+2250700000012',
         role: UserRole.CLIENT,
+        fullName: 'Aya Kone',
+        idCardStorageKey: 'id-cards/aya.png',
         firebaseIdToken: 'token-for-a-different-phone',
       }),
     ).rejects.toThrow(UnauthorizedException);
@@ -91,6 +97,8 @@ describe('UsersService', () => {
     const user = await service.register({
       phone: '+2250700000013',
       role: UserRole.CLIENT,
+      fullName: 'Aya Kone',
+      idCardStorageKey: 'id-cards/aya.png',
       firebaseIdToken: 'some-token',
     });
 
@@ -101,6 +109,7 @@ describe('UsersService', () => {
     await service.register({
       phone: '+2250700000014',
       role: UserRole.CRAFTSMAN,
+      fullName: 'Kofi Yao',
       serviceCategory: 'plumber' as never,
       idCardStorageKey: 'id-cards/abc.png',
     });

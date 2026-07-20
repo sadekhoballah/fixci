@@ -28,15 +28,13 @@ class OnboardingRepository {
 
     await _apiClient.post('/users/register', {
       'phone': state.phone.trim(),
-      if (state.fullName.trim().isNotEmpty) 'fullName': state.fullName.trim(),
+      'fullName': state.fullName.trim(),
       'role': role.wireValue,
+      'idCardStorageKey': state.idCardStorageKey,
       if (role == UserRole.craftsman && state.serviceCategory != null)
         'serviceCategory': state.serviceCategory!.wireValue,
-      if (role == UserRole.craftsman &&
-          state.experienceDetails.trim().isNotEmpty)
+      if (role == UserRole.craftsman)
         'experienceDetails': state.experienceDetails.trim(),
-      if (role == UserRole.craftsman && state.idCardStorageKey != null)
-        'idCardStorageKey': state.idCardStorageKey,
       if (state.isPhoneVerified && state.firebaseIdToken != null)
         'firebaseIdToken': state.firebaseIdToken,
     });

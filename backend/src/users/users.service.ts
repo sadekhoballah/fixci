@@ -59,7 +59,10 @@ export class UsersService {
           );
         } else {
           await manager.save(
-            manager.create(ClientProfile, { userId: user.id }),
+            manager.create(ClientProfile, {
+              userId: user.id,
+              idCardStorageKey: dto.idCardStorageKey ?? null,
+            }),
           );
         }
 
