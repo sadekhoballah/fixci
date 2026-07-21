@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
 import '../../core/media/id_card_picker.dart';
+import '../../core/models/subscription_tier.dart';
 import '../../core/models/user_role.dart';
 import 'onboarding_state.dart';
 
@@ -38,6 +39,25 @@ class OnboardingRepository {
       if (state.isPhoneVerified && state.firebaseIdToken != null)
         'firebaseIdToken': state.firebaseIdToken,
     });
+  }
+
+  // Kicks off a Wave charge for the given plan and returns our reference —
+  // the payment stays `pending` server-side until the Wave webhook (or, for
+  // now, the stub that simulates it) resolves it. Poll [getPaymentStatus]
+  // with that reference to find out when it does.
+  Future<String> subscribeToTier(String phone, SubscriptionTier tier) async {
+    final response = await _apiClient.post('/payments/subscribe', {
+      'phone': phone,
+      'tier': tier.wireValue,
+    });
+    return response['reference'] as String;
+  }
+
+  Future<String> getPaymentStatus(String reference) async {
+    final response = await _apiClient.get(
+      '/payments/status?reference=${Uri.encodeQueryComponent(reference)}',
+    );
+    return response['status'] as String;
   }
 }
 
