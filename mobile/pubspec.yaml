@@ -87,6 +87,7 @@ flutter:
   #   - images/a_dot_ham.jpeg
 
   assets:
+    - assets/splash/splash.png
     - assets/role_icons/client.png
     - assets/role_icons/artisan.png
 
