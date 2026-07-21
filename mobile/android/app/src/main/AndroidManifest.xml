@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- debug/profile manifests also declare this (for the Flutter tool's VM
+         service), but release builds only merge main/ — without it here,
+         every API call (id-card upload, registration, ...) silently fails
+         on a release build with no network access at all. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Needed by image_picker to capture the craftsman ID card photo with the camera. -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
