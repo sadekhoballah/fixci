@@ -30,6 +30,8 @@
 	<string>FixCi a besoin de la caméra pour photographier votre pièce d'identité.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>FixCi a besoin d'accéder à vos photos pour joindre votre pièce d'identité.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>FixCi a besoin de votre position pour vous montrer les demandes de clients à proximité.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

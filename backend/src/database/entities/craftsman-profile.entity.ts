@@ -81,6 +81,9 @@ export class CraftsmanProfile {
   })
   subscriptionExpiresAt: Date | null;
 
+  @Column({ name: 'is_available', type: 'boolean', default: false })
+  isAvailable: boolean;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

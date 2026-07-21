@@ -54,6 +54,27 @@ class ApiClient {
     return _handleResponse(response);
   }
 
+  Future<Map<String, dynamic>> patch(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final http.Response response;
+    try {
+      response = await _client
+          .patch(
+            Uri.parse('${ApiConfig.baseUrl}$path'),
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      throw ApiException(
+        'Impossible de contacter le serveur. Vérifiez votre connexion.',
+      );
+    }
+    return _handleResponse(response);
+  }
+
   Future<Map<String, dynamic>> postMultipart(
     String path,
     String fieldName,

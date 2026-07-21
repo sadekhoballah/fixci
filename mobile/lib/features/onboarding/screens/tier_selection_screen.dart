@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/subscription_tier.dart';
 import '../../../shared/widgets/primary_button.dart';
-import '../../craftsman_home/screens/craftsman_dashboard_screen.dart';
+import '../../craftsman_home/screens/artisan_home_screen.dart';
 import '../onboarding_controller.dart';
 import 'wave_payment_checkout_screen.dart';
 
@@ -30,7 +30,7 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
       await controller.confirmActiveTier();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const CraftsmanDashboardScreen()),
+        MaterialPageRoute(builder: (_) => const ArtisanHomeScreen()),
         (route) => false,
       );
       return;

@@ -7,6 +7,10 @@
     <!-- Needed by image_picker to capture the craftsman ID card photo with the camera. -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <!-- Needed by geolocator so a craftsman going "available" can be geo-indexed
+         for nearby matching. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="Fix Pro"
         android:name="${applicationName}"

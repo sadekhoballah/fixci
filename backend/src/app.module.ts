@@ -10,6 +10,7 @@ import { UsersModule } from './users/users.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { FirebaseAdminModule } from './firebase/firebase-admin.module';
 import { PaymentsModule } from './payments/payments.module';
+import { CraftsmenModule } from './craftsmen/craftsmen.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PaymentsModule } from './payments/payments.module';
     UploadsModule,
     FirebaseAdminModule,
     PaymentsModule,
+    CraftsmenModule,
   ],
   controllers: [AppController],
   providers: [AppService],
