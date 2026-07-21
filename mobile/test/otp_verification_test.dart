@@ -9,6 +9,7 @@ import 'package:mobile/core/auth/phone_verification_provider.dart';
 import 'package:mobile/core/auth/phone_verification_service.dart';
 import 'package:mobile/core/auth/session_storage.dart';
 import 'package:mobile/core/media/id_card_picker.dart';
+import 'package:mobile/core/models/subscription_tier.dart';
 import 'package:mobile/core/models/user_role.dart';
 import 'package:mobile/core/network/api_client.dart';
 import 'package:mobile/features/onboarding/onboarding_controller.dart';
@@ -109,12 +110,19 @@ class _FakeIdCardPicker implements IdCardPicker {
 // `flutter test`.
 class _FakeSessionStorage implements SessionStorage {
   UserRole? _role;
+  SubscriptionTier? _tier;
 
   @override
   Future<void> saveRole(UserRole role) async => _role = role;
 
   @override
   Future<UserRole?> loadRole() async => _role;
+
+  @override
+  Future<void> saveTier(SubscriptionTier tier) async => _tier = tier;
+
+  @override
+  Future<SubscriptionTier?> loadTier() async => _tier;
 }
 
 void main() {

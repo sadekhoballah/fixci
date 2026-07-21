@@ -3,15 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/user_role.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../client_home/screens/client_home_screen.dart';
-import '../../craftsman_home/screens/craftsman_dashboard_screen.dart';
 import '../onboarding_controller.dart';
+import 'tier_selection_screen.dart';
 
 class RegistrationSuccessScreen extends ConsumerWidget {
   const RegistrationSuccessScreen({super.key});
 
   void _continue(BuildContext context, UserRole? role) {
     final destination = role == UserRole.craftsman
-        ? const CraftsmanDashboardScreen()
+        ? const TierSelectionScreen()
         : const ClientHomeScreen();
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => destination),

@@ -4,6 +4,7 @@ import '../../core/auth/session_storage.dart';
 import '../../core/media/id_card_picker.dart';
 import '../../core/media/image_validation.dart';
 import '../../core/models/service_category.dart';
+import '../../core/models/subscription_tier.dart';
 import '../../core/models/user_role.dart';
 import '../../core/network/api_client.dart';
 import 'onboarding_repository.dart';
@@ -47,6 +48,19 @@ class OnboardingController extends Notifier<OnboardingState> {
 
   void setServiceCategory(ServiceCategory category) {
     state = state.copyWith(serviceCategory: category);
+  }
+
+  void selectTier(SubscriptionTier tier) {
+    state = state.copyWith(selectedTier: tier);
+  }
+
+  // Persists the currently-selected tier as the artisan's active plan — call
+  // this once it's actually active: immediately for the free tier, or after
+  // the manual Wave payment confirmation for paid tiers.
+  Future<void> confirmActiveTier() async {
+    final tier = state.selectedTier;
+    if (tier == null) return;
+    await ref.read(sessionStorageProvider).saveTier(tier);
   }
 
   void setExperienceDetails(String value) {

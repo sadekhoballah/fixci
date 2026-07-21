@@ -7,6 +7,7 @@ import 'package:mobile/app.dart';
 import 'package:mobile/core/auth/dev_bypass_phone_verification_service.dart';
 import 'package:mobile/core/auth/session_storage.dart';
 import 'package:mobile/core/media/id_card_picker.dart';
+import 'package:mobile/core/models/subscription_tier.dart';
 import 'package:mobile/core/models/user_role.dart';
 import 'package:mobile/core/network/api_client.dart';
 import 'package:mobile/features/onboarding/onboarding_repository.dart';
@@ -122,12 +123,19 @@ class _FakeIdCardPicker implements IdCardPicker {
 // `flutter test`.
 class _FakeSessionStorage implements SessionStorage {
   UserRole? _role;
+  SubscriptionTier? _tier;
 
   @override
   Future<void> saveRole(UserRole role) async => _role = role;
 
   @override
   Future<UserRole?> loadRole() async => _role;
+
+  @override
+  Future<void> saveTier(SubscriptionTier tier) async => _tier = tier;
+
+  @override
+  Future<SubscriptionTier?> loadTier() async => _tier;
 }
 
 void main() {
@@ -294,6 +302,16 @@ void main() {
 
       expect(find.text('Bienvenue, Aya Kone !'), findsOneWidget);
 
+      await tester.tap(find.text('Continuer'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Choisissez la formule qui vous convient'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Débutant'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Continuer'));
       await tester.pumpAndSettle();
 

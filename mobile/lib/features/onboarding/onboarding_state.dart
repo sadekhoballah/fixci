@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import '../../core/models/service_category.dart';
+import '../../core/models/subscription_tier.dart';
 import '../../core/models/user_role.dart';
 
 class OnboardingState {
@@ -19,6 +20,7 @@ class OnboardingState {
     this.isSubmitting = false,
     this.submissionError,
     this.registrationSucceeded = false,
+    this.selectedTier,
   });
 
   final UserRole? role;
@@ -40,6 +42,10 @@ class OnboardingState {
   final bool isSubmitting;
   final String? submissionError;
   final bool registrationSucceeded;
+  // Set once the artisan picks a plan on TierSelectionScreen; persisted via
+  // OnboardingController.confirmActiveTier() once it's actually active (free
+  // tiers immediately, paid tiers after WavePaymentCheckoutScreen).
+  final SubscriptionTier? selectedTier;
 
   bool get idCardAttached => idCardStorageKey != null;
 
@@ -82,6 +88,7 @@ class OnboardingState {
     String? submissionError,
     bool clearSubmissionError = false,
     bool? registrationSucceeded,
+    SubscriptionTier? selectedTier,
   }) {
     return OnboardingState(
       role: role ?? this.role,
@@ -112,6 +119,7 @@ class OnboardingState {
           : (submissionError ?? this.submissionError),
       registrationSucceeded:
           registrationSucceeded ?? this.registrationSucceeded,
+      selectedTier: selectedTier ?? this.selectedTier,
     );
   }
 }
