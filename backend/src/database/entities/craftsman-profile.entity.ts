@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 import { ServiceCategory } from '../enums/service-category.enum';
+import { SubscriptionTier } from '../enums/subscription-tier.enum';
 
 @Entity('craftsman_profiles')
 export class CraftsmanProfile {
@@ -63,6 +64,22 @@ export class CraftsmanProfile {
 
   @Column({ name: 'ratings_count', type: 'integer', default: 0 })
   ratingsCount: number;
+
+  @Column({
+    name: 'subscription_tier',
+    type: 'enum',
+    enum: SubscriptionTier,
+    enumName: 'subscription_tier_enum',
+    default: SubscriptionTier.FREE,
+  })
+  subscriptionTier: SubscriptionTier;
+
+  @Column({
+    name: 'subscription_expires_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  subscriptionExpiresAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

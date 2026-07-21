@@ -9,6 +9,7 @@ import { MatchingModule } from './matching/matching.module';
 import { UsersModule } from './users/users.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { FirebaseAdminModule } from './firebase/firebase-admin.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { FirebaseAdminModule } from './firebase/firebase-admin.module';
     UsersModule,
     UploadsModule,
     FirebaseAdminModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -6,6 +6,7 @@ import { ClientProfile } from '../database/entities/client-profile.entity';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 import { ServiceRequest } from '../database/entities/service-request.entity';
 import { Rating } from '../database/entities/rating.entity';
+import { SubscriptionPayment } from '../database/entities/subscription-payment.entity';
 
 dotenv.config();
 
@@ -21,7 +22,14 @@ const baseOptions = {
   username: process.env.DATABASE_USER ?? 'fixci',
   password: process.env.DATABASE_PASSWORD ?? 'fixci',
   database: process.env.DATABASE_NAME ?? 'fixci',
-  entities: [User, ClientProfile, CraftsmanProfile, ServiceRequest, Rating],
+  entities: [
+    User,
+    ClientProfile,
+    CraftsmanProfile,
+    ServiceRequest,
+    Rating,
+    SubscriptionPayment,
+  ],
   synchronize: false,
 };
 
