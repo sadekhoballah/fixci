@@ -18,6 +18,10 @@ export class UsersService {
     private readonly phoneTokenVerifier: PhoneTokenVerifierService,
   ) {}
 
+  async findByPhone(phone: string): Promise<User | null> {
+    return this.userRepository.findOne({ where: { phone } });
+  }
+
   async register(dto: RegisterUserDto): Promise<User> {
     const existing = await this.userRepository.findOne({
       where: { phone: dto.phone },

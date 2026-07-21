@@ -13,7 +13,6 @@ import 'package:mobile/core/models/subscription_tier.dart';
 import 'package:mobile/core/models/user_role.dart';
 import 'package:mobile/core/network/api_client.dart';
 import 'package:mobile/features/onboarding/onboarding_controller.dart';
-import 'package:mobile/features/onboarding/onboarding_repository.dart';
 
 // A real 400x300 PNG — plausible ID-card-ish dimensions, passes validation
 // (mirrors the constant in widget_test.dart).
@@ -111,6 +110,7 @@ class _FakeIdCardPicker implements IdCardPicker {
 class _FakeSessionStorage implements SessionStorage {
   UserRole? _role;
   SubscriptionTier? _tier;
+  String? _phone;
 
   @override
   Future<void> saveRole(UserRole role) async => _role = role;
@@ -123,6 +123,19 @@ class _FakeSessionStorage implements SessionStorage {
 
   @override
   Future<SubscriptionTier?> loadTier() async => _tier;
+
+  @override
+  Future<void> savePhone(String phone) async => _phone = phone;
+
+  @override
+  Future<String?> loadPhone() async => _phone;
+
+  @override
+  Future<void> clearSession() async {
+    _role = null;
+    _tier = null;
+    _phone = null;
+  }
 }
 
 void main() {

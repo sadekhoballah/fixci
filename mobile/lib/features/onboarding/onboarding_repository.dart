@@ -41,8 +41,6 @@ class OnboardingRepository {
   }
 }
 
-final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
-
 final onboardingRepositoryProvider = Provider<OnboardingRepository>(
   (ref) => OnboardingRepository(ref.watch(apiClientProvider)),
 );

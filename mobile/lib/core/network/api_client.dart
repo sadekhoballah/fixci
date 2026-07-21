@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'api_config.dart';
@@ -17,6 +18,20 @@ class ApiClient {
   ApiClient({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
+
+  Future<Map<String, dynamic>> get(String path) async {
+    final http.Response response;
+    try {
+      response = await _client
+          .get(Uri.parse('${ApiConfig.baseUrl}$path'))
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      throw ApiException(
+        'Impossible de contacter le serveur. Vérifiez votre connexion.',
+      );
+    }
+    return _handleResponse(response);
+  }
 
   Future<Map<String, dynamic>> post(
     String path,
@@ -91,3 +106,5 @@ class ApiClient {
     );
   }
 }
+
+final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());

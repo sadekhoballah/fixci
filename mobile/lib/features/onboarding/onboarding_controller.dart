@@ -123,7 +123,9 @@ class OnboardingController extends Notifier<OnboardingState> {
     try {
       await ref.read(onboardingRepositoryProvider).registerUser(state);
       state = state.copyWith(isSubmitting: false, registrationSucceeded: true);
-      await ref.read(sessionStorageProvider).saveRole(state.role!);
+      final storage = ref.read(sessionStorageProvider);
+      await storage.saveRole(state.role!);
+      await storage.savePhone(state.phone.trim());
       return true;
     } on ApiException catch (e) {
       state = state.copyWith(isSubmitting: false, submissionError: e.message);

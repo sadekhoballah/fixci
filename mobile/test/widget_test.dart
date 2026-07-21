@@ -10,7 +10,6 @@ import 'package:mobile/core/media/id_card_picker.dart';
 import 'package:mobile/core/models/subscription_tier.dart';
 import 'package:mobile/core/models/user_role.dart';
 import 'package:mobile/core/network/api_client.dart';
-import 'package:mobile/features/onboarding/onboarding_repository.dart';
 
 // Running under `flutter test` on this Linux dev machine, isFirebaseSupportedPlatform
 // is false and kDebugMode is true, so phoneVerificationServiceProvider naturally
@@ -124,6 +123,7 @@ class _FakeIdCardPicker implements IdCardPicker {
 class _FakeSessionStorage implements SessionStorage {
   UserRole? _role;
   SubscriptionTier? _tier;
+  String? _phone;
 
   @override
   Future<void> saveRole(UserRole role) async => _role = role;
@@ -136,6 +136,19 @@ class _FakeSessionStorage implements SessionStorage {
 
   @override
   Future<SubscriptionTier?> loadTier() async => _tier;
+
+  @override
+  Future<void> savePhone(String phone) async => _phone = phone;
+
+  @override
+  Future<String?> loadPhone() async => _phone;
+
+  @override
+  Future<void> clearSession() async {
+    _role = null;
+    _tier = null;
+    _phone = null;
+  }
 }
 
 void main() {
