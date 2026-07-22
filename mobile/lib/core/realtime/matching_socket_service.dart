@@ -1,0 +1,172 @@
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:socket_io_client/socket_io_client.dart' as socket_io;
+import '../auth/current_auth_token.dart';
+import '../auth/dev_bypass_session.dart';
+import '../models/service_category.dart';
+import '../network/api_config.dart';
+
+class IncomingRequestEvent {
+  const IncomingRequestEvent({
+    required this.requestId,
+    required this.serviceCategory,
+    required this.distanceMeters,
+    required this.estimatedArrivalMinutes,
+  });
+
+  factory IncomingRequestEvent.fromJson(Map<String, dynamic> json) {
+    return IncomingRequestEvent(
+      requestId: json['requestId'] as String,
+      serviceCategory: _parseCategory(json['serviceCategory'] as String),
+      distanceMeters: (json['distanceMeters'] as num).toDouble(),
+      estimatedArrivalMinutes: json['estimatedArrivalMinutes'] as int,
+    );
+  }
+
+  final String requestId;
+  final ServiceCategory serviceCategory;
+  final double distanceMeters;
+  final int estimatedArrivalMinutes;
+}
+
+ServiceCategory _parseCategory(String wireValue) => ServiceCategory.values
+    .firstWhere((c) => c.wireValue == wireValue, orElse: () => ServiceCategory.plumber);
+
+class RequestOutcomeEvent {
+  const RequestOutcomeEvent(this.requestId);
+
+  factory RequestOutcomeEvent.fromJson(Map<String, dynamic> json) =>
+      RequestOutcomeEvent(json['requestId'] as String);
+
+  final String requestId;
+}
+
+enum SocketConnectionStatus { disconnected, connecting, connected }
+
+// Wraps the raw socket.io connection to the backend's MatchingGateway. Every
+// method here mirrors an event the gateway actually understands (see
+// matching.gateway.ts) — this is the mobile half of the realtime matching
+// loop that already exists server-side.
+class MatchingSocketService {
+  socket_io.Socket? _socket;
+
+  final _requestNewController =
+      StreamController<IncomingRequestEvent>.broadcast();
+  final _requestAssignedController =
+      StreamController<RequestOutcomeEvent>.broadcast();
+  final _requestUnavailableController =
+      StreamController<RequestOutcomeEvent>.broadcast();
+  final _connectionStatusController =
+      StreamController<SocketConnectionStatus>.broadcast();
+
+  Stream<IncomingRequestEvent> get onRequestNew => _requestNewController.stream;
+  Stream<RequestOutcomeEvent> get onRequestAssigned =>
+      _requestAssignedController.stream;
+  Stream<RequestOutcomeEvent> get onRequestUnavailable =>
+      _requestUnavailableController.stream;
+  Stream<SocketConnectionStatus> get connectionStatus =>
+      _connectionStatusController.stream;
+
+  bool get isConnected => _socket?.connected ?? false;
+
+  void connect() {
+    if (_socket != null) return; // already connecting/connected
+
+    _connectionStatusController.add(SocketConnectionStatus.connecting);
+    final socket = socket_io.io(
+      ApiConfig.baseUrl,
+      socket_io.OptionBuilder()
+          .setTransports(['websocket'])
+          .disableAutoConnect()
+          .setReconnectionAttempts(999999)
+          .setAuthFn((callback) async {
+            final auth = <String, dynamic>{};
+            final token = await currentAuthToken();
+            if (token != null) {
+              auth['token'] = token;
+            } else if (devBypassPhone != null) {
+              auth['devPhone'] = devBypassPhone;
+            }
+            callback(auth);
+          })
+          .build(),
+    );
+    _socket = socket;
+
+    socket.onConnect((_) {
+      _connectionStatusController.add(SocketConnectionStatus.connected);
+    });
+    socket.onDisconnect((_) {
+      _connectionStatusController.add(SocketConnectionStatus.disconnected);
+    });
+    socket.onConnectError((_) {
+      _connectionStatusController.add(SocketConnectionStatus.disconnected);
+    });
+    socket.on('request:new', (data) {
+      _requestNewController.add(
+        IncomingRequestEvent.fromJson(data as Map<String, dynamic>),
+      );
+    });
+    socket.on('request:assigned', (data) {
+      _requestAssignedController.add(
+        RequestOutcomeEvent.fromJson(data as Map<String, dynamic>),
+      );
+    });
+    socket.on('request:unavailable', (data) {
+      _requestUnavailableController.add(
+        RequestOutcomeEvent.fromJson(data as Map<String, dynamic>),
+      );
+    });
+
+    socket.connect();
+  }
+
+  void disconnect() {
+    _socket?.disconnect();
+    _socket?.dispose();
+    _socket = null;
+    _connectionStatusController.add(SocketConnectionStatus.disconnected);
+  }
+
+  void goOnline({
+    required ServiceCategory category,
+    required double latitude,
+    required double longitude,
+  }) {
+    _socket?.emit('craftsman:online', {
+      'serviceCategory': category.wireValue,
+      'latitude': latitude,
+      'longitude': longitude,
+    });
+  }
+
+  void updateLocation({required double latitude, required double longitude}) {
+    _socket?.emit('craftsman:location', {
+      'latitude': latitude,
+      'longitude': longitude,
+    });
+  }
+
+  void goOffline() {
+    _socket?.emit('craftsman:offline', {});
+  }
+
+  void acceptRequest(String requestId) {
+    _socket?.emit('request:accept', {'requestId': requestId});
+  }
+
+  void dispose() {
+    disconnect();
+    _requestNewController.close();
+    _requestAssignedController.close();
+    _requestUnavailableController.close();
+    _connectionStatusController.close();
+  }
+}
+
+final matchingSocketServiceProvider = Provider<MatchingSocketService>((ref) {
+  final service = MatchingSocketService();
+  ref.onDispose(service.dispose);
+  return service;
+});

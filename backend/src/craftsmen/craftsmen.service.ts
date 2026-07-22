@@ -11,6 +11,7 @@ import { SetAvailabilityDto } from './dto/set-availability.dto';
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export interface CraftsmanMe {
+  fullName: string | null;
   subscriptionTier: SubscriptionTier;
   subscriptionExpiresAt: Date | null;
   daysRemaining: number | null;
@@ -26,6 +27,58 @@ export interface CraftsmanStats {
   avgResponseSeconds: number | null;
 }
 
+export interface ActiveJob {
+  requestId: string;
+  serviceCategory: string;
+  status: 'assigned' | 'in_progress';
+  clientFullName: string | null;
+  clientPhone: string;
+  clientLatitude: number;
+  clientLongitude: number;
+  assignedAt: Date;
+  startedAt: Date | null;
+}
+
+export interface JobHistoryItem {
+  requestId: string;
+  serviceCategory: string;
+  status: string;
+  clientFullName: string | null;
+  createdAt: Date;
+  assignedAt: Date | null;
+  startedAt: Date | null;
+  completedAt: Date | null;
+  cancelledAt: Date | null;
+  ratingStars: number | null;
+  ratingComment: string | null;
+}
+
+interface ActiveJobRow {
+  id: string;
+  service_category: string;
+  status: 'assigned' | 'in_progress';
+  client_full_name: string | null;
+  client_phone: string;
+  latitude: string;
+  longitude: string;
+  assigned_at: Date;
+  started_at: Date | null;
+}
+
+interface JobHistoryRow {
+  id: string;
+  service_category: string;
+  status: string;
+  client_full_name: string | null;
+  created_at: Date;
+  assigned_at: Date | null;
+  started_at: Date | null;
+  completed_at: Date | null;
+  cancelled_at: Date | null;
+  rating_stars: number | null;
+  rating_comment: string | null;
+}
+
 @Injectable()
 export class CraftsmenService {
   constructor(
@@ -37,8 +90,9 @@ export class CraftsmenService {
   ) {}
 
   async getMe(userId: string): Promise<CraftsmanMe> {
-    const profile = await this.findCraftsmanProfileByUserId(userId);
+    const { user, profile } = await this.findCraftsmanByUserId(userId);
     return {
+      fullName: user.fullName,
       subscriptionTier: profile.subscriptionTier,
       subscriptionExpiresAt: profile.subscriptionExpiresAt,
       daysRemaining: this.daysRemaining(profile.subscriptionExpiresAt),
@@ -54,7 +108,7 @@ export class CraftsmenService {
     userId: string,
     dto: SetAvailabilityDto,
   ): Promise<{ isAvailable: boolean }> {
-    const profile = await this.findCraftsmanProfileByUserId(userId);
+    const { profile } = await this.findCraftsmanByUserId(userId);
 
     if (dto.available) {
       await this.presenceService.setOnline(
@@ -76,7 +130,7 @@ export class CraftsmenService {
   }
 
   async getStats(userId: string): Promise<CraftsmanStats> {
-    const profile = await this.findCraftsmanProfileByUserId(userId);
+    const { profile } = await this.findCraftsmanByUserId(userId);
 
     const [{ count: jobsDoneToday }]: [{ count: string }] =
       await this.dataSource.query(
@@ -109,9 +163,83 @@ export class CraftsmenService {
     };
   }
 
-  private async findCraftsmanProfileByUserId(
+  // The job the craftsman is currently working (assigned or in_progress),
+  // if any — lets the app restore "you have an active job" state on cold
+  // start, without relying on client-held state surviving an app restart.
+  async getActiveJob(userId: string): Promise<ActiveJob | null> {
+    await this.findCraftsmanByUserId(userId);
+
+    const rows: ActiveJobRow[] = await this.dataSource.query(
+      `SELECT sr."id", sr."service_category", sr."status",
+              sr."assigned_at", sr."started_at",
+              u."full_name" AS client_full_name, u."phone" AS client_phone,
+              ST_Y(sr."client_location"::geometry) AS latitude,
+              ST_X(sr."client_location"::geometry) AS longitude
+       FROM "service_requests" sr
+       JOIN "users" u ON u."id" = sr."client_id"
+       WHERE sr."craftsman_id" = $1 AND sr."status" IN ('assigned', 'in_progress')
+       ORDER BY sr."assigned_at" DESC
+       LIMIT 1`,
+      [userId],
+    );
+    if (rows.length === 0) return null;
+
+    const row = rows[0];
+    return {
+      requestId: row.id,
+      serviceCategory: row.service_category,
+      status: row.status,
+      clientFullName: row.client_full_name,
+      clientPhone: row.client_phone,
+      clientLatitude: Number(row.latitude),
+      clientLongitude: Number(row.longitude),
+      assignedAt: row.assigned_at,
+      startedAt: row.started_at,
+    };
+  }
+
+  // Every job this craftsman was ever assigned, past or present — this is
+  // what backs the History tab. Requests that never left `pending` have no
+  // craftsman_id yet, so they're excluded by the WHERE clause naturally.
+  async getJobHistory(
     userId: string,
-  ): Promise<CraftsmanProfile> {
+    limit: number,
+    offset: number,
+  ): Promise<JobHistoryItem[]> {
+    await this.findCraftsmanByUserId(userId);
+
+    const rows: JobHistoryRow[] = await this.dataSource.query(
+      `SELECT sr."id", sr."service_category", sr."status", sr."created_at",
+              sr."assigned_at", sr."started_at", sr."completed_at", sr."cancelled_at",
+              u."full_name" AS client_full_name,
+              r."stars" AS rating_stars, r."comment" AS rating_comment
+       FROM "service_requests" sr
+       JOIN "users" u ON u."id" = sr."client_id"
+       LEFT JOIN "ratings" r ON r."service_request_id" = sr."id"
+       WHERE sr."craftsman_id" = $1
+       ORDER BY sr."created_at" DESC
+       LIMIT $2 OFFSET $3`,
+      [userId, limit, offset],
+    );
+
+    return rows.map((row) => ({
+      requestId: row.id,
+      serviceCategory: row.service_category,
+      status: row.status,
+      clientFullName: row.client_full_name,
+      createdAt: row.created_at,
+      assignedAt: row.assigned_at,
+      startedAt: row.started_at,
+      completedAt: row.completed_at,
+      cancelledAt: row.cancelled_at,
+      ratingStars: row.rating_stars === null ? null : Number(row.rating_stars),
+      ratingComment: row.rating_comment,
+    }));
+  }
+
+  private async findCraftsmanByUserId(
+    userId: string,
+  ): Promise<{ user: User; profile: CraftsmanProfile }> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user || user.role !== UserRole.CRAFTSMAN) {
       throw new NotFoundException('No craftsman account for this user');
@@ -122,7 +250,7 @@ export class CraftsmenService {
     if (!profile) {
       throw new NotFoundException('No craftsman profile for this account');
     }
-    return profile;
+    return { user, profile };
   }
 
   private daysRemaining(expiresAt: Date | null): number | null {

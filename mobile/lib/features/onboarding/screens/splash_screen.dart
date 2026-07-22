@@ -8,7 +8,7 @@ import '../../../core/models/subscription_tier.dart';
 import '../../../core/models/user_role.dart';
 import '../../../core/platform/firebase_support.dart';
 import '../../client_home/screens/client_home_screen.dart';
-import '../../craftsman_home/screens/artisan_home_screen.dart';
+import '../../craftsman_home/screens/artisan_shell_screen.dart';
 import 'role_selection_screen.dart';
 import 'tier_selection_screen.dart';
 
@@ -50,7 +50,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       UserRole.client => const ClientHomeScreen(),
       UserRole.craftsman => tier == null
           ? const TierSelectionScreen()
-          : const ArtisanHomeScreen(),
+          : const ArtisanShellScreen(),
       null => const RoleSelectionScreen(),
     };
     Navigator.of(

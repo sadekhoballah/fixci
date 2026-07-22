@@ -79,4 +79,70 @@ export class MatchingService {
     );
     return rows.length === 1;
   }
+
+  // The job lifecycle past assignment: assigned -> in_progress -> completed,
+  // with cancellation possible from either of the first two. Each transition
+  // is a single atomic UPDATE scoped to both the expected prior status AND
+  // the calling craftsman's own id — same compare-and-swap shape as tryAssign
+  // above, and it's what makes "only the assigned craftsman can transition
+  // their own job" a property of the query itself rather than a separate
+  // ownership check that could race with a concurrent request.
+  async startJob(
+    requestId: string,
+    craftsmanId: string,
+  ): Promise<JobTransitionResult | null> {
+    return this.transitionJob(
+      requestId,
+      craftsmanId,
+      ['assigned'],
+      `"status" = 'in_progress', "started_at" = now()`,
+    );
+  }
+
+  async completeJob(
+    requestId: string,
+    craftsmanId: string,
+  ): Promise<JobTransitionResult | null> {
+    return this.transitionJob(
+      requestId,
+      craftsmanId,
+      ['in_progress'],
+      `"status" = 'completed', "completed_at" = now()`,
+    );
+  }
+
+  async cancelJob(
+    requestId: string,
+    craftsmanId: string,
+  ): Promise<JobTransitionResult | null> {
+    return this.transitionJob(
+      requestId,
+      craftsmanId,
+      ['assigned', 'in_progress'],
+      `"status" = 'cancelled', "cancelled_at" = now()`,
+    );
+  }
+
+  private async transitionJob(
+    requestId: string,
+    craftsmanId: string,
+    fromStatuses: string[],
+    setClause: string,
+  ): Promise<JobTransitionResult | null> {
+    const [rows]: [Array<{ id: string; client_id: string }>, number] =
+      await this.dataSource.query(
+        `UPDATE "service_requests"
+         SET ${setClause}, "updated_at" = now()
+         WHERE "id" = $1 AND "craftsman_id" = $2 AND "status" = ANY($3)
+         RETURNING "id", "client_id"`,
+        [requestId, craftsmanId, fromStatuses],
+      );
+    if (rows.length === 0) return null;
+    return { requestId: rows[0].id, clientId: rows[0].client_id };
+  }
+}
+
+export interface JobTransitionResult {
+  requestId: string;
+  clientId: string;
 }

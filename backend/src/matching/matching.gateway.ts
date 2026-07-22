@@ -173,6 +173,17 @@ export class MatchingGateway implements OnGatewayInit {
     return user;
   }
 
+  // Used by MatchingController after a job-lifecycle transition (start/
+  // complete/cancel). No mobile client on the Client side listens to these
+  // yet — this exists so the wiring is already in place once that app does.
+  notifyClient(
+    clientId: string,
+    event: 'request:started' | 'request:completed' | 'request:cancelled',
+    payload: { requestId: string },
+  ): void {
+    this.server.to(clientRoom(clientId)).emit(event, payload);
+  }
+
   // Fire-and-forget from the controller: the HTTP response returns as soon as
   // the request row exists, and this loop runs independently, pushing
   // updates over sockets as candidates are broadcast to / assigned / expired.
@@ -220,6 +231,14 @@ export class MatchingGateway implements OnGatewayInit {
               requestId: request.id,
               craftsmanId: acceptedCraftsmanId,
             });
+          // The winning craftsman otherwise gets no confirmation at all —
+          // every *other* candidate in this round gets `request:unavailable`
+          // below, but without this, whoever actually won the accept race
+          // has no way to know their tap succeeded versus the request
+          // having simply gone quiet.
+          this.server
+            .to(craftsmanRoom(acceptedCraftsmanId))
+            .emit('request:assigned', { requestId: request.id });
           for (const candidate of candidates) {
             if (candidate.craftsmanId !== acceptedCraftsmanId) {
               this.server

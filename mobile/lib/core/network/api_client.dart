@@ -1,10 +1,9 @@
 import 'dart:convert';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import '../auth/current_auth_token.dart';
 import '../auth/dev_bypass_session.dart';
-import '../platform/firebase_support.dart';
 import 'api_config.dart';
 
 class ApiException implements Exception {
@@ -17,16 +16,6 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
-// The Firebase ID token doubles as this app's bearer credential for every
-// authenticated call (see api_client.dart usage below) — the SDK caches and
-// auto-refreshes it, so fetching it fresh on every request is cheap and
-// never goes stale.
-Future<String?> _currentAuthToken() async {
-  if (!isFirebaseSupportedPlatform) return null;
-  await firebaseInitFuture;
-  return FirebaseAuth.instance.currentUser?.getIdToken();
-}
-
 class ApiClient {
   ApiClient({http.Client? client}) : _client = client ?? http.Client();
 
@@ -35,7 +24,7 @@ class ApiClient {
   Future<Map<String, String>> _authHeaders([
     Map<String, String> extra = const {},
   ]) async {
-    final token = await _currentAuthToken();
+    final token = await currentAuthToken();
     if (token != null) {
       return {...extra, 'Authorization': 'Bearer $token'};
     }
@@ -142,9 +131,13 @@ class ApiClient {
   }
 
   Map<String, dynamic> _handleResponse(http.Response response) {
-    final decoded = response.body.isEmpty
-        ? <String, dynamic>{}
-        : jsonDecode(response.body) as Map<String, dynamic>;
+    // A body of `null` (valid JSON for an endpoint like "my active job,
+    // or none") isn't a Map — treat it the same as an empty body rather
+    // than let the cast below throw.
+    final rawDecoded = response.body.isEmpty ? null : jsonDecode(response.body);
+    final decoded = rawDecoded is Map<String, dynamic>
+        ? rawDecoded
+        : <String, dynamic>{};
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return decoded;

@@ -61,6 +61,9 @@ export class ServiceRequest {
   @Column({ name: 'assigned_at', type: 'timestamptz', nullable: true })
   assignedAt: Date | null;
 
+  @Column({ name: 'started_at', type: 'timestamptz', nullable: true })
+  startedAt: Date | null;
+
   @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
   completedAt: Date | null;
 
