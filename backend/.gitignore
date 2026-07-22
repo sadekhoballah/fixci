@@ -14,8 +14,11 @@ npm-debug.log*
 .env
 .env.*.local
 
-# Firebase Admin SDK service account credentials — never commit these
+# Firebase Admin SDK service account credentials — never commit these.
+# Covers both a manually-chosen name and Firebase's own default download
+# naming scheme (<project-id>-firebase-adminsdk-<hash>.json).
 firebase-service-account*.json
+*firebase-adminsdk*.json
 
 # IDE
 .idea
