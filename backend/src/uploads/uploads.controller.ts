@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Throttle } from '@nestjs/throttler';
 import { Repository } from 'typeorm';
 import type { Response } from 'express';
 import { diskStorage } from 'multer';
@@ -27,7 +28,6 @@ import {
   MAX_ID_CARD_SIZE_BYTES,
   MIN_ID_CARD_DIMENSION,
 } from './uploads.constants';
-import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth-request';
@@ -49,8 +49,18 @@ export class UploadsController {
     private readonly clientProfileRepository: Repository<ClientProfile>,
   ) {}
 
+  // Deliberately NOT behind an auth guard: the registration screen lets a
+  // user attach their ID card before phone OTP verification happens (see
+  // registration_screen.dart — the picker sits above the "S'inscrire"
+  // button that triggers OTP), so no Firebase token exists yet at the time
+  // this is called, on any platform. There is nothing to verify a caller's
+  // identity against here by construction, not by oversight — don't
+  // "fix" this by adding a guard back without first moving ID-card
+  // attachment after OTP verification in the UI flow. What actually
+  // protects this data is the authenticated, ownership-checked GET below,
+  // plus the size/type/dimension validation and rate limiting here.
   @Post('id-card')
-  @UseGuards(FirebaseAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
