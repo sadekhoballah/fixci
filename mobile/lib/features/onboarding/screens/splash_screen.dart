@@ -1,9 +1,12 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/auth/dev_bypass_session.dart';
 import '../../../core/auth/session_storage.dart';
 import '../../../core/auth/user_lookup_service.dart';
 import '../../../core/models/subscription_tier.dart';
 import '../../../core/models/user_role.dart';
+import '../../../core/platform/firebase_support.dart';
 import '../../client_home/screens/client_home_screen.dart';
 import '../../craftsman_home/screens/artisan_home_screen.dart';
 import 'role_selection_screen.dart';
@@ -55,12 +58,21 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     ).pushReplacement(MaterialPageRoute(builder: (_) => destination));
   }
 
-  // No saved phone means we can't ask the backend anything (e.g. a session
-  // cached before this check existed) — treat that the same as "not
-  // registered" rather than trusting the cached role forever.
+  // The lookup call authenticates with the current Firebase session — no
+  // session means we can't ask the backend anything (e.g. the user was
+  // signed out), so treat that the same as "not registered" rather than
+  // trusting the cached role forever. On platforms with no real Firebase
+  // session at all (the desktop dev-bypass), fall back to the same
+  // X-Dev-Phone mechanism the rest of the app uses there — see
+  // devBypassPhone.
   Future<bool> _stillRegistered(String? phone) async {
+    if (isFirebaseSupportedPlatform) {
+      if (FirebaseAuth.instance.currentUser == null) return false;
+      return ref.read(userLookupServiceProvider).isPhoneStillRegistered();
+    }
     if (phone == null) return false;
-    return ref.read(userLookupServiceProvider).isPhoneStillRegistered(phone);
+    devBypassPhone = phone;
+    return ref.read(userLookupServiceProvider).isPhoneStillRegistered();
   }
 
   @override

@@ -1,29 +1,33 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-import '../../core/auth/session_storage.dart';
 import '../../core/network/api_client.dart';
 import 'craftsman_home_repository.dart';
 import 'craftsman_home_state.dart';
 
+const _statsRefreshInterval = Duration(seconds: 30);
+
 class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
-  String? _phone;
+  Timer? _statsRefreshTimer;
 
   @override
   CraftsmanHomeState build() {
     Future.microtask(_load);
+    _statsRefreshTimer = Timer.periodic(
+      _statsRefreshInterval,
+      (_) => refreshStats(),
+    );
+    ref.onDispose(() => _statsRefreshTimer?.cancel());
     return const CraftsmanHomeState();
   }
 
   Future<void> _load() async {
-    final phone = await ref.read(sessionStorageProvider).loadPhone();
-    if (phone == null) return;
-    _phone = phone;
-
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final repository = ref.read(craftsmanHomeRepositoryProvider);
-      final me = await repository.getMe(phone);
-      final stats = await repository.getStats(phone);
+      final me = await repository.getMe();
+      final stats = await repository.getStats();
       state = state.copyWith(
         isLoading: false,
         tier: me.tier,
@@ -45,13 +49,11 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
 
   Future<void> refresh() => _load();
 
+  // Keeps the live job/stats counters from going stale between full
+  // dashboard reloads — see _statsRefreshTimer above.
   Future<void> refreshStats() async {
-    final phone = _phone;
-    if (phone == null) return;
     try {
-      final stats = await ref
-          .read(craftsmanHomeRepositoryProvider)
-          .getStats(phone);
+      final stats = await ref.read(craftsmanHomeRepositoryProvider).getStats();
       state = state.copyWith(stats: stats);
     } catch (_) {
       // Silent — the stats bar just keeps showing the last known numbers.
@@ -59,8 +61,7 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
   }
 
   Future<void> toggleAvailability(bool wantsAvailable) async {
-    final phone = _phone;
-    if (phone == null || state.isTogglingAvailability) return;
+    if (state.isTogglingAvailability) return;
 
     state = state.copyWith(isTogglingAvailability: true, clearError: true);
     try {
@@ -83,7 +84,6 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
       final isAvailable = await ref
           .read(craftsmanHomeRepositoryProvider)
           .setAvailability(
-            phone,
             wantsAvailable,
             latitude: latitude,
             longitude: longitude,

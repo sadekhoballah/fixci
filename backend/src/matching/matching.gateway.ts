@@ -1,10 +1,14 @@
 import {
   ConnectedSocket,
   MessageBody,
+  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { Server, Socket } from 'socket.io';
 import { PresenceService } from './presence.service';
 import { CreatedServiceRequest, MatchingService } from './matching.service';
@@ -15,14 +19,38 @@ import {
 } from './matching.constants';
 import { clientRoom, craftsmanRoom } from './matching.rooms';
 import { ServiceCategory } from '../database/enums/service-category.enum';
+import { User } from '../database/entities/user.entity';
+import { UserRole } from '../database/enums/user-role.enum';
+import { PhoneTokenVerifierService } from '../firebase/phone-token-verifier.service';
+import { resolveVerifiedPhone } from '../auth/resolve-verified-phone';
 
 function estimateArrivalMinutes(distanceMeters: number): number {
   const averageSpeedMetersPerMinute = 500; // ~30 km/h urban traffic, rough MVP heuristic
   return Math.max(1, Math.round(distanceMeters / averageSpeedMetersPerMinute));
 }
 
-@WebSocketGateway({ cors: { origin: '*' } })
-export class MatchingGateway {
+interface SocketUser {
+  id: string;
+  role: UserRole;
+}
+
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+@Injectable()
+@WebSocketGateway({
+  cors: {
+    origin:
+      ALLOWED_ORIGINS.length > 0
+        ? ALLOWED_ORIGINS
+        : process.env.NODE_ENV === 'production'
+          ? false
+          : '*',
+  },
+})
+export class MatchingGateway implements OnGatewayInit {
   @WebSocketServer()
   server: Server;
 
@@ -39,14 +67,45 @@ export class MatchingGateway {
   constructor(
     private readonly matchingService: MatchingService,
     private readonly presenceService: PresenceService,
+    private readonly phoneTokenVerifier: PhoneTokenVerifierService,
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
 
+  // Every socket must prove who it is before any handler runs — otherwise a
+  // client could claim to be any clientId/craftsmanId in its message bodies.
+  // Mirrors FirebaseAuthGuard/AuthGuard's HTTP logic (same resolveVerifiedPhone
+  // helper), just reading handshake.auth instead of headers, since a plain
+  // socket.io connection has no per-message Authorization header.
+  afterInit(server: Server): void {
+    server.use((socket, next) => {
+      const token = socket.handshake.auth?.['token'] as string | undefined;
+      const devPhone = socket.handshake.auth?.['devPhone'] as
+        string | undefined;
+
+      resolveVerifiedPhone(this.phoneTokenVerifier, token, devPhone)
+        .then((phone) => this.userRepository.findOne({ where: { phone } }))
+        .then((user) => {
+          if (!user) {
+            next(new Error('No account for this phone number'));
+            return;
+          }
+          (socket.data as { user?: SocketUser }).user = {
+            id: user.id,
+            role: user.role,
+          };
+          next();
+        })
+        .catch((error: unknown) => {
+          next(error instanceof Error ? error : new Error('Unauthorized'));
+        });
+    });
+  }
+
   @SubscribeMessage('client:join')
-  handleClientJoin(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() body: { clientId: string },
-  ) {
-    void client.join(clientRoom(body.clientId));
+  handleClientJoin(@ConnectedSocket() client: Socket) {
+    const user = this.requireUser(client);
+    if (user.role !== UserRole.CLIENT) return;
+    void client.join(clientRoom(user.id));
   }
 
   @SubscribeMessage('craftsman:online')
@@ -54,15 +113,16 @@ export class MatchingGateway {
     @ConnectedSocket() client: Socket,
     @MessageBody()
     body: {
-      craftsmanId: string;
       serviceCategory: ServiceCategory;
       latitude: number;
       longitude: number;
     },
   ) {
-    void client.join(craftsmanRoom(body.craftsmanId));
+    const user = this.requireUser(client);
+    if (user.role !== UserRole.CRAFTSMAN) return;
+    void client.join(craftsmanRoom(user.id));
     await this.presenceService.setOnline(
-      body.craftsmanId,
+      user.id,
       body.serviceCategory,
       body.longitude,
       body.latitude,
@@ -71,31 +131,46 @@ export class MatchingGateway {
 
   @SubscribeMessage('craftsman:location')
   async handleCraftsmanLocation(
+    @ConnectedSocket() client: Socket,
     @MessageBody()
     body: {
-      craftsmanId: string;
       latitude: number;
       longitude: number;
     },
   ) {
+    const user = this.requireUser(client);
+    if (user.role !== UserRole.CRAFTSMAN) return;
     await this.presenceService.updateLocation(
-      body.craftsmanId,
+      user.id,
       body.longitude,
       body.latitude,
     );
   }
 
   @SubscribeMessage('craftsman:offline')
-  async handleCraftsmanOffline(@MessageBody() body: { craftsmanId: string }) {
-    await this.presenceService.setOffline(body.craftsmanId);
+  async handleCraftsmanOffline(@ConnectedSocket() client: Socket) {
+    const user = this.requireUser(client);
+    if (user.role !== UserRole.CRAFTSMAN) return;
+    await this.presenceService.setOffline(user.id);
   }
 
   @SubscribeMessage('request:accept')
   handleAccept(
-    @MessageBody() body: { requestId: string; craftsmanId: string },
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: { requestId: string },
   ) {
+    const user = this.requireUser(client);
+    if (user.role !== UserRole.CRAFTSMAN) return;
     const resolve = this.acceptResolvers.get(body.requestId);
-    resolve?.(body.craftsmanId);
+    resolve?.(user.id);
+  }
+
+  private requireUser(client: Socket): SocketUser {
+    const user = (client.data as { user?: SocketUser }).user;
+    if (!user) {
+      throw new Error('Socket connected without passing auth middleware');
+    }
+    return user;
   }
 
   // Fire-and-forget from the controller: the HTTP response returns as soon as

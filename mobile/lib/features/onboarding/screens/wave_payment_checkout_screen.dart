@@ -26,12 +26,19 @@ class WavePaymentCheckoutScreen extends ConsumerStatefulWidget {
       _WavePaymentCheckoutScreenState();
 }
 
+// Polling stops (with an error shown) after this many ticks so a lost
+// payment record or a Wave charge that's abandoned mid-flow doesn't leave
+// the user staring at "waiting for confirmation" forever.
+const _maxPollAttempts = 30; // ~60s at the 2s poll interval below
+
 class _WavePaymentCheckoutScreenState
     extends ConsumerState<WavePaymentCheckoutScreen> {
   _CheckoutStatus _status = _CheckoutStatus.requesting;
   String? _reference;
   String? _errorMessage;
   Timer? _pollTimer;
+  int _pollAttempts = 0;
+  bool _isChecking = false;
 
   @override
   void initState() {
@@ -50,15 +57,15 @@ class _WavePaymentCheckoutScreenState
       _status = _CheckoutStatus.requesting;
       _errorMessage = null;
     });
-    final phone = ref.read(onboardingControllerProvider).phone;
     try {
       final reference = await ref
           .read(onboardingRepositoryProvider)
-          .subscribeToTier(phone, widget.tier);
+          .subscribeToTier(widget.tier);
       if (!mounted) return;
       setState(() {
         _reference = reference;
         _status = _CheckoutStatus.pending;
+        _pollAttempts = 0;
       });
       _pollTimer = Timer.periodic(
         const Duration(seconds: 2),
@@ -80,32 +87,68 @@ class _WavePaymentCheckoutScreenState
   }
 
   Future<void> _checkStatus(String reference) async {
-    final String status;
+    // A slow response can still be in flight when the next tick fires —
+    // skip this tick rather than let two checks race each other.
+    if (_isChecking) return;
+    _isChecking = true;
     try {
-      status = await ref
-          .read(onboardingRepositoryProvider)
-          .getPaymentStatus(reference);
-    } catch (_) {
-      return; // transient network hiccup — the next tick will retry
-    }
-    if (!mounted || status == 'pending') return;
+      _pollAttempts++;
+      if (_pollAttempts > _maxPollAttempts) {
+        _pollTimer?.cancel();
+        if (!mounted) return;
+        setState(() {
+          _status = _CheckoutStatus.failed;
+          _errorMessage =
+              'La confirmation prend plus de temps que prévu. '
+              'Réessayez dans quelques minutes.';
+        });
+        return;
+      }
 
-    _pollTimer?.cancel();
-    if (status == 'success') {
-      await ref.read(onboardingControllerProvider.notifier).confirmActiveTier();
-      if (!mounted) return;
-      setState(() => _status = _CheckoutStatus.success);
-      await Future<void>.delayed(const Duration(seconds: 1));
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const ArtisanHomeScreen()),
-        (route) => false,
-      );
-    } else {
-      setState(() {
-        _status = _CheckoutStatus.failed;
-        _errorMessage = 'Le paiement a échoué.';
-      });
+      final String status;
+      try {
+        status = await ref
+            .read(onboardingRepositoryProvider)
+            .getPaymentStatus(reference);
+      } on ApiException catch (e) {
+        // A missing/rejected reference is permanent — no amount of
+        // retrying will resolve it. Anything else (timeout, 5xx) is
+        // treated as transient and retried on the next tick.
+        if (e.statusCode == 404 || e.statusCode == 401) {
+          _pollTimer?.cancel();
+          if (!mounted) return;
+          setState(() {
+            _status = _CheckoutStatus.failed;
+            _errorMessage = e.message;
+          });
+        }
+        return;
+      } catch (_) {
+        return; // transient network hiccup — the next tick will retry
+      }
+      if (!mounted || status == 'pending') return;
+
+      _pollTimer?.cancel();
+      if (status == 'success') {
+        await ref
+            .read(onboardingControllerProvider.notifier)
+            .confirmActiveTier();
+        if (!mounted) return;
+        setState(() => _status = _CheckoutStatus.success);
+        await Future<void>.delayed(const Duration(seconds: 1));
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const ArtisanHomeScreen()),
+          (route) => false,
+        );
+      } else {
+        setState(() {
+          _status = _CheckoutStatus.failed;
+          _errorMessage = 'Le paiement a échoué.';
+        });
+      }
+    } finally {
+      _isChecking = false;
     }
   }
 

@@ -17,6 +17,34 @@ export class PhoneTokenVerifierService {
     private readonly adminApp: App | null,
   ) {}
 
+  get isConfigured(): boolean {
+    return this.adminApp !== null;
+  }
+
+  // Verifies a Firebase ID token is genuine and returns the phone number it
+  // was issued for. This is the one place that ever calls out to Firebase to
+  // check a token — everything that needs to know "who is this caller,
+  // really" (registration, the auth guards, the WS gateway) goes through
+  // this rather than trusting a client-supplied phone/id.
+  async verifyIdToken(idToken: string): Promise<{ phone: string }> {
+    if (!this.adminApp) {
+      throw new UnauthorizedException('Phone verification is not configured');
+    }
+    let decodedPhoneNumber: string | undefined;
+    try {
+      const decoded = await getAuth(this.adminApp).verifyIdToken(idToken);
+      decodedPhoneNumber = decoded.phone_number;
+    } catch {
+      throw new UnauthorizedException('Invalid or expired verification token');
+    }
+    if (!decodedPhoneNumber) {
+      throw new UnauthorizedException(
+        'Verification token has no associated phone number',
+      );
+    }
+    return { phone: decodedPhoneNumber };
+  }
+
   // Confirms a Firebase ID token is genuine AND that its verified phone
   // number actually matches what's being registered — the client-side OTP
   // confirmation alone can't be trusted, since any client could just claim

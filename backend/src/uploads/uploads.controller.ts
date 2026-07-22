@@ -1,15 +1,23 @@
 import {
   BadRequestException,
   Controller,
+  Get,
+  NotFoundException,
+  Param,
   Post,
+  Res,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import type { Response } from 'express';
 import { diskStorage } from 'multer';
 import { randomUUID } from 'crypto';
 import { existsSync, mkdirSync, readFileSync, unlinkSync } from 'fs';
-import { extname } from 'path';
+import { extname, join } from 'path';
 import { imageSize } from 'image-size';
 import {
   ALLOWED_ID_CARD_MIME_TYPES,
@@ -19,6 +27,12 @@ import {
   MAX_ID_CARD_SIZE_BYTES,
   MIN_ID_CARD_DIMENSION,
 } from './uploads.constants';
+import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/auth-request';
+import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
+import { ClientProfile } from '../database/entities/client-profile.entity';
 
 if (!existsSync(ID_CARDS_DIR)) {
   mkdirSync(ID_CARDS_DIR, { recursive: true });
@@ -28,7 +42,15 @@ const ALLOWED_IMAGE_SIZE_TYPES = new Set(['jpg', 'png']);
 
 @Controller('uploads')
 export class UploadsController {
+  constructor(
+    @InjectRepository(CraftsmanProfile)
+    private readonly craftsmanProfileRepository: Repository<CraftsmanProfile>,
+    @InjectRepository(ClientProfile)
+    private readonly clientProfileRepository: Repository<ClientProfile>,
+  ) {}
+
   @Post('id-card')
+  @UseGuards(FirebaseAuthGuard)
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -92,5 +114,36 @@ export class UploadsController {
     }
 
     return { storageKey: `${ID_CARDS_SUBDIR}/${file.filename}` };
+  }
+
+  // Replaces the previous public static-file serving of /uploads: an ID-card
+  // photo is sensitive, and a UUID filename alone isn't access control.
+  // Only the account that owns this exact storage key can fetch it back.
+  @Get('id-card/:filename')
+  @UseGuards(AuthGuard)
+  async getIdCard(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('filename') filename: string,
+    @Res() res: Response,
+  ) {
+    if (filename.includes('/') || filename.includes('..')) {
+      throw new NotFoundException('No ID card found for this account');
+    }
+    const storageKey = `${ID_CARDS_SUBDIR}/${filename}`;
+
+    const [craftsmanProfile, clientProfile] = await Promise.all([
+      this.craftsmanProfileRepository.findOne({
+        where: { userId: user.id, idCardStorageKey: storageKey },
+      }),
+      this.clientProfileRepository.findOne({
+        where: { userId: user.id, idCardStorageKey: storageKey },
+      }),
+    ]);
+
+    if (!craftsmanProfile && !clientProfile) {
+      throw new NotFoundException('No ID card found for this account');
+    }
+
+    res.sendFile(join(ID_CARDS_DIR, filename));
   }
 }

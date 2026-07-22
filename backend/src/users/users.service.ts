@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../database/entities/user.entity';
@@ -39,6 +43,17 @@ export class UsersService {
         dto.phone,
       );
       phoneVerified = result.verified;
+    }
+
+    // Outside production, an unverified registration is tolerated (the
+    // desktop dev-bypass flow never has a real token to send at all — see
+    // DevBypassPhoneVerificationService). In production, silently creating
+    // an unverified account defeats the point of phone verification, so
+    // fail loudly instead of persisting phoneVerified:false unnoticed.
+    if (!phoneVerified && process.env.NODE_ENV === 'production') {
+      throw new ServiceUnavailableException(
+        'Phone verification is required and could not be completed',
+      );
     }
 
     try {

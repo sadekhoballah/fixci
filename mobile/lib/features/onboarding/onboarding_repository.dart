@@ -45,9 +45,8 @@ class OnboardingRepository {
   // the payment stays `pending` server-side until the Wave webhook (or, for
   // now, the stub that simulates it) resolves it. Poll [getPaymentStatus]
   // with that reference to find out when it does.
-  Future<String> subscribeToTier(String phone, SubscriptionTier tier) async {
+  Future<String> subscribeToTier(SubscriptionTier tier) async {
     final response = await _apiClient.post('/payments/subscribe', {
-      'phone': phone,
       'tier': tier.wireValue,
     });
     return response['reference'] as String;

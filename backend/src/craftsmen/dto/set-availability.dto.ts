@@ -2,16 +2,10 @@ import {
   IsBoolean,
   IsLatitude,
   IsLongitude,
-  Matches,
   ValidateIf,
 } from 'class-validator';
 
 export class SetAvailabilityDto {
-  @Matches(/^\+[1-9]\d{7,14}$/, {
-    message: 'phone must be in E.164 format, e.g. +2250700000001',
-  })
-  phone: string;
-
   @IsBoolean()
   available: boolean;
 

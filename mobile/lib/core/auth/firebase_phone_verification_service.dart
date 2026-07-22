@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import '../platform/firebase_support.dart';
 import 'phone_verification_service.dart';
 
 String _messageForCode(String code) {
@@ -27,6 +28,10 @@ class FirebasePhoneVerificationService implements PhoneVerificationService {
     required void Function(String idToken) onAutoVerified,
     required void Function(PhoneVerificationException error) onFailed,
   }) async {
+    // main() deliberately doesn't await Firebase.initializeApp() before the
+    // first frame (see firebaseInitFuture's doc comment) — this is the
+    // actual first call into a Firebase API, so it's the one that must wait.
+    await firebaseInitFuture;
     await FirebaseAuth.instance.verifyPhoneNumber(
       phoneNumber: phoneNumber,
       verificationCompleted: (PhoneAuthCredential credential) async {
@@ -61,6 +66,7 @@ class FirebasePhoneVerificationService implements PhoneVerificationService {
     required String verificationId,
     required String smsCode,
   }) async {
+    await firebaseInitFuture;
     final credential = PhoneAuthProvider.credential(
       verificationId: verificationId,
       smsCode: smsCode,

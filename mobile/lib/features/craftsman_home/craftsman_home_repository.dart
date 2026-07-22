@@ -24,10 +24,8 @@ class CraftsmanHomeRepository {
 
   final ApiClient _apiClient;
 
-  Future<CraftsmanMe> getMe(String phone) async {
-    final response = await _apiClient.get(
-      '/craftsmen/me?phone=${Uri.encodeQueryComponent(phone)}',
-    );
+  Future<CraftsmanMe> getMe() async {
+    final response = await _apiClient.get('/craftsmen/me');
     return CraftsmanMe(
       tier: _parseTier(response['subscriptionTier'] as String),
       daysRemaining: response['daysRemaining'] as int?,
@@ -38,13 +36,11 @@ class CraftsmanHomeRepository {
   }
 
   Future<bool> setAvailability(
-    String phone,
     bool available, {
     double? latitude,
     double? longitude,
   }) async {
     final response = await _apiClient.patch('/craftsmen/me/availability', {
-      'phone': phone,
       'available': available,
       'latitude': ?latitude,
       'longitude': ?longitude,
@@ -52,10 +48,8 @@ class CraftsmanHomeRepository {
     return response['isAvailable'] as bool;
   }
 
-  Future<CraftsmanHomeStats> getStats(String phone) async {
-    final response = await _apiClient.get(
-      '/craftsmen/me/stats?phone=${Uri.encodeQueryComponent(phone)}',
-    );
+  Future<CraftsmanHomeStats> getStats() async {
+    final response = await _apiClient.get('/craftsmen/me/stats');
     return CraftsmanHomeStats(
       jobsDoneToday: response['jobsDoneToday'] as int,
       jobsAssignedToday: response['jobsAssignedToday'] as int,

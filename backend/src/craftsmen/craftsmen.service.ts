@@ -36,8 +36,8 @@ export class CraftsmenService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async getMe(phone: string): Promise<CraftsmanMe> {
-    const profile = await this.findCraftsmanProfileByPhone(phone);
+  async getMe(userId: string): Promise<CraftsmanMe> {
+    const profile = await this.findCraftsmanProfileByUserId(userId);
     return {
       subscriptionTier: profile.subscriptionTier,
       subscriptionExpiresAt: profile.subscriptionExpiresAt,
@@ -51,9 +51,10 @@ export class CraftsmenService {
   }
 
   async setAvailability(
+    userId: string,
     dto: SetAvailabilityDto,
   ): Promise<{ isAvailable: boolean }> {
-    const profile = await this.findCraftsmanProfileByPhone(dto.phone);
+    const profile = await this.findCraftsmanProfileByUserId(userId);
 
     if (dto.available) {
       await this.presenceService.setOnline(
@@ -74,8 +75,8 @@ export class CraftsmenService {
     return { isAvailable: dto.available };
   }
 
-  async getStats(phone: string): Promise<CraftsmanStats> {
-    const profile = await this.findCraftsmanProfileByPhone(phone);
+  async getStats(userId: string): Promise<CraftsmanStats> {
+    const profile = await this.findCraftsmanProfileByUserId(userId);
 
     const [{ count: jobsDoneToday }]: [{ count: string }] =
       await this.dataSource.query(
@@ -108,14 +109,12 @@ export class CraftsmenService {
     };
   }
 
-  private async findCraftsmanProfileByPhone(
-    phone: string,
+  private async findCraftsmanProfileByUserId(
+    userId: string,
   ): Promise<CraftsmanProfile> {
-    const user = await this.userRepository.findOne({ where: { phone } });
+    const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user || user.role !== UserRole.CRAFTSMAN) {
-      throw new NotFoundException(
-        'No craftsman account with this phone number',
-      );
+      throw new NotFoundException('No craftsman account for this user');
     }
     const profile = await this.craftsmanProfileRepository.findOne({
       where: { userId: user.id },

@@ -21,9 +21,15 @@ export class StubWaveClient implements WaveClient {
   async requestCharge(
     params: RequestChargeParams,
   ): Promise<RequestChargeResult> {
+    const port = process.env.PORT ?? 3000;
+    const secretHeader = process.env.WAVE_WEBHOOK_SECRET
+      ? ` -H "X-Webhook-Secret: ${process.env.WAVE_WEBHOOK_SECRET}"`
+      : '';
     this.logger.warn(
       `Wave API not connected yet — simulating approval of ${params.reference} ` +
-        `(${params.phone}, ${params.amountCfa} CFA) in ${SIMULATED_APPROVAL_DELAY_MS}ms.`,
+        `(${params.phone}, ${params.amountCfa} CFA) in ${SIMULATED_APPROVAL_DELAY_MS}ms. ` +
+        `To trigger it by hand instead: curl -X POST http://localhost:${port}/payments/wave/webhook ` +
+        `-H "Content-Type: application/json"${secretHeader} -d '{"reference":"${params.reference}","status":"success"}'`,
     );
     setTimeout(() => {
       this.simulateApproval(params.reference).catch((error: unknown) => {
@@ -38,9 +44,13 @@ export class StubWaveClient implements WaveClient {
 
   private async simulateApproval(reference: string): Promise<void> {
     const port = process.env.PORT ?? 3000;
+    const secret = process.env.WAVE_WEBHOOK_SECRET;
     await fetch(`http://localhost:${port}/payments/wave/webhook`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(secret ? { 'X-Webhook-Secret': secret } : {}),
+      },
       body: JSON.stringify({ reference, status: 'success' }),
     });
   }

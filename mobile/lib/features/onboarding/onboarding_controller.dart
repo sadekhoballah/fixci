@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/auth/dev_bypass_session.dart';
 import '../../core/auth/session_storage.dart';
 import '../../core/media/id_card_picker.dart';
 import '../../core/media/image_validation.dart';
@@ -99,6 +100,13 @@ class OnboardingController extends Notifier<OnboardingState> {
     }
 
     state = state.copyWith(isUploadingIdCard: true, clearIdCardUploadError: true);
+    // No account (and no real Firebase session on unsupported platforms)
+    // exists yet at this point — on those platforms, this is the earliest
+    // the phone being registered is known, so it's what dev-bypass auth
+    // uses for this call. Harmless no-op on platforms with a real session.
+    if (state.phone.trim().isNotEmpty) {
+      devBypassPhone = state.phone.trim();
+    }
     try {
       final storageKey = await ref
           .read(onboardingRepositoryProvider)
@@ -126,6 +134,7 @@ class OnboardingController extends Notifier<OnboardingState> {
       final storage = ref.read(sessionStorageProvider);
       await storage.saveRole(state.role!);
       await storage.savePhone(state.phone.trim());
+      devBypassPhone = state.phone.trim();
       return true;
     } on ApiException catch (e) {
       state = state.copyWith(isSubmitting: false, submissionError: e.message);

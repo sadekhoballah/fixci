@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/subscription_tier.dart';
 import '../models/user_role.dart';
@@ -7,6 +8,11 @@ class SessionStorage {
   static const _roleKey = 'session_role';
   static const _tierKey = 'session_tier';
   static const _phoneKey = 'session_phone';
+
+  // The phone number is the one piece of quasi-identifying data cached
+  // locally, so unlike role/tier (plain UI state) it belongs in the
+  // platform keystore rather than plaintext SharedPreferences.
+  static const _secureStorage = FlutterSecureStorage();
 
   Future<void> saveRole(UserRole role) async {
     final prefs = await SharedPreferences.getInstance();
@@ -39,13 +45,11 @@ class SessionStorage {
   }
 
   Future<void> savePhone(String phone) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_phoneKey, phone);
+    await _secureStorage.write(key: _phoneKey, value: phone);
   }
 
   Future<String?> loadPhone() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_phoneKey);
+    return _secureStorage.read(key: _phoneKey);
   }
 
   // Wipes the cached session — used when the backend no longer recognizes
@@ -55,7 +59,7 @@ class SessionStorage {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_roleKey);
     await prefs.remove(_tierKey);
-    await prefs.remove(_phoneKey);
+    await _secureStorage.delete(key: _phoneKey);
   }
 }
 
