@@ -16,13 +16,16 @@ import 'service_request_state.dart';
 class ServiceRequestController extends Notifier<ServiceRequestState> {
   StreamSubscription<RequestOutcomeEvent>? _assignedSub;
   StreamSubscription<RequestOutcomeEvent>? _noCraftsmanSub;
+  // Captured directly (rather than read via `ref` inside onDispose below) —
+  // Riverpod forbids using `ref` from within a dispose callback.
+  MatchingSocketService? _socket;
 
   @override
   ServiceRequestState build() {
     ref.onDispose(() {
       _assignedSub?.cancel();
       _noCraftsmanSub?.cancel();
-      ref.read(matchingSocketServiceProvider).disconnect();
+      _socket?.disconnect();
     });
     return const ServiceRequestState();
   }
@@ -77,6 +80,7 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
 
   void _listenForOutcome(String requestId) {
     final socket = ref.read(matchingSocketServiceProvider);
+    _socket = socket;
     socket.connect();
     socket.joinAsClient();
     _assignedSub = socket.onRequestAssigned.listen((event) {

@@ -45,17 +45,9 @@ class TradeDetailScreen extends ConsumerWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Same placeholder photo source as the home grid, seeded
-                  // per category — swap for real per-trade photography later.
-                  Image.network(
-                    'https://picsum.photos/seed/${category.wireValue}/800/600',
+                  Image.asset(
+                    'assets/categories/${category.wireValue}.jpg',
                     fit: BoxFit.cover,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return const ColoredBox(color: Color(0xFFEDEDED));
-                    },
-                    errorBuilder: (context, error, stackTrace) =>
-                        const ColoredBox(color: Color(0xFFEDEDED)),
                   ),
                   const DecoratedBox(
                     decoration: BoxDecoration(

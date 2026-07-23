@@ -53,17 +53,9 @@ class _CategoryCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Temporary placeholder photo (Lorem Picsum, seeded per
-              // category) — swap for real per-trade photography later.
-              Image.network(
-                'https://picsum.photos/seed/${category.wireValue}/400/400',
+              Image.asset(
+                'assets/categories/${category.wireValue}.jpg',
                 fit: BoxFit.cover,
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return const ColoredBox(color: Color(0xFFEDEDED));
-                },
-                errorBuilder: (context, error, stackTrace) =>
-                    const ColoredBox(color: Color(0xFFEDEDED)),
               ),
               const DecoratedBox(
                 decoration: BoxDecoration(
