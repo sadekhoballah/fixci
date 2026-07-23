@@ -57,6 +57,8 @@ class MatchingSocketService {
       StreamController<RequestOutcomeEvent>.broadcast();
   final _requestUnavailableController =
       StreamController<RequestOutcomeEvent>.broadcast();
+  final _noCraftsmanAvailableController =
+      StreamController<RequestOutcomeEvent>.broadcast();
   final _connectionStatusController =
       StreamController<SocketConnectionStatus>.broadcast();
 
@@ -65,6 +67,8 @@ class MatchingSocketService {
       _requestAssignedController.stream;
   Stream<RequestOutcomeEvent> get onRequestUnavailable =>
       _requestUnavailableController.stream;
+  Stream<RequestOutcomeEvent> get onNoCraftsmanAvailable =>
+      _noCraftsmanAvailableController.stream;
   Stream<SocketConnectionStatus> get connectionStatus =>
       _connectionStatusController.stream;
 
@@ -118,6 +122,11 @@ class MatchingSocketService {
         RequestOutcomeEvent.fromJson(data as Map<String, dynamic>),
       );
     });
+    socket.on('request:no_craftsman_available', (data) {
+      _noCraftsmanAvailableController.add(
+        RequestOutcomeEvent.fromJson(data as Map<String, dynamic>),
+      );
+    });
 
     socket.connect();
   }
@@ -127,6 +136,13 @@ class MatchingSocketService {
     _socket?.dispose();
     _socket = null;
     _connectionStatusController.add(SocketConnectionStatus.disconnected);
+  }
+
+  // Puts this socket in the caller's client room (matching.gateway.ts:
+  // handleClientJoin) so notifyClient/runMatchingLoop pushes reach it. Safe to
+  // call right after connect() — see the goOnline note below on queued emits.
+  void joinAsClient() {
+    _socket?.emit('client:join');
   }
 
   void goOnline({
@@ -161,6 +177,7 @@ class MatchingSocketService {
     _requestNewController.close();
     _requestAssignedController.close();
     _requestUnavailableController.close();
+    _noCraftsmanAvailableController.close();
     _connectionStatusController.close();
   }
 }
