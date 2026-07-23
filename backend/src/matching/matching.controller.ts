@@ -79,6 +79,7 @@ export class MatchingController {
     this.matchingGateway.notifyClient(result.clientId, 'request:completed', {
       requestId: id,
     });
+    this.matchingGateway.clearActiveAssignment(user.id);
     return { requestId: id, status: 'completed' };
   }
 
@@ -97,6 +98,7 @@ export class MatchingController {
     this.matchingGateway.notifyClient(result.clientId, 'request:cancelled', {
       requestId: id,
     });
+    this.matchingGateway.clearActiveAssignment(user.id);
     return { requestId: id, status: 'cancelled' };
   }
 

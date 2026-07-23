@@ -19,7 +19,7 @@ const acceptTimeout = Duration(seconds: 18);
 // events, not a one-shot load).
 class LiveRequestsController extends Notifier<LiveRequestsState> {
   StreamSubscription<IncomingRequestEvent>? _newSub;
-  StreamSubscription<RequestOutcomeEvent>? _assignedSub;
+  StreamSubscription<RequestAssignedEvent>? _assignedSub;
   StreamSubscription<RequestOutcomeEvent>? _unavailableSub;
   StreamSubscription<SocketConnectionStatus>? _statusSub;
   Timer? _countdownTicker;
@@ -167,7 +167,7 @@ class LiveRequestsController extends Notifier<LiveRequestsState> {
     );
   }
 
-  void _onRequestAssigned(RequestOutcomeEvent event) {
+  void _onRequestAssigned(RequestAssignedEvent event) {
     final wasMine = state.incomingRequests.any(
       (r) => r.requestId == event.requestId,
     );

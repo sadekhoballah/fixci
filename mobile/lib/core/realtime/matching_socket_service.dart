@@ -42,6 +42,43 @@ class RequestOutcomeEvent {
   final String requestId;
 }
 
+// request:assigned carries extra fields when it reaches the client (the
+// craftsman's name/phone) — craftsman-side listeners only ever read
+// requestId, so those fields are simply null on that side of the wire.
+class RequestAssignedEvent {
+  const RequestAssignedEvent({
+    required this.requestId,
+    this.craftsmanFullName,
+    this.craftsmanPhone,
+  });
+
+  factory RequestAssignedEvent.fromJson(Map<String, dynamic> json) {
+    return RequestAssignedEvent(
+      requestId: json['requestId'] as String,
+      craftsmanFullName: json['craftsmanFullName'] as String?,
+      craftsmanPhone: json['craftsmanPhone'] as String?,
+    );
+  }
+
+  final String requestId;
+  final String? craftsmanFullName;
+  final String? craftsmanPhone;
+}
+
+class CraftsmanLocationEvent {
+  const CraftsmanLocationEvent({required this.latitude, required this.longitude});
+
+  factory CraftsmanLocationEvent.fromJson(Map<String, dynamic> json) {
+    return CraftsmanLocationEvent(
+      latitude: (json['latitude'] as num).toDouble(),
+      longitude: (json['longitude'] as num).toDouble(),
+    );
+  }
+
+  final double latitude;
+  final double longitude;
+}
+
 enum SocketConnectionStatus { disconnected, connecting, connected }
 
 // Wraps the raw socket.io connection to the backend's MatchingGateway. Every
@@ -54,21 +91,25 @@ class MatchingSocketService {
   final _requestNewController =
       StreamController<IncomingRequestEvent>.broadcast();
   final _requestAssignedController =
-      StreamController<RequestOutcomeEvent>.broadcast();
+      StreamController<RequestAssignedEvent>.broadcast();
   final _requestUnavailableController =
       StreamController<RequestOutcomeEvent>.broadcast();
   final _noCraftsmanAvailableController =
       StreamController<RequestOutcomeEvent>.broadcast();
+  final _craftsmanLocationController =
+      StreamController<CraftsmanLocationEvent>.broadcast();
   final _connectionStatusController =
       StreamController<SocketConnectionStatus>.broadcast();
 
   Stream<IncomingRequestEvent> get onRequestNew => _requestNewController.stream;
-  Stream<RequestOutcomeEvent> get onRequestAssigned =>
+  Stream<RequestAssignedEvent> get onRequestAssigned =>
       _requestAssignedController.stream;
   Stream<RequestOutcomeEvent> get onRequestUnavailable =>
       _requestUnavailableController.stream;
   Stream<RequestOutcomeEvent> get onNoCraftsmanAvailable =>
       _noCraftsmanAvailableController.stream;
+  Stream<CraftsmanLocationEvent> get onCraftsmanLocationUpdate =>
+      _craftsmanLocationController.stream;
   Stream<SocketConnectionStatus> get connectionStatus =>
       _connectionStatusController.stream;
 
@@ -114,7 +155,7 @@ class MatchingSocketService {
     });
     socket.on('request:assigned', (data) {
       _requestAssignedController.add(
-        RequestOutcomeEvent.fromJson(data as Map<String, dynamic>),
+        RequestAssignedEvent.fromJson(data as Map<String, dynamic>),
       );
     });
     socket.on('request:unavailable', (data) {
@@ -125,6 +166,11 @@ class MatchingSocketService {
     socket.on('request:no_craftsman_available', (data) {
       _noCraftsmanAvailableController.add(
         RequestOutcomeEvent.fromJson(data as Map<String, dynamic>),
+      );
+    });
+    socket.on('craftsman:location:update', (data) {
+      _craftsmanLocationController.add(
+        CraftsmanLocationEvent.fromJson(data as Map<String, dynamic>),
       );
     });
 
@@ -178,6 +224,7 @@ class MatchingSocketService {
     _requestAssignedController.close();
     _requestUnavailableController.close();
     _noCraftsmanAvailableController.close();
+    _craftsmanLocationController.close();
     _connectionStatusController.close();
   }
 }

@@ -64,6 +64,12 @@ export class MatchingGateway implements OnGatewayInit {
     (craftsmanId: string) => void
   >();
 
+  // Which client is waiting on which craftsman right now (assigned or
+  // in_progress) — lets handleCraftsmanLocation relay position updates to
+  // the right client room without a DB lookup on every ping. Same
+  // single-process caveat as acceptResolvers above.
+  private readonly activeAssignments = new Map<string, string>();
+
   constructor(
     private readonly matchingService: MatchingService,
     private readonly presenceService: PresenceService,
@@ -145,6 +151,14 @@ export class MatchingGateway implements OnGatewayInit {
       body.longitude,
       body.latitude,
     );
+
+    const clientId = this.activeAssignments.get(user.id);
+    if (clientId) {
+      this.server.to(clientRoom(clientId)).emit('craftsman:location:update', {
+        latitude: body.latitude,
+        longitude: body.longitude,
+      });
+    }
   }
 
   @SubscribeMessage('craftsman:offline')
@@ -182,6 +196,12 @@ export class MatchingGateway implements OnGatewayInit {
     payload: { requestId: string },
   ): void {
     this.server.to(clientRoom(clientId)).emit(event, payload);
+  }
+
+  // Stops relaying this craftsman's location once their job wraps up
+  // (completed/cancelled) — called by MatchingController alongside notifyClient.
+  clearActiveAssignment(craftsmanId: string): void {
+    this.activeAssignments.delete(craftsmanId);
   }
 
   // Fire-and-forget from the controller: the HTTP response returns as soon as
@@ -225,11 +245,17 @@ export class MatchingGateway implements OnGatewayInit {
           acceptedCraftsmanId,
         );
         if (assigned) {
+          const craftsman = await this.userRepository.findOne({
+            where: { id: acceptedCraftsmanId },
+          });
+          this.activeAssignments.set(acceptedCraftsmanId, request.clientId);
           this.server
             .to(clientRoom(request.clientId))
             .emit('request:assigned', {
               requestId: request.id,
               craftsmanId: acceptedCraftsmanId,
+              craftsmanFullName: craftsman?.fullName ?? null,
+              craftsmanPhone: craftsman?.phone ?? null,
             });
           // The winning craftsman otherwise gets no confirmation at all —
           // every *other* candidate in this round gets `request:unavailable`

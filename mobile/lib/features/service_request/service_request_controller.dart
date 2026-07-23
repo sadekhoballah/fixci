@@ -14,8 +14,9 @@ import 'service_request_state.dart';
 // screens (autoDispose) — a fresh attempt starts clean each time either is
 // reopened.
 class ServiceRequestController extends Notifier<ServiceRequestState> {
-  StreamSubscription<RequestOutcomeEvent>? _assignedSub;
+  StreamSubscription<RequestAssignedEvent>? _assignedSub;
   StreamSubscription<RequestOutcomeEvent>? _noCraftsmanSub;
+  StreamSubscription<CraftsmanLocationEvent>? _locationSub;
   // Captured directly (rather than read via `ref` inside onDispose below) —
   // Riverpod forbids using `ref` from within a dispose callback.
   MatchingSocketService? _socket;
@@ -25,6 +26,7 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
     ref.onDispose(() {
       _assignedSub?.cancel();
       _noCraftsmanSub?.cancel();
+      _locationSub?.cancel();
       _socket?.disconnect();
     });
     return const ServiceRequestState();
@@ -44,7 +46,11 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
       return;
     }
 
-    state = state.copyWith(status: ServiceRequestStatus.submitting);
+    state = state.copyWith(
+      status: ServiceRequestStatus.submitting,
+      myLatitude: position.latitude,
+      myLongitude: position.longitude,
+    );
     try {
       final requestId = await ref
           .read(serviceRequestRepositoryProvider)
@@ -74,6 +80,7 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
   void retry(ServiceCategory category) {
     _assignedSub?.cancel();
     _noCraftsmanSub?.cancel();
+    _locationSub?.cancel();
     state = const ServiceRequestState();
     unawaited(submit(category));
   }
@@ -85,11 +92,21 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
     socket.joinAsClient();
     _assignedSub = socket.onRequestAssigned.listen((event) {
       if (event.requestId != requestId) return;
-      state = state.copyWith(status: ServiceRequestStatus.assigned);
+      state = state.copyWith(
+        status: ServiceRequestStatus.assigned,
+        craftsmanFullName: event.craftsmanFullName,
+        craftsmanPhone: event.craftsmanPhone,
+      );
     });
     _noCraftsmanSub = socket.onNoCraftsmanAvailable.listen((event) {
       if (event.requestId != requestId) return;
       state = state.copyWith(status: ServiceRequestStatus.noCraftsmanAvailable);
+    });
+    _locationSub = socket.onCraftsmanLocationUpdate.listen((event) {
+      state = state.copyWith(
+        craftsmanLatitude: event.latitude,
+        craftsmanLongitude: event.longitude,
+      );
     });
   }
 
