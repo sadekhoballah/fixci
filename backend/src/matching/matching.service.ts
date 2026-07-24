@@ -160,6 +160,32 @@ export class MatchingService {
     );
   }
 
+  // A client can back out any time before the job is actually underway —
+  // still searching (pending, nobody assigned yet) or waiting on the
+  // craftsman they matched with (assigned). Once work has started
+  // (in_progress) it's the craftsman's transitions that own the job, not
+  // the client's. If the request is still 'pending', the in-memory
+  // runMatchingLoop for it just keeps running harmlessly: every write it
+  // makes is itself guarded by a status check, so it'll find 0 rows and
+  // no-op until it naturally winds down.
+  async cancelByClient(
+    requestId: string,
+    clientId: string,
+  ): Promise<ClientCancelResult | null> {
+    const [rows]: [
+      Array<{ id: string; craftsman_id: string | null }>,
+      number,
+    ] = await this.dataSource.query(
+      `UPDATE "service_requests"
+       SET "status" = 'cancelled', "cancelled_at" = now(), "updated_at" = now()
+       WHERE "id" = $1 AND "client_id" = $2 AND "status" = ANY($3)
+       RETURNING "id", "craftsman_id"`,
+      [requestId, clientId, ['pending', 'assigned']],
+    );
+    if (rows.length === 0) return null;
+    return { requestId: rows[0].id, craftsmanId: rows[0].craftsman_id };
+  }
+
   private async transitionJob(
     requestId: string,
     craftsmanId: string,
@@ -182,4 +208,9 @@ export class MatchingService {
 export interface JobTransitionResult {
   requestId: string;
   clientId: string;
+}
+
+export interface ClientCancelResult {
+  requestId: string;
+  craftsmanId: string | null;
 }

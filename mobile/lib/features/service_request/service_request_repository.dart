@@ -19,6 +19,9 @@ class ServiceRequestRepository {
     });
     return response['requestId'] as String;
   }
+
+  Future<void> cancelRequest(String requestId) =>
+      _apiClient.patch('/matching/requests/$requestId/cancel', const {});
 }
 
 final serviceRequestRepositoryProvider = Provider<ServiceRequestRepository>(

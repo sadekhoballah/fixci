@@ -88,6 +88,24 @@ export class MatchingController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
+    if (user.role === UserRole.CLIENT) {
+      const result = await this.matchingService.cancelByClient(id, user.id);
+      if (!result) {
+        throw new ConflictException(
+          'This request cannot be cancelled (already resolved)',
+        );
+      }
+      if (result.craftsmanId) {
+        this.matchingGateway.notifyCraftsman(
+          result.craftsmanId,
+          'request:cancelled',
+          { requestId: id },
+        );
+        this.matchingGateway.clearActiveAssignment(result.craftsmanId);
+      }
+      return { requestId: id, status: 'cancelled' };
+    }
+
     this.requireCraftsman(user);
     const result = await this.matchingService.cancelJob(id, user.id);
     if (!result) {

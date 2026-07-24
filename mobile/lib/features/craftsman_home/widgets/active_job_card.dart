@@ -26,6 +26,12 @@ class ActiveJobCard extends StatelessWidget {
     if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
+  Future<void> _whatsapp() async {
+    final digits = job.clientPhone.replaceAll(RegExp(r'[^0-9]'), '');
+    final uri = Uri.parse('https://wa.me/$digits');
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
   Future<void> _navigate() async {
     final uri = Uri.parse(
       'geo:${job.clientLatitude},${job.clientLongitude}'
@@ -120,9 +126,9 @@ class ActiveJobCard extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: _navigate,
-                  icon: const Icon(Icons.directions_rounded, size: 18),
-                  label: const Text('Itinéraire'),
+                  onPressed: _whatsapp,
+                  icon: const Icon(Icons.chat_rounded, size: 18),
+                  label: const Text('WhatsApp'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(
@@ -132,6 +138,21 @@ class ActiveJobCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _navigate,
+              icon: const Icon(Icons.directions_rounded, size: 18),
+              label: const Text('Itinéraire'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 10),
           Row(

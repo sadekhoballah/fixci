@@ -234,6 +234,18 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     this.activeAssignments.delete(craftsmanId);
   }
 
+  // The craftsman-facing counterpart to notifyClient — used when the
+  // *client* cancels a job the craftsman had already been assigned to, so
+  // the craftsman's app can drop it instead of sitting on a job that's
+  // quietly dead server-side.
+  notifyCraftsman(
+    craftsmanId: string,
+    event: 'request:cancelled',
+    payload: { requestId: string },
+  ): void {
+    this.server.to(craftsmanRoom(craftsmanId)).emit(event, payload);
+  }
+
   // Fire-and-forget from the controller: the HTTP response returns as soon as
   // the request row exists, and this loop runs independently, pushing
   // updates over sockets as candidates are broadcast to / assigned / expired.

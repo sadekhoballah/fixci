@@ -13,7 +13,14 @@ class SearchingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(serviceRequestControllerProvider, (previous, next) {
+      if (next.status == ServiceRequestStatus.cancelled &&
+          previous?.status != ServiceRequestStatus.cancelled) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    });
     final state = ref.watch(serviceRequestControllerProvider);
+    final notifier = ref.read(serviceRequestControllerProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(title: Text(category.label)),
@@ -24,6 +31,7 @@ class SearchingScreen extends ConsumerWidget {
             ServiceRequestStatus.assigned => _AssignedCard(
               category: category,
               state: state,
+              onCancel: notifier.cancel,
             ),
             ServiceRequestStatus.noCraftsmanAvailable => _Outcome(
               icon: Icons.search_off_rounded,
@@ -49,6 +57,22 @@ class SearchingScreen extends ConsumerWidget {
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
+                if (state.requestId != null) ...[
+                  const SizedBox(height: 32),
+                  TextButton(
+                    onPressed: state.isCancelling
+                        ? null
+                        : () => _confirmCancel(context, notifier.cancel),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: state.isCancelling
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Annuler la recherche'),
+                  ),
+                ],
               ],
             ),
           },
@@ -56,6 +80,32 @@ class SearchingScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+Future<void> _confirmCancel(
+  BuildContext context,
+  Future<void> Function() onConfirm,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Annuler la demande ?'),
+      content: const Text(
+        'Le professionnel assigné (le cas échéant) en sera informé.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: const Text('Retour'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: const Text('Annuler la demande'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed == true) await onConfirm();
 }
 
 class _Outcome extends StatelessWidget {
@@ -147,15 +197,28 @@ String _distanceLabel(ServiceRequestState state) {
 }
 
 class _AssignedCard extends StatelessWidget {
-  const _AssignedCard({required this.category, required this.state});
+  const _AssignedCard({
+    required this.category,
+    required this.state,
+    required this.onCancel,
+  });
 
   final ServiceCategory category;
   final ServiceRequestState state;
+  final Future<void> Function() onCancel;
 
   Future<void> _call() async {
     final phone = state.craftsmanPhone;
     if (phone == null) return;
     final uri = Uri(scheme: 'tel', path: phone);
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
+  Future<void> _whatsapp() async {
+    final phone = state.craftsmanPhone;
+    if (phone == null) return;
+    final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    final uri = Uri.parse('https://wa.me/$digits');
     if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
@@ -167,74 +230,113 @@ class _AssignedCard extends StatelessWidget {
     if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
+  Future<void> _confirmCancelJob(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Annuler cette demande ?'),
+        content: Text(
+          '${state.craftsmanFullName ?? "Le professionnel"} sera informé que vous annulez.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Retour'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Annuler la demande'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await onCancel();
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasLocation =
         state.craftsmanLatitude != null && state.craftsmanLongitude != null;
+    final hasPhone = state.craftsmanPhone != null;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.check_circle_rounded, color: Colors.green, size: 72),
-        const SizedBox(height: 20),
-        const Text(
-          'Professionnel trouvé !',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          state.craftsmanFullName ?? category.label,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          _distanceLabel(state),
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
-        ),
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: state.craftsmanPhone == null ? null : _call,
-                icon: const Icon(Icons.call_rounded),
-                label: const Text('Appeler'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: hasLocation ? _openMap : null,
-                icon: const Icon(Icons.map_rounded),
-                label: const Text('Voir sur la carte'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: ElevatedButton(
-            onPressed: () =>
-                Navigator.of(context).popUntil((route) => route.isFirst),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            child: const Text(
-              "Retour à l'accueil",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.green.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.green, width: 1.5),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.check_circle_rounded, color: Colors.green, size: 56),
+          const SizedBox(height: 16),
+          Text(
+            '${state.craftsmanFullName ?? category.label} a accepté votre demande',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Il est en route vers vous.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: Colors.black54),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _distanceLabel(state),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade700,
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: hasPhone ? _call : null,
+                  icon: const Icon(Icons.call_rounded, size: 18),
+                  label: const Text('Appeler'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: hasPhone ? _whatsapp : null,
+                  icon: const Icon(Icons.chat_rounded, size: 18),
+                  label: const Text('WhatsApp'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: hasLocation ? _openMap : null,
+              icon: const Icon(Icons.map_rounded, size: 18),
+              label: const Text('Voir sur la carte'),
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextButton(
+            onPressed: state.isCancelling
+                ? null
+                : () => _confirmCancelJob(context),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: state.isCancelling
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Annuler'),
+          ),
+        ],
+      ),
     );
   }
 }

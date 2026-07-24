@@ -77,6 +77,35 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
     }
   }
 
+  // Lets the client back out any time before the job is actually underway —
+  // still searching, or waiting on the craftsman they matched with. Mirrors
+  // matching.controller.ts's role-branch on the same PATCH .../cancel route.
+  Future<void> cancel() async {
+    final requestId = state.requestId;
+    if (requestId == null || state.isCancelling) return;
+    state = state.copyWith(isCancelling: true, clearError: true);
+    try {
+      await ref
+          .read(serviceRequestRepositoryProvider)
+          .cancelRequest(requestId);
+      _assignedSub?.cancel();
+      _noCraftsmanSub?.cancel();
+      _locationSub?.cancel();
+      _socket?.disconnect();
+      state = state.copyWith(
+        status: ServiceRequestStatus.cancelled,
+        isCancelling: false,
+      );
+    } on ApiException catch (e) {
+      state = state.copyWith(isCancelling: false, errorMessage: e.message);
+    } catch (_) {
+      state = state.copyWith(
+        isCancelling: false,
+        errorMessage: "Impossible d'annuler la demande.",
+      );
+    }
+  }
+
   void retry(ServiceCategory category) {
     _assignedSub?.cancel();
     _noCraftsmanSub?.cancel();

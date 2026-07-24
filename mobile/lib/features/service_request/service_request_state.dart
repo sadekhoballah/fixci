@@ -5,6 +5,7 @@ enum ServiceRequestStatus {
   searching,
   assigned,
   noCraftsmanAvailable,
+  cancelled,
   error,
 }
 
@@ -19,6 +20,7 @@ class ServiceRequestState {
     this.craftsmanPhone,
     this.craftsmanLatitude,
     this.craftsmanLongitude,
+    this.isCancelling = false,
   });
 
   final ServiceRequestStatus status;
@@ -32,6 +34,7 @@ class ServiceRequestState {
   final String? craftsmanPhone;
   final double? craftsmanLatitude;
   final double? craftsmanLongitude;
+  final bool isCancelling;
 
   ServiceRequestState copyWith({
     ServiceRequestStatus? status,
@@ -44,6 +47,7 @@ class ServiceRequestState {
     String? craftsmanPhone,
     double? craftsmanLatitude,
     double? craftsmanLongitude,
+    bool? isCancelling,
   }) {
     return ServiceRequestState(
       status: status ?? this.status,
@@ -55,6 +59,7 @@ class ServiceRequestState {
       craftsmanPhone: craftsmanPhone ?? this.craftsmanPhone,
       craftsmanLatitude: craftsmanLatitude ?? this.craftsmanLatitude,
       craftsmanLongitude: craftsmanLongitude ?? this.craftsmanLongitude,
+      isCancelling: isCancelling ?? this.isCancelling,
     );
   }
 }
