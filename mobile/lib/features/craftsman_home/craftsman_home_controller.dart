@@ -48,9 +48,12 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
         stats: stats,
         serviceCategory: me.serviceCategory,
       );
-      if (me.isAvailable) {
-        _startLiveRequests();
-      }
+      // Being reachable for new jobs shouldn't require a separate manual
+      // step on top of granting location — attempt to go online from GPS
+      // alone on every load. The toggle still exists purely as an explicit
+      // opt-out (toggleAvailability(false)) for a craftsman who wants to
+      // stop receiving jobs without closing the app.
+      unawaited(_goOnlineFromGps());
     } on ApiException catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.message);
     } catch (_) {
@@ -141,9 +144,9 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
         isAvailable: isAvailable,
       );
 
-      if (isAvailable) {
+      if (isAvailable && latitude != null && longitude != null) {
         _startLiveRequests(latitude: latitude, longitude: longitude);
-      } else {
+      } else if (!isAvailable) {
         _stopLiveRequests();
       }
     } on ApiException catch (e) {
@@ -159,10 +162,47 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
     }
   }
 
+  // Reachability for new jobs only needs a GPS fix, not a separate manual
+  // step — called on every load so a craftsman who simply opens the app
+  // with location already granted starts receiving requests immediately.
+  // The toggle above remains as an explicit opt-out for someone who wants
+  // to stay logged in without being matched.
+  Future<void> _goOnlineFromGps() async {
+    final position = await _getCurrentPosition();
+    if (position == null) {
+      if (!state.isAvailable) {
+        state = state.copyWith(
+          errorMessage: "Activez la localisation pour recevoir des demandes.",
+        );
+      }
+      return;
+    }
+
+    _startLiveRequests(latitude: position.latitude, longitude: position.longitude);
+
+    if (!state.isAvailable) {
+      try {
+        final isAvailable = await ref
+            .read(craftsmanHomeRepositoryProvider)
+            .setAvailability(
+              true,
+              latitude: position.latitude,
+              longitude: position.longitude,
+            );
+        state = state.copyWith(isAvailable: isAvailable);
+      } catch (_) {
+        // Presence is already live over the socket regardless — this PATCH
+        // only keeps the isAvailable flag in sync for display elsewhere, so
+        // a failure here doesn't stop the craftsman from receiving jobs.
+      }
+    }
+  }
+
   void handleAppResumed() {
     unawaited(refreshLocationStatus());
     final category = state.serviceCategory;
-    if (state.isAvailable && category != null) {
+    if (category == null) return;
+    if (state.isAvailable) {
       unawaited(() async {
         final position = await _getCurrentPosition();
         if (position == null) return;
@@ -174,37 +214,31 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
               longitude: position.longitude,
             );
       }());
+    } else {
+      // Covers granting location permission while backgrounded, then
+      // returning — without this, going online would otherwise wait for
+      // the next full app restart.
+      unawaited(_goOnlineFromGps());
     }
   }
 
-  void _startLiveRequests({double? latitude, double? longitude}) {
+  void _startLiveRequests({required double latitude, required double longitude}) {
     final category = state.serviceCategory;
     if (category == null) return;
-    final controller = ref.read(liveRequestsControllerProvider.notifier);
-
-    Future<void> start(double lat, double lng) async {
-      controller.startListening(category: category, latitude: lat, longitude: lng);
-    }
-
-    if (latitude != null && longitude != null) {
-      unawaited(start(latitude, longitude));
-    } else {
-      unawaited(() async {
-        final position = await _getCurrentPosition();
-        if (position != null) {
-          await start(position.latitude, position.longitude);
-        }
-      }());
-    }
+    ref
+        .read(liveRequestsControllerProvider.notifier)
+        .startListening(category: category, latitude: latitude, longitude: longitude);
 
     _locationPingTimer?.cancel();
     _locationPingTimer = Timer.periodic(_locationPingInterval, (_) async {
       final position = await _getCurrentPosition();
       if (position != null) {
-        controller.updateLocation(
-          latitude: position.latitude,
-          longitude: position.longitude,
-        );
+        ref
+            .read(liveRequestsControllerProvider.notifier)
+            .updateLocation(
+              latitude: position.latitude,
+              longitude: position.longitude,
+            );
       }
     });
   }

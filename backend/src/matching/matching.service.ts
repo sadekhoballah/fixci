@@ -40,6 +40,43 @@ export class MatchingService {
     };
   }
 
+  // Catches the craftsman who logs in / goes available *after* a client's
+  // request already exists — runMatchingLoop only samples candidates at the
+  // start of each radius round, so a craftsman who comes online between
+  // rounds (or after the loop moved to a wider radius) would otherwise wait
+  // for the next round's findNearest to happen to pick them up, or miss the
+  // request entirely if it's already run out of rounds. Called once, right
+  // after presence registration, so this newly-online craftsman gets an
+  // immediate request:new for anything still pending within its own
+  // (possibly already-expanded) search_radius_meters.
+  async findPendingNear(
+    category: ServiceCategory,
+    longitude: number,
+    latitude: number,
+  ): Promise<
+    Array<{ id: string; clientId: string; distanceMeters: number }>
+  > {
+    const rows: Array<{
+      id: string;
+      client_id: string;
+      distance_meters: string;
+    }> = await this.dataSource.query(
+      `SELECT "id", "client_id",
+              ST_Distance("client_location", ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS distance_meters
+       FROM "service_requests"
+       WHERE "status" = 'pending'
+         AND "service_category" = $3
+         AND ST_DWithin("client_location", ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, "search_radius_meters")
+       ORDER BY distance_meters ASC`,
+      [longitude, latitude, category],
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      clientId: row.client_id,
+      distanceMeters: Number(row.distance_meters),
+    }));
+  }
+
   async updateSearchRadius(
     requestId: string,
     radiusMeters: number,

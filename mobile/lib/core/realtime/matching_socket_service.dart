@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 import '../auth/current_auth_token.dart';
@@ -145,7 +146,12 @@ class MatchingSocketService {
     socket.onDisconnect((_) {
       _connectionStatusController.add(SocketConnectionStatus.disconnected);
     });
-    socket.onConnectError((_) {
+    socket.onConnectError((error) {
+      // Auth failures (expired Firebase token, no matching account for the
+      // phone — see matching.gateway.ts afterInit) land here and previously
+      // vanished silently: the status stream just flipped to "disconnected"
+      // with no way to tell that apart from a plain network drop.
+      debugPrint('MatchingSocketService connect error: $error');
       _connectionStatusController.add(SocketConnectionStatus.disconnected);
     });
     socket.on('request:new', (data) {

@@ -1,6 +1,7 @@
 import {
   ConnectedSocket,
   MessageBody,
+  OnGatewayDisconnect,
   OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
@@ -50,7 +51,7 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '')
           : '*',
   },
 })
-export class MatchingGateway implements OnGatewayInit {
+export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -133,6 +134,22 @@ export class MatchingGateway implements OnGatewayInit {
       body.longitude,
       body.latitude,
     );
+
+    const pending = await this.matchingService.findPendingNear(
+      body.serviceCategory,
+      body.longitude,
+      body.latitude,
+    );
+    for (const request of pending) {
+      this.server.to(craftsmanRoom(user.id)).emit('request:new', {
+        requestId: request.id,
+        serviceCategory: body.serviceCategory,
+        distanceMeters: Math.round(request.distanceMeters),
+        estimatedArrivalMinutes: estimateArrivalMinutes(
+          request.distanceMeters,
+        ),
+      });
+    }
   }
 
   @SubscribeMessage('craftsman:location')
@@ -165,6 +182,19 @@ export class MatchingGateway implements OnGatewayInit {
   async handleCraftsmanOffline(@ConnectedSocket() client: Socket) {
     const user = this.requireUser(client);
     if (user.role !== UserRole.CRAFTSMAN) return;
+    await this.presenceService.setOffline(user.id);
+  }
+
+  // Without this, a craftsman whose socket drops without emitting
+  // craftsman:offline first (app killed, backgrounded and OS-suspended,
+  // network loss) stays in the Redis presence GEO index forever — Redis has
+  // no TTL on these keys. runMatchingLoop then "finds" them as a candidate,
+  // emits into an empty room, and burns a full ACCEPT_TIMEOUT_MS round for
+  // nobody, every round, until the request expires with no craftsman ever
+  // actually notified.
+  async handleDisconnect(client: Socket): Promise<void> {
+    const user = (client.data as { user?: SocketUser }).user;
+    if (!user || user.role !== UserRole.CRAFTSMAN) return;
     await this.presenceService.setOffline(user.id);
   }
 
@@ -219,8 +249,13 @@ export class MatchingGateway implements OnGatewayInit {
         CANDIDATES_PER_ROUND,
       );
 
-      if (candidates.length === 0) continue;
-
+      // Deliberately not skipping the wait when candidates.length === 0:
+      // this round's ACCEPT_TIMEOUT_MS is also the window during which a
+      // craftsman who logs in / goes available mid-round gets caught by
+      // handleCraftsmanOnline's findPendingNear catch-up and can still tap
+      // accept against this same waitForAccept. Bailing out early here would
+      // make a request with nobody currently online expire in milliseconds,
+      // leaving no realistic window for a craftsman arriving moments later.
       for (const candidate of candidates) {
         this.server
           .to(craftsmanRoom(candidate.craftsmanId))
