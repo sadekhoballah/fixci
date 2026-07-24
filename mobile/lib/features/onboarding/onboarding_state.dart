@@ -21,6 +21,7 @@ class OnboardingState {
     this.submissionError,
     this.registrationSucceeded = false,
     this.selectedTier,
+    this.loggedIntoExistingAccount = false,
   });
 
   final UserRole? role;
@@ -46,6 +47,12 @@ class OnboardingState {
   // OnboardingController.confirmActiveTier() once it's actually active (free
   // tiers immediately, paid tiers after WavePaymentCheckoutScreen).
   final SubscriptionTier? selectedTier;
+  // True when the phone entered during "registration" turned out to already
+  // have an account (GET /users/lookup found it) — the app logged the user
+  // straight into that existing account instead of creating a new one, so
+  // the post-verification screen should skip the "welcome, new account"
+  // flow and go directly to that account's home screen.
+  final bool loggedIntoExistingAccount;
 
   bool get idCardAttached => idCardStorageKey != null;
 
@@ -89,6 +96,7 @@ class OnboardingState {
     bool clearSubmissionError = false,
     bool? registrationSucceeded,
     SubscriptionTier? selectedTier,
+    bool? loggedIntoExistingAccount,
   }) {
     return OnboardingState(
       role: role ?? this.role,
@@ -120,6 +128,8 @@ class OnboardingState {
       registrationSucceeded:
           registrationSucceeded ?? this.registrationSucceeded,
       selectedTier: selectedTier ?? this.selectedTier,
+      loggedIntoExistingAccount:
+          loggedIntoExistingAccount ?? this.loggedIntoExistingAccount,
     );
   }
 }

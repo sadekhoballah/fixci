@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/dev_bypass_session.dart';
 import '../../core/auth/session_storage.dart';
+import '../../core/auth/user_lookup_service.dart';
 import '../../core/media/id_card_picker.dart';
 import '../../core/media/image_validation.dart';
 import '../../core/models/service_category.dart';
@@ -124,6 +125,47 @@ class OnboardingController extends Notifier<OnboardingState> {
         idCardUploadError: "Échec de l'envoi de l'image.",
       );
     }
+  }
+
+  // Called right after OTP verification succeeds. Checks whether this phone
+  // already has an account before ever attempting to create one — if it
+  // does, logs straight into it instead of hitting the 409 from
+  // POST /users/register with no way to recover. Only genuinely new phones
+  // fall through to submitRegistration() below.
+  Future<bool> completeAfterVerification() async {
+    state = state.copyWith(isSubmitting: true, clearSubmissionError: true);
+    try {
+      final existing = await ref
+          .read(userLookupServiceProvider)
+          .findExistingAccount();
+      if (existing != null) {
+        final storage = ref.read(sessionStorageProvider);
+        await storage.saveRole(existing.role);
+        await storage.savePhone(state.phone.trim());
+        if (existing.subscriptionTier != null) {
+          await storage.saveTier(existing.subscriptionTier!);
+        }
+        devBypassPhone = state.phone.trim();
+        state = state.copyWith(
+          isSubmitting: false,
+          registrationSucceeded: true,
+          loggedIntoExistingAccount: true,
+          role: existing.role,
+          selectedTier: existing.subscriptionTier,
+        );
+        return true;
+      }
+    } on ApiException catch (e) {
+      state = state.copyWith(isSubmitting: false, submissionError: e.message);
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isSubmitting: false,
+        submissionError: 'Une erreur inattendue est survenue.',
+      );
+      return false;
+    }
+    return submitRegistration();
   }
 
   Future<bool> submitRegistration() async {

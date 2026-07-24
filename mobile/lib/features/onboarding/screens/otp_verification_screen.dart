@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/models/user_role.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../client_home/screens/client_home_screen.dart';
+import '../../craftsman_home/screens/artisan_shell_screen.dart';
 import '../onboarding_controller.dart';
 import '../otp_controller.dart';
 import 'registration_success_screen.dart';
+import 'tier_selection_screen.dart';
 
 class OtpVerificationScreen extends ConsumerStatefulWidget {
   const OtpVerificationScreen({super.key, required this.phone});
@@ -54,14 +58,29 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   Future<void> _completeRegistration() async {
     if (_completing) return;
     _completing = true;
-    final succeeded = await ref
-        .read(onboardingControllerProvider.notifier)
-        .submitRegistration();
+    final notifier = ref.read(onboardingControllerProvider.notifier);
+    final succeeded = await notifier.completeAfterVerification();
     if (!mounted) return;
     if (!succeeded) {
       _completing = false;
       return;
     }
+
+    final state = ref.read(onboardingControllerProvider);
+    if (state.loggedIntoExistingAccount) {
+      final destination = switch (state.role) {
+        UserRole.craftsman when state.selectedTier == null =>
+          const TierSelectionScreen(),
+        UserRole.craftsman => const ArtisanShellScreen(),
+        _ => const ClientHomeScreen(),
+      };
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => destination),
+        (route) => false,
+      );
+      return;
+    }
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const RegistrationSuccessScreen()),
     );

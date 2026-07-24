@@ -9,6 +9,7 @@ import { User } from '../database/entities/user.entity';
 import { ClientProfile } from '../database/entities/client-profile.entity';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 import { UserRole } from '../database/enums/user-role.enum';
+import { SubscriptionTier } from '../database/enums/subscription-tier.enum';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { PhoneTokenVerifierService } from '../firebase/phone-token-verifier.service';
 
@@ -18,12 +19,25 @@ const UNIQUE_VIOLATION = '23505';
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
+    @InjectRepository(CraftsmanProfile)
+    private readonly craftsmanProfileRepository: Repository<CraftsmanProfile>,
     private readonly dataSource: DataSource,
     private readonly phoneTokenVerifier: PhoneTokenVerifierService,
   ) {}
 
   async findByPhone(phone: string): Promise<User | null> {
     return this.userRepository.findOne({ where: { phone } });
+  }
+
+  // Only meaningful for a craftsman — used by GET /users/lookup so a
+  // returning craftsman (reinstalled app, cleared local storage) lands
+  // straight back on their dashboard instead of being routed through tier
+  // selection again as if they'd never subscribed.
+  async findCraftsmanTier(userId: string): Promise<SubscriptionTier | null> {
+    const profile = await this.craftsmanProfileRepository.findOne({
+      where: { userId },
+    });
+    return profile?.subscriptionTier ?? null;
   }
 
   async register(dto: RegisterUserDto): Promise<User> {

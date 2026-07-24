@@ -5,10 +5,13 @@ import '../../../core/media/id_card_picker.dart';
 import '../../../core/models/service_category.dart';
 import '../../../core/models/user_role.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../client_home/screens/client_home_screen.dart';
+import '../../craftsman_home/screens/artisan_shell_screen.dart';
 import '../onboarding_controller.dart';
 import '../onboarding_state.dart';
 import 'otp_verification_screen.dart';
 import 'registration_success_screen.dart';
+import 'tier_selection_screen.dart';
 
 class RegistrationScreen extends ConsumerStatefulWidget {
   const RegistrationScreen({super.key});
@@ -44,8 +47,24 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       );
       return;
     }
-    final succeeded = await controller.submitRegistration();
+    final succeeded = await controller.completeAfterVerification();
     if (!context.mounted || !succeeded) return;
+
+    final latest = ref.read(onboardingControllerProvider);
+    if (latest.loggedIntoExistingAccount) {
+      final destination = switch (latest.role) {
+        UserRole.craftsman when latest.selectedTier == null =>
+          const TierSelectionScreen(),
+        UserRole.craftsman => const ArtisanShellScreen(),
+        _ => const ClientHomeScreen(),
+      };
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => destination),
+        (route) => false,
+      );
+      return;
+    }
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const RegistrationSuccessScreen()),
     );

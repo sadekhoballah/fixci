@@ -12,6 +12,7 @@ import type { Request } from 'express';
 import { UsersService } from './users.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
+import { UserRole } from '../database/enums/user-role.enum';
 
 @Controller('users')
 export class UsersController {
@@ -43,12 +44,17 @@ export class UsersController {
     if (!user) {
       throw new NotFoundException('No account with this phone number');
     }
+    const subscriptionTier =
+      user.role === UserRole.CRAFTSMAN
+        ? await this.usersService.findCraftsmanTier(user.id)
+        : null;
     return {
       id: user.id,
       phone: user.phone,
       fullName: user.fullName,
       role: user.role,
       phoneVerified: user.phoneVerified,
+      subscriptionTier,
     };
   }
 }
