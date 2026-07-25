@@ -12,4 +12,6 @@ export enum ServiceCategory {
   SATELLITE_INSTALLATION = 'satellite_installation',
   CONSTRUCTION = 'construction',
   BLACKSMITH = 'blacksmith',
+  HOUSEKEEPING = 'housekeeping',
+  HOME_TUTORING = 'home_tutoring',
 }

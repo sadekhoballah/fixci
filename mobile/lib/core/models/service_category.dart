@@ -13,7 +13,9 @@ enum ServiceCategory {
   tvInstallation,
   satelliteInstallation,
   construction,
-  blacksmith;
+  blacksmith,
+  housekeeping,
+  homeTutoring;
 
   String get label => switch (this) {
     ServiceCategory.plumber => 'Plombier',
@@ -29,6 +31,8 @@ enum ServiceCategory {
     ServiceCategory.satelliteInstallation => 'Satellite',
     ServiceCategory.construction => 'Construction',
     ServiceCategory.blacksmith => 'Forgeron',
+    ServiceCategory.housekeeping => 'Femme de ménage',
+    ServiceCategory.homeTutoring => 'Cours à domicile',
   };
 
   // Matches the backend's service_category_enum string values.
@@ -46,6 +50,8 @@ enum ServiceCategory {
     ServiceCategory.satelliteInstallation => 'satellite_installation',
     ServiceCategory.construction => 'construction',
     ServiceCategory.blacksmith => 'blacksmith',
+    ServiceCategory.housekeeping => 'housekeeping',
+    ServiceCategory.homeTutoring => 'home_tutoring',
   };
 
   String get description => switch (this) {
@@ -75,6 +81,10 @@ enum ServiceCategory {
       'Travaux de construction, maçonnerie et rénovation de bâtiments.',
     ServiceCategory.blacksmith =>
       'Fabrication et réparation de portails, grilles et structures métalliques.',
+    ServiceCategory.housekeeping =>
+      'Ménage à domicile, repassage et entretien courant du foyer.',
+    ServiceCategory.homeTutoring =>
+      'Cours particuliers à domicile pour tous niveaux et matières.',
   };
 
   IconData get icon => switch (this) {
@@ -91,5 +101,7 @@ enum ServiceCategory {
     ServiceCategory.satelliteInstallation => Icons.satellite_alt_rounded,
     ServiceCategory.construction => Icons.construction_rounded,
     ServiceCategory.blacksmith => Icons.hardware_rounded,
+    ServiceCategory.housekeeping => Icons.local_laundry_service_rounded,
+    ServiceCategory.homeTutoring => Icons.school_rounded,
   };
 }
