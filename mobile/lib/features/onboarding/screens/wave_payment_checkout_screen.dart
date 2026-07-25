@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/subscription_tier.dart';
 import '../../../core/network/api_client.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../craftsman_home/craftsman_home_controller.dart';
 import '../../craftsman_home/screens/artisan_shell_screen.dart';
 import '../onboarding_controller.dart';
 import '../onboarding_repository.dart';
@@ -17,9 +18,18 @@ enum _CheckoutStatus { requesting, pending, success, failed }
 // nothing here for the user to lie to. Until real Wave API access exists,
 // the backend's StubWaveClient simulates that webhook after a short delay.
 class WavePaymentCheckoutScreen extends ConsumerStatefulWidget {
-  const WavePaymentCheckoutScreen({super.key, required this.tier});
+  const WavePaymentCheckoutScreen({
+    super.key,
+    required this.tier,
+    this.isChangingPlan = false,
+  });
 
   final SubscriptionTier tier;
+  // True when this checkout was reached from the Account tab to change an
+  // already-active plan — on success this pops back to the shell (refreshing
+  // the craftsman's profile) instead of resetting the nav stack to it, since
+  // there's no onboarding stack to clear in that case.
+  final bool isChangingPlan;
 
   @override
   ConsumerState<WavePaymentCheckoutScreen> createState() =>
@@ -137,10 +147,16 @@ class _WavePaymentCheckoutScreenState
         setState(() => _status = _CheckoutStatus.success);
         await Future<void>.delayed(const Duration(seconds: 1));
         if (!mounted) return;
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const ArtisanShellScreen()),
-          (route) => false,
-        );
+        if (widget.isChangingPlan) {
+          await ref.read(craftsmanHomeControllerProvider.notifier).refresh();
+          if (!mounted) return;
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        } else {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const ArtisanShellScreen()),
+            (route) => false,
+          );
+        }
       } else {
         setState(() {
           _status = _CheckoutStatus.failed;

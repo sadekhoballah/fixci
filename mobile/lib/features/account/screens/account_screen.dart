@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/session_storage.dart';
 import '../../craftsman_home/craftsman_home_controller.dart';
+import '../../onboarding/screens/tier_selection_screen.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
@@ -31,6 +32,15 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Compte')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const TierSelectionScreen(isChangingPlan: true),
+          ),
+        ),
+        icon: const Icon(Icons.workspace_premium_rounded),
+        label: const Text('Changer de forfait'),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),

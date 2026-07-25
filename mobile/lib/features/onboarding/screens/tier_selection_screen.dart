@@ -7,7 +7,13 @@ import '../onboarding_controller.dart';
 import 'wave_payment_checkout_screen.dart';
 
 class TierSelectionScreen extends ConsumerStatefulWidget {
-  const TierSelectionScreen({super.key});
+  const TierSelectionScreen({super.key, this.isChangingPlan = false});
+
+  // True when reached from the craftsman's Account tab to change an already
+  // active plan, rather than during onboarding. Changes the copy, drops the
+  // free tier from the list (downgrading to free isn't a payment — there's
+  // no backend endpoint for it), and changes what happens after checkout.
+  final bool isChangingPlan;
 
   @override
   ConsumerState<TierSelectionScreen> createState() =>
@@ -17,6 +23,10 @@ class TierSelectionScreen extends ConsumerStatefulWidget {
 class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
   SubscriptionTier? _selected;
   bool _continuing = false;
+
+  List<SubscriptionTier> get _availableTiers => widget.isChangingPlan
+      ? SubscriptionTier.values.where((tier) => tier.isPaid).toList()
+      : SubscriptionTier.values;
 
   Future<void> _continue() async {
     final tier = _selected;
@@ -37,14 +47,25 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
     }
 
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => WavePaymentCheckoutScreen(tier: tier)),
+      MaterialPageRoute(
+        builder: (_) => WavePaymentCheckoutScreen(
+          tier: tier,
+          isChangingPlan: widget.isChangingPlan,
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Choisissez votre formule')),
+      appBar: AppBar(
+        title: Text(
+          widget.isChangingPlan
+              ? 'Changer de forfait'
+              : 'Choisissez votre formule',
+        ),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -57,7 +78,9 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Vous pourrez changer de formule à tout moment.',
+                widget.isChangingPlan
+                    ? 'Le nouveau forfait remplacera le vôtre après le paiement.'
+                    : 'Vous pourrez changer de formule à tout moment.',
                 style: TextStyle(
                   fontSize: 14,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -66,11 +89,11 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
               const SizedBox(height: 24),
               Expanded(
                 child: ListView.separated(
-                  itemCount: SubscriptionTier.values.length,
+                  itemCount: _availableTiers.length,
                   separatorBuilder: (context, index) =>
                       const SizedBox(height: 12),
                   itemBuilder: (context, index) {
-                    final tier = SubscriptionTier.values[index];
+                    final tier = _availableTiers[index];
                     return _TierOption(
                       tier: tier,
                       selected: _selected == tier,
