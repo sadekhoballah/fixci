@@ -172,11 +172,14 @@ class OnboardingController extends Notifier<OnboardingState> {
   Future<bool> submitRegistration() async {
     state = state.copyWith(isSubmitting: true, clearSubmissionError: true);
     try {
-      await ref.read(onboardingRepositoryProvider).registerUser(state);
+      final isAdmin = await ref
+          .read(onboardingRepositoryProvider)
+          .registerUser(state);
       state = state.copyWith(isSubmitting: false, registrationSucceeded: true);
       final storage = ref.read(sessionStorageProvider);
       await storage.saveRole(state.role!);
       await storage.savePhone(state.phone.trim());
+      await storage.saveIsAdmin(isAdmin);
       devBypassPhone = state.phone.trim();
       return true;
     } on ApiException catch (e) {
