@@ -13,6 +13,7 @@ class CraftsmanHeader extends StatelessWidget {
     required this.isToggling,
     required this.tier,
     required this.averageRating,
+    required this.idVerified,
     required this.onToggleAvailability,
   });
 
@@ -21,6 +22,7 @@ class CraftsmanHeader extends StatelessWidget {
   final bool isToggling;
   final SubscriptionTier tier;
   final double? averageRating;
+  final bool idVerified;
   final ValueChanged<bool> onToggleAvailability;
 
   String get _initials {
@@ -105,6 +107,7 @@ class CraftsmanHeader extends StatelessWidget {
                       ),
                     ),
                   ),
+                  _VerifiedPill(idVerified: idVerified),
                 ],
               ),
             ],
@@ -166,6 +169,39 @@ class _AvailabilityPill extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _VerifiedPill extends StatelessWidget {
+  const _VerifiedPill({required this.idVerified});
+
+  final bool idVerified;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = idVerified ? const Color(0xFF1B8A3B) : const Color(0xFFC62828);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            idVerified ? Icons.verified_rounded : Icons.error_outline_rounded,
+            size: 12,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            idVerified ? 'Vérifié' : 'Non vérifié',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color),
+          ),
+        ],
       ),
     );
   }

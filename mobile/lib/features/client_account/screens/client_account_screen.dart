@@ -124,10 +124,13 @@ class _ClientAccountScreenState extends ConsumerState<ClientAccountScreen> {
                         _InfoRow(
                           icon: me.idVerified
                               ? Icons.verified_rounded
-                              : Icons.pending_rounded,
+                              : Icons.error_outline_rounded,
                           label: me.idVerified
                               ? 'Identité vérifiée'
                               : 'Identité non vérifiée',
+                          color: me.idVerified
+                              ? const Color(0xFF1B8A3B)
+                              : const Color(0xFFC62828),
                         ),
                       ],
                     ),
@@ -140,22 +143,28 @@ class _ClientAccountScreenState extends ConsumerState<ClientAccountScreen> {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.icon, required this.label});
+  const _InfoRow({required this.icon, required this.label, this.color});
 
   final IconData icon;
   final String label;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final resolvedColor = color ?? colorScheme.primary;
     return Row(
       children: [
-        Icon(icon, color: colorScheme.primary, size: 20),
+        Icon(icon, color: resolvedColor, size: 20),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
           ),
         ),
       ],

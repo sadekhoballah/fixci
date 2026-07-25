@@ -63,6 +63,7 @@ class _ArtisanHomeScreenState extends ConsumerState<ArtisanHomeScreen>
                       isToggling: state.isTogglingAvailability,
                       tier: state.tier,
                       averageRating: state.averageRating,
+                      idVerified: state.idVerified,
                       onToggleAvailability: controller.toggleAvailability,
                     ),
                     if (state.errorMessage != null) ...[

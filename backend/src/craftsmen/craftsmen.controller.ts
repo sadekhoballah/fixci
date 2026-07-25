@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Patch, Query, UseGuards } from '@nestjs/common';
 import { CraftsmenService } from './craftsmen.service';
 import { SetAvailabilityDto } from './dto/set-availability.dto';
+import { ResubmitIdCardDto } from './dto/resubmit-id-card.dto';
 import { GetJobHistoryQueryDto } from './dto/get-job-history-query.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -24,6 +25,15 @@ export class CraftsmenController {
     @Body() dto: SetAvailabilityDto,
   ) {
     return this.craftsmenService.setAvailability(user.id, dto);
+  }
+
+  @Patch('me/id-card')
+  async resubmitIdCard(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ResubmitIdCardDto,
+  ) {
+    await this.craftsmenService.resubmitIdCard(user.id, dto.idCardStorageKey);
+    return { idCardStorageKey: dto.idCardStorageKey };
   }
 
   @Get('me/stats')

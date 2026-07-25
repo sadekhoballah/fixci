@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/media/id_card_picker.dart';
 import '../../core/models/service_category.dart';
 import '../../core/models/subscription_tier.dart';
 import '../../core/network/api_client.dart';
@@ -14,6 +15,8 @@ class CraftsmanMe {
     required this.averageRating,
     required this.ratingsCount,
     required this.serviceCategory,
+    required this.idVerified,
+    required this.isActive,
   });
 
   final String? fullName;
@@ -23,6 +26,8 @@ class CraftsmanMe {
   final double? averageRating;
   final int ratingsCount;
   final ServiceCategory serviceCategory;
+  final bool idVerified;
+  final bool isActive;
 }
 
 class CraftsmanHomeRepository {
@@ -40,8 +45,30 @@ class CraftsmanHomeRepository {
       averageRating: (response['averageRating'] as num?)?.toDouble(),
       ratingsCount: response['ratingsCount'] as int,
       serviceCategory: _parseCategory(response['serviceCategory'] as String),
+      idVerified: response['idVerified'] as bool,
+      isActive: response['isActive'] as bool,
     );
   }
+
+  // Same two-step shape as OnboardingRepository.uploadIdCard +
+  // registerUser's idCardStorageKey: get a storage key from the (already
+  // rate-limited/validated) public upload endpoint, then attach it — here,
+  // to an existing profile instead of a not-yet-created one.
+  Future<String> uploadIdCard(PickedImage image) async {
+    final response = await _apiClient.postMultipart(
+      '/uploads/id-card',
+      'file',
+      image.bytes,
+      image.filename,
+      contentTypeHeader: image.mimeType,
+    );
+    return response['storageKey'] as String;
+  }
+
+  Future<void> resubmitIdCard(String storageKey) =>
+      _apiClient.patch('/craftsmen/me/id-card', {
+        'idCardStorageKey': storageKey,
+      });
 
   Future<bool> setAvailability(
     bool available, {

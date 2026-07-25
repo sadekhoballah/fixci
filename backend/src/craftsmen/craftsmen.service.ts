@@ -23,6 +23,10 @@ export interface CraftsmanMe {
   averageRating: number | null;
   ratingsCount: number;
   serviceCategory: string;
+  idVerified: boolean;
+  // False only ever means "an admin rejected this account" (see
+  // AdminService.deactivateCraftsman) — every account starts true.
+  isActive: boolean;
 }
 
 export interface CraftsmanStats {
@@ -105,6 +109,8 @@ export class CraftsmenService {
         profile.averageRating === null ? null : Number(profile.averageRating),
       ratingsCount: profile.ratingsCount,
       serviceCategory: profile.serviceCategory,
+      idVerified: profile.idVerified,
+      isActive: profile.isActive,
     };
   }
 
@@ -134,6 +140,23 @@ export class CraftsmenService {
     );
 
     return { isAvailable: dto.available };
+  }
+
+  // Lets a craftsman attach a fresh ID-card photo after a rejection (or any
+  // time before they've been verified) — reuses the existing unauthenticated
+  // /uploads/id-card endpoint to get a storageKey, then this attaches it to
+  // their own profile. Un-deactivates them (isActive: true) so they drop
+  // back into AdminService.getPendingVerifications' queue for another look;
+  // idVerified stays false either way, for the admin to decide again.
+  async resubmitIdCard(
+    userId: string,
+    idCardStorageKey: string,
+  ): Promise<void> {
+    await this.findCraftsmanByUserId(userId);
+    await this.craftsmanProfileRepository.update(
+      { userId },
+      { idCardStorageKey, isActive: true },
+    );
   }
 
   async getStats(userId: string): Promise<CraftsmanStats> {

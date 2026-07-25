@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../core/location/location_service.dart' as location_service;
+import '../../core/media/id_card_picker.dart';
+import '../../core/media/image_validation.dart';
 import '../../core/network/api_client.dart';
 import 'craftsman_home_repository.dart';
 import 'craftsman_home_state.dart';
@@ -48,6 +50,8 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
         ratingsCount: me.ratingsCount,
         stats: stats,
         serviceCategory: me.serviceCategory,
+        idVerified: me.idVerified,
+        isActive: me.isActive,
       );
       // Being reachable for new jobs shouldn't require a separate manual
       // step on top of granting location — attempt to go online from GPS
@@ -169,6 +173,7 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
   // The toggle above remains as an explicit opt-out for someone who wants
   // to stay logged in without being matched.
   Future<void> _goOnlineFromGps() async {
+    if (!state.isActive) return;
     final position = await _getCurrentPosition();
     if (position == null) {
       if (!state.isAvailable) {
@@ -250,6 +255,53 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
   }
 
   Future<Position?> _getCurrentPosition() => location_service.getCurrentPosition();
+
+  // Lets a rejected (isActive: false) craftsman attach a fresh ID photo
+  // without going through a whole new registration — mirrors
+  // OnboardingController's pick→validate→upload sequence for the id-card
+  // step, just pointed at the craftsman's own already-created profile.
+  Future<void> resubmitIdCardFromGallery() =>
+      _resubmitIdCard(ref.read(idCardPickerProvider).pickFromGallery);
+
+  Future<void> resubmitIdCardFromCamera() =>
+      _resubmitIdCard(ref.read(idCardPickerProvider).pickFromCamera);
+
+  Future<void> _resubmitIdCard(Future<PickedImage?> Function() pick) async {
+    state = state.copyWith(clearError: true);
+    final PickedImage? image;
+    try {
+      image = await pick();
+    } on IdCardPickerException catch (e) {
+      state = state.copyWith(errorMessage: e.message);
+      return;
+    } catch (_) {
+      state = state.copyWith(errorMessage: "Impossible de sélectionner l'image.");
+      return;
+    }
+    if (image == null) return; // user cancelled the picker
+
+    try {
+      await validateIdCardImage(image.bytes);
+    } on ImageValidationException catch (e) {
+      state = state.copyWith(errorMessage: e.message);
+      return;
+    }
+
+    state = state.copyWith(isResubmittingIdCard: true, clearError: true);
+    try {
+      final repository = ref.read(craftsmanHomeRepositoryProvider);
+      final storageKey = await repository.uploadIdCard(image);
+      await repository.resubmitIdCard(storageKey);
+      state = state.copyWith(isResubmittingIdCard: false, isActive: true);
+    } on ApiException catch (e) {
+      state = state.copyWith(isResubmittingIdCard: false, errorMessage: e.message);
+    } catch (_) {
+      state = state.copyWith(
+        isResubmittingIdCard: false,
+        errorMessage: "Échec de l'envoi de la pièce d'identité.",
+      );
+    }
+  }
 }
 
 final craftsmanHomeControllerProvider =

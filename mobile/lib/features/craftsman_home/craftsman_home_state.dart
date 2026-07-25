@@ -29,6 +29,9 @@ class CraftsmanHomeState {
     this.serviceCategory,
     this.locationServiceEnabled = false,
     this.locationPermission = LocationPermission.denied,
+    this.idVerified = false,
+    this.isActive = true,
+    this.isResubmittingIdCard = false,
   });
 
   final bool isLoading;
@@ -44,6 +47,10 @@ class CraftsmanHomeState {
   final ServiceCategory? serviceCategory;
   final bool locationServiceEnabled;
   final LocationPermission locationPermission;
+  final bool idVerified;
+  // False only ever means an admin rejected this account.
+  final bool isActive;
+  final bool isResubmittingIdCard;
 
   bool get hasLocationAccess =>
       locationServiceEnabled &&
@@ -65,6 +72,9 @@ class CraftsmanHomeState {
     ServiceCategory? serviceCategory,
     bool? locationServiceEnabled,
     LocationPermission? locationPermission,
+    bool? idVerified,
+    bool? isActive,
+    bool? isResubmittingIdCard,
   }) {
     return CraftsmanHomeState(
       isLoading: isLoading ?? this.isLoading,
@@ -82,6 +92,10 @@ class CraftsmanHomeState {
       locationServiceEnabled:
           locationServiceEnabled ?? this.locationServiceEnabled,
       locationPermission: locationPermission ?? this.locationPermission,
+      idVerified: idVerified ?? this.idVerified,
+      isActive: isActive ?? this.isActive,
+      isResubmittingIdCard:
+          isResubmittingIdCard ?? this.isResubmittingIdCard,
     );
   }
 }
