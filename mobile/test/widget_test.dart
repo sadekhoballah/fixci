@@ -60,6 +60,17 @@ class _FakeApiClient extends ApiClient {
   final bool failUpload;
   int multipartCallCount = 0;
 
+  // completeAfterVerification() checks for an existing account before
+  // registering — 404 here means "no account yet", the expected case for a
+  // fresh registration test.
+  @override
+  Future<Map<String, dynamic>> get(String path) async {
+    if (path == '/users/lookup') {
+      throw ApiException('No account with this phone number', statusCode: 404);
+    }
+    throw UnimplementedError('Unexpected path in fake client: $path');
+  }
+
   @override
   Future<Map<String, dynamic>> post(
     String path,
@@ -124,6 +135,7 @@ class _FakeSessionStorage implements SessionStorage {
   UserRole? _role;
   SubscriptionTier? _tier;
   String? _phone;
+  bool _isAdmin = false;
 
   @override
   Future<void> saveRole(UserRole role) async => _role = role;
@@ -144,10 +156,17 @@ class _FakeSessionStorage implements SessionStorage {
   Future<String?> loadPhone() async => _phone;
 
   @override
+  Future<void> saveIsAdmin(bool isAdmin) async => _isAdmin = isAdmin;
+
+  @override
+  Future<bool> loadIsAdmin() async => _isAdmin;
+
+  @override
   Future<void> clearSession() async {
     _role = null;
     _tier = null;
     _phone = null;
+    _isAdmin = false;
   }
 }
 
@@ -250,11 +269,10 @@ void main() {
       expect(find.text('Votre profil artisan'), findsOneWidget);
 
       await fillIdentity(tester, phone: '+2250700000000');
-      await tester.enterText(
-        find.widgetWithText(TextField, 'Expérience'),
-        "5 ans d'expérience en plomberie",
-      );
-      await tester.pump();
+      await tester.tap(find.text('Expérience'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('1-2 ans').last);
+      await tester.pumpAndSettle();
       await attachIdCard(tester);
 
       final disabledButton = tester.widget<ElevatedButton>(
@@ -292,10 +310,10 @@ void main() {
       await tester.pumpAndSettle();
 
       await fillIdentity(tester, phone: '+2250700000001');
-      await tester.enterText(
-        find.widgetWithText(TextField, 'Expérience'),
-        "5 ans d'expérience en électricité",
-      );
+      await tester.tap(find.text('Expérience'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('1-2 ans').last);
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Catégorie de service'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Électricien').last);

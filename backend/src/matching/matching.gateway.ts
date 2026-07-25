@@ -127,13 +127,16 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
   ) {
     const user = this.requireUser(client);
     if (user.role !== UserRole.CRAFTSMAN) return;
-    void client.join(craftsmanRoom(user.id));
-    await this.presenceService.setOnline(
+    const wentOnline = await this.presenceService.setOnline(
       user.id,
       body.serviceCategory,
       body.longitude,
       body.latitude,
     );
+    // Deactivated by an admin — never join the room or enter presence, so
+    // this craftsman can't be matched to anything.
+    if (!wentOnline) return;
+    void client.join(craftsmanRoom(user.id));
 
     const pending = await this.matchingService.findPendingNear(
       body.serviceCategory,

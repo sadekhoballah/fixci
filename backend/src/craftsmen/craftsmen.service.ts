@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { User } from '../database/entities/user.entity';
@@ -111,12 +115,15 @@ export class CraftsmenService {
     const { profile } = await this.findCraftsmanByUserId(userId);
 
     if (dto.available) {
-      await this.presenceService.setOnline(
+      const wentOnline = await this.presenceService.setOnline(
         profile.userId,
         profile.serviceCategory,
         dto.longitude!,
         dto.latitude!,
       );
+      if (!wentOnline) {
+        throw new ForbiddenException('Ce compte a été désactivé.');
+      }
     } else {
       await this.presenceService.setOffline(profile.userId);
     }

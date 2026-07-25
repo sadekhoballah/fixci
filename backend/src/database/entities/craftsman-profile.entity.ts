@@ -84,6 +84,13 @@ export class CraftsmanProfile {
   @Column({ name: 'is_available', type: 'boolean', default: false })
   isAvailable: boolean;
 
+  // Admin kill switch (see AdminService.deactivateCraftsman) — distinct from
+  // isAvailable, which the craftsman toggles themselves. A deactivated
+  // craftsman can never go online again (PresenceService.setOnline refuses),
+  // regardless of what they do with the availability toggle client-side.
+  @Column({ name: 'is_active', type: 'boolean', default: true })
+  isActive: boolean;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

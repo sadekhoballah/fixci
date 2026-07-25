@@ -61,6 +61,17 @@ class _FakePhoneVerificationService implements PhoneVerificationService {
 }
 
 class _FakeApiClient extends ApiClient {
+  // completeAfterVerification() checks for an existing account before
+  // registering — 404 here means "no account yet", the expected case for a
+  // fresh registration test.
+  @override
+  Future<Map<String, dynamic>> get(String path) async {
+    if (path == '/users/lookup') {
+      throw ApiException('No account with this phone number', statusCode: 404);
+    }
+    throw UnimplementedError('Unexpected path in fake client: $path');
+  }
+
   @override
   Future<Map<String, dynamic>> post(
     String path,
@@ -111,6 +122,7 @@ class _FakeSessionStorage implements SessionStorage {
   UserRole? _role;
   SubscriptionTier? _tier;
   String? _phone;
+  bool _isAdmin = false;
 
   @override
   Future<void> saveRole(UserRole role) async => _role = role;
@@ -131,10 +143,17 @@ class _FakeSessionStorage implements SessionStorage {
   Future<String?> loadPhone() async => _phone;
 
   @override
+  Future<void> saveIsAdmin(bool isAdmin) async => _isAdmin = isAdmin;
+
+  @override
+  Future<bool> loadIsAdmin() async => _isAdmin;
+
+  @override
   Future<void> clearSession() async {
     _role = null;
     _tier = null;
     _phone = null;
+    _isAdmin = false;
   }
 }
 

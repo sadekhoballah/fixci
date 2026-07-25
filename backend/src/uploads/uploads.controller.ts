@@ -27,7 +27,9 @@ import {
   MAX_ID_CARD_ASPECT_RATIO,
   MAX_ID_CARD_SIZE_BYTES,
   MIN_ID_CARD_DIMENSION,
+  MIN_ID_DOCUMENT_TEXT_CHARACTERS,
 } from './uploads.constants';
+import { extractDocumentText } from './id-document-ocr';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth-request';
@@ -82,7 +84,7 @@ export class UploadsController {
       },
     }),
   )
-  uploadIdCard(@UploadedFile() file?: Express.Multer.File) {
+  async uploadIdCard(@UploadedFile() file?: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -113,6 +115,19 @@ export class UploadsController {
       if (longer / shorter > MAX_ID_CARD_ASPECT_RATIO) {
         throw new BadRequestException(
           "Image proportions don't look like an ID card",
+        );
+      }
+
+      // None of the checks above look at the image's *content* — a plausibly
+      // sized/shaped photo of a car or a blank wall would still pass them.
+      // A real CNI/passport is dense with printed text; a quick OCR pass is
+      // enough to reject the obvious non-documents client-side validation
+      // can't catch. This is a coarse filter, not identity verification —
+      // idVerified stays false either way, for a human to review.
+      const text = await extractDocumentText(file.path);
+      if (text.length < MIN_ID_DOCUMENT_TEXT_CHARACTERS) {
+        throw new BadRequestException(
+          'Le fichier téléchargé ne ressemble pas à un document officiel (CNI/Passeport). Veuillez réessayer avec une photo claire.',
         );
       }
     } catch (error) {

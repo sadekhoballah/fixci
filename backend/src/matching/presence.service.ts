@@ -1,7 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../redis/redis.constants';
 import { ServiceCategory } from '../database/enums/service-category.enum';
+import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 
 export interface NearbyCraftsman {
   craftsmanId: string;
@@ -13,7 +16,11 @@ export interface NearbyCraftsman {
 // nearest-candidate lookups without touching the DB on the matching hot path.
 @Injectable()
 export class PresenceService {
-  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
+  constructor(
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    @InjectRepository(CraftsmanProfile)
+    private readonly craftsmanProfileRepository: Repository<CraftsmanProfile>,
+  ) {}
 
   private geoKey(category: ServiceCategory): string {
     return `presence:geo:${category}`;
@@ -23,12 +30,25 @@ export class PresenceService {
     return `presence:category:${craftsmanId}`;
   }
 
+  // The single choke point both go-online paths (REST PATCH
+  // /craftsmen/me/availability and the socket craftsman:online event) go
+  // through — an admin-deactivated craftsman (craftsman_profiles.is_active)
+  // can never re-enter the Redis presence index, so they stop being
+  // findable as a matching candidate immediately, without touching the
+  // matching algorithm itself. Returns false instead of throwing so callers
+  // in different contexts (HTTP vs. socket) can each decide how to surface
+  // that.
   async setOnline(
     craftsmanId: string,
     category: ServiceCategory,
     longitude: number,
     latitude: number,
-  ): Promise<void> {
+  ): Promise<boolean> {
+    const profile = await this.craftsmanProfileRepository.findOne({
+      where: { userId: craftsmanId },
+    });
+    if (!profile?.isActive) return false;
+
     await Promise.all([
       this.redis.geoadd(
         this.geoKey(category),
@@ -38,6 +58,7 @@ export class PresenceService {
       ),
       this.redis.set(this.categoryKey(craftsmanId), category),
     ]);
+    return true;
   }
 
   async updateLocation(

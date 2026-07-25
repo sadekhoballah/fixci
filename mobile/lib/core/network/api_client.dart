@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -48,6 +49,32 @@ class ApiClient {
       );
     }
     return _handleResponse(response);
+  }
+
+  // Raw bytes rather than JSON — used for fetching a stored image (e.g. the
+  // admin ID-card review endpoint) where the response body is the file
+  // itself, not a JSON envelope.
+  Future<Uint8List> getBytes(String path) async {
+    final http.Response response;
+    try {
+      response = await _client
+          .get(
+            Uri.parse('${ApiConfig.baseUrl}$path'),
+            headers: await _authHeaders(),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      throw ApiException(
+        'Impossible de contacter le serveur. Vérifiez votre connexion.',
+      );
+    }
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return response.bodyBytes;
+    }
+    throw ApiException(
+      'Une erreur est survenue (${response.statusCode}).',
+      statusCode: response.statusCode,
+    );
   }
 
   Future<Map<String, dynamic>> post(

@@ -142,6 +142,7 @@ class OnboardingController extends Notifier<OnboardingState> {
         final storage = ref.read(sessionStorageProvider);
         await storage.saveRole(existing.role);
         await storage.savePhone(state.phone.trim());
+        await storage.saveIsAdmin(existing.isAdmin);
         if (existing.subscriptionTier != null) {
           await storage.saveTier(existing.subscriptionTier!);
         }
