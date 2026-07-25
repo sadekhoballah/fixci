@@ -21,16 +21,16 @@ class RegistrationScreen extends ConsumerStatefulWidget {
       _RegistrationScreenState();
 }
 
+const _experienceOptions = ['1-2 ans', '2-4 ans', 'Plus de 5 ans'];
+
 class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
-  final _experienceController = TextEditingController();
 
   @override
   void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();
-    _experienceController.dispose();
     super.dispose();
   }
 
@@ -134,14 +134,17 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: _experienceController,
-                  onChanged: controller.setExperienceDetails,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Expérience',
-                    hintText: "Ex : 5 ans d'expérience en plomberie",
-                  ),
+                DropdownButtonFormField<String>(
+                  initialValue: state.experienceDetails.isEmpty
+                      ? null
+                      : state.experienceDetails,
+                  decoration: const InputDecoration(labelText: 'Expérience'),
+                  items: _experienceOptions
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) controller.setExperienceDetails(value);
+                  },
                 ),
               ],
               const SizedBox(height: 16),
