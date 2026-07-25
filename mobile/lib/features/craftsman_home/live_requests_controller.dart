@@ -21,6 +21,7 @@ class LiveRequestsController extends Notifier<LiveRequestsState> {
   StreamSubscription<IncomingRequestEvent>? _newSub;
   StreamSubscription<RequestAssignedEvent>? _assignedSub;
   StreamSubscription<RequestOutcomeEvent>? _unavailableSub;
+  StreamSubscription<RequestOutcomeEvent>? _completedSub;
   StreamSubscription<SocketConnectionStatus>? _statusSub;
   Timer? _countdownTicker;
   bool _shouldBeListening = false;
@@ -32,6 +33,11 @@ class LiveRequestsController extends Notifier<LiveRequestsState> {
     _newSub = socket.onRequestNew.listen(_onRequestNew);
     _assignedSub = socket.onRequestAssigned.listen(_onRequestAssigned);
     _unavailableSub = socket.onRequestUnavailable.listen(_onRequestUnavailable);
+    // The client confirmed completion of the job we marked done — refresh so
+    // the active-job card clears instead of sitting on "En attente...".
+    _completedSub = socket.onRequestCompleted.listen((_) {
+      unawaited(loadActiveJob());
+    });
     _statusSub = socket.connectionStatus.listen((status) {
       state = state.copyWith(connectionStatus: status);
     });
@@ -43,6 +49,7 @@ class LiveRequestsController extends Notifier<LiveRequestsState> {
       _newSub?.cancel();
       _assignedSub?.cancel();
       _unavailableSub?.cancel();
+      _completedSub?.cancel();
       _statusSub?.cancel();
       _countdownTicker?.cancel();
     });

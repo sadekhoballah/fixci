@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/service_category.dart';
 import '../service_request_controller.dart';
 import '../service_request_state.dart';
+import '../widgets/star_rating_input.dart';
 
 class SearchingScreen extends ConsumerWidget {
   const SearchingScreen({super.key, required this.category});
@@ -18,6 +19,10 @@ class SearchingScreen extends ConsumerWidget {
           previous?.status != ServiceRequestStatus.cancelled) {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
+      if (next.status == ServiceRequestStatus.rated &&
+          previous?.status != ServiceRequestStatus.rated) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     });
     final state = ref.watch(serviceRequestControllerProvider);
     final notifier = ref.read(serviceRequestControllerProvider.notifier);
@@ -28,10 +33,20 @@ class SearchingScreen extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: switch (state.status) {
-            ServiceRequestStatus.assigned => _AssignedCard(
+            ServiceRequestStatus.assigned ||
+            ServiceRequestStatus.inProgress ||
+            ServiceRequestStatus.awaitingClientConfirmation => _AssignedCard(
               category: category,
               state: state,
               onCancel: notifier.cancel,
+              onConfirmCompletion: notifier.confirmCompletion,
+            ),
+            ServiceRequestStatus.completed => _RatingCard(
+              craftsmanName: state.craftsmanFullName ?? category.label,
+              isSubmitting: state.isSubmittingRating,
+              onSubmit: (stars, comment) =>
+                  notifier.submitRating(stars: stars, comment: comment),
+              onSkip: notifier.skipRating,
             ),
             ServiceRequestStatus.noCraftsmanAvailable => _Outcome(
               icon: Icons.search_off_rounded,
@@ -201,11 +216,13 @@ class _AssignedCard extends StatelessWidget {
     required this.category,
     required this.state,
     required this.onCancel,
+    required this.onConfirmCompletion,
   });
 
   final ServiceCategory category;
   final ServiceRequestState state;
   final Future<void> Function() onCancel;
+  final Future<void> Function() onConfirmCompletion;
 
   Future<void> _call() async {
     final phone = state.craftsmanPhone;
@@ -258,6 +275,9 @@ class _AssignedCard extends StatelessWidget {
     final hasLocation =
         state.craftsmanLatitude != null && state.craftsmanLongitude != null;
     final hasPhone = state.craftsmanPhone != null;
+    final inProgress = state.status == ServiceRequestStatus.inProgress;
+    final awaitingConfirmation =
+        state.status == ServiceRequestStatus.awaitingClientConfirmation;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -269,7 +289,13 @@ class _AssignedCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.check_circle_rounded, color: Colors.green, size: 56),
+          Icon(
+            awaitingConfirmation
+                ? Icons.task_alt_rounded
+                : Icons.check_circle_rounded,
+            color: Colors.green,
+            size: 56,
+          ),
           const SizedBox(height: 16),
           Text(
             '${state.craftsmanFullName ?? category.label} a accepté votre demande',
@@ -277,21 +303,28 @@ class _AssignedCard extends StatelessWidget {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Il est en route vers vous.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: Colors.black54),
-          ),
-          const SizedBox(height: 8),
           Text(
-            _distanceLabel(state),
+            switch (state.status) {
+              ServiceRequestStatus.inProgress => 'La mission est en cours.',
+              ServiceRequestStatus.awaitingClientConfirmation =>
+                'Le professionnel indique avoir terminé.',
+              _ => 'Il est en route vers vous.',
+            },
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
-            ),
+            style: const TextStyle(fontSize: 14, color: Colors.black54),
           ),
+          if (!inProgress && !awaitingConfirmation) ...[
+            const SizedBox(height: 8),
+            Text(
+              _distanceLabel(state),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
           Row(
             children: [
@@ -312,31 +345,159 @@ class _AssignedCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: hasLocation ? _openMap : null,
-              icon: const Icon(Icons.map_rounded, size: 18),
-              label: const Text('Voir sur la carte'),
+          if (!awaitingConfirmation) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: hasLocation ? _openMap : null,
+                icon: const Icon(Icons.map_rounded, size: 18),
+                label: const Text('Voir sur la carte'),
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 14),
-          TextButton(
-            onPressed: state.isCancelling
-                ? null
-                : () => _confirmCancelJob(context),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: state.isCancelling
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Annuler'),
-          ),
+          if (awaitingConfirmation)
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: FilledButton.icon(
+                onPressed: state.isConfirming
+                    ? null
+                    : () => onConfirmCompletion(),
+                icon: state.isConfirming
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.check_rounded),
+                label: const Text('Confirmer la fin de la mission'),
+              ),
+            )
+          else
+            TextButton(
+              onPressed: state.isCancelling
+                  ? null
+                  : () => _confirmCancelJob(context),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: state.isCancelling
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Annuler'),
+            ),
         ],
       ),
+    );
+  }
+}
+
+class _RatingCard extends StatefulWidget {
+  const _RatingCard({
+    required this.craftsmanName,
+    required this.isSubmitting,
+    required this.onSubmit,
+    required this.onSkip,
+  });
+
+  final String craftsmanName;
+  final bool isSubmitting;
+  final Future<void> Function(int stars, String? comment) onSubmit;
+  final VoidCallback onSkip;
+
+  @override
+  State<_RatingCard> createState() => _RatingCardState();
+}
+
+class _RatingCardState extends State<_RatingCard> {
+  int _stars = 5;
+  final _commentController = TextEditingController();
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.emoji_events_rounded, color: Colors.amber, size: 56),
+        const SizedBox(height: 16),
+        Text(
+          'Mission terminée !',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Comment évaluez-vous ${widget.craftsmanName} ?',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
+        ),
+        const SizedBox(height: 16),
+        StarRatingInput(
+          value: _stars,
+          onChanged: (value) => setState(() => _stars = value),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _commentController,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: 'Un commentaire (facultatif)',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: widget.isSubmitting
+                ? null
+                : () => widget.onSubmit(
+                    _stars,
+                    _commentController.text.trim().isEmpty
+                        ? null
+                        : _commentController.text.trim(),
+                  ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            child: widget.isSubmitting
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(
+                    'Envoyer',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: widget.isSubmitting ? null : widget.onSkip,
+          child: const Text('Passer'),
+        ),
+      ],
     );
   }
 }

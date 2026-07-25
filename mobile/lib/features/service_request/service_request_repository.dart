@@ -22,6 +22,20 @@ class ServiceRequestRepository {
 
   Future<void> cancelRequest(String requestId) =>
       _apiClient.patch('/matching/requests/$requestId/cancel', const {});
+
+  Future<void> confirmCompletion(String requestId) => _apiClient.patch(
+    '/matching/requests/$requestId/confirm-complete',
+    const {},
+  );
+
+  Future<void> submitRating(
+    String requestId, {
+    required int stars,
+    String? comment,
+  }) => _apiClient.post('/matching/requests/$requestId/rating', {
+    'stars': stars,
+    if (comment != null && comment.isNotEmpty) 'comment': comment,
+  });
 }
 
 final serviceRequestRepositoryProvider = Provider<ServiceRequestRepository>(

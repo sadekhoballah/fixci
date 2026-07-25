@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../core/location/location_service.dart' as location_service;
 import '../../core/network/api_client.dart';
 import 'craftsman_home_repository.dart';
 import 'craftsman_home_state.dart';
@@ -248,22 +249,7 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
     ref.read(liveRequestsControllerProvider.notifier).stopListening();
   }
 
-  Future<Position?> _getCurrentPosition() async {
-    if (!await Geolocator.isLocationServiceEnabled()) return null;
-
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      return null;
-    }
-
-    return Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-    );
-  }
+  Future<Position?> _getCurrentPosition() => location_service.getCurrentPosition();
 }
 
 final craftsmanHomeControllerProvider =

@@ -1,14 +1,11 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddHousekeepingAndHomeTutoringCategories1784800000000 implements MigrationInterface {
-  name = 'AddHousekeepingAndHomeTutoringCategories1784800000000';
+export class AddAwaitingClientConfirmationStatus1784900000000 implements MigrationInterface {
+  name = 'AddAwaitingClientConfirmationStatus1784900000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TYPE "service_category_enum" ADD VALUE 'housekeeping'`,
-    );
-    await queryRunner.query(
-      `ALTER TYPE "service_category_enum" ADD VALUE 'home_tutoring'`,
+      `ALTER TYPE "service_request_status_enum" ADD VALUE 'awaiting_client_confirmation'`,
     );
   }
 

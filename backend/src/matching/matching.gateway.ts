@@ -145,9 +145,7 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
         requestId: request.id,
         serviceCategory: body.serviceCategory,
         distanceMeters: Math.round(request.distanceMeters),
-        estimatedArrivalMinutes: estimateArrivalMinutes(
-          request.distanceMeters,
-        ),
+        estimatedArrivalMinutes: estimateArrivalMinutes(request.distanceMeters),
       });
     }
   }
@@ -222,7 +220,11 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
   // yet — this exists so the wiring is already in place once that app does.
   notifyClient(
     clientId: string,
-    event: 'request:started' | 'request:completed' | 'request:cancelled',
+    event:
+      | 'request:started'
+      | 'request:awaiting_confirmation'
+      | 'request:completed'
+      | 'request:cancelled',
     payload: { requestId: string },
   ): void {
     this.server.to(clientRoom(clientId)).emit(event, payload);
@@ -234,13 +236,14 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     this.activeAssignments.delete(craftsmanId);
   }
 
-  // The craftsman-facing counterpart to notifyClient — used when the
-  // *client* cancels a job the craftsman had already been assigned to, so
+  // The craftsman-facing counterpart to notifyClient — used both when the
+  // *client* cancels a job the craftsman had already been assigned to (so
   // the craftsman's app can drop it instead of sitting on a job that's
-  // quietly dead server-side.
+  // quietly dead server-side), and when the client confirms completion of a
+  // job the craftsman already marked done.
   notifyCraftsman(
     craftsmanId: string,
-    event: 'request:cancelled',
+    event: 'request:cancelled' | 'request:completed',
     payload: { requestId: string },
   ): void {
     this.server.to(craftsmanRoom(craftsmanId)).emit(event, payload);

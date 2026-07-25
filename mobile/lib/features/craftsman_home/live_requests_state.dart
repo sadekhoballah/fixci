@@ -1,7 +1,7 @@
 import '../../core/models/service_category.dart';
 import '../../core/realtime/matching_socket_service.dart';
 
-enum ActiveJobStatus { assigned, inProgress }
+enum ActiveJobStatus { assigned, inProgress, awaitingClientConfirmation }
 
 class ActiveJob {
   const ActiveJob({

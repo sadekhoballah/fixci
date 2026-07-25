@@ -71,9 +71,12 @@ class CraftsmanHomeRepository {
     return ActiveJob(
       requestId: response['requestId'] as String,
       serviceCategory: _parseCategory(response['serviceCategory'] as String),
-      status: response['status'] == 'in_progress'
-          ? ActiveJobStatus.inProgress
-          : ActiveJobStatus.assigned,
+      status: switch (response['status']) {
+        'in_progress' => ActiveJobStatus.inProgress,
+        'awaiting_client_confirmation' =>
+          ActiveJobStatus.awaitingClientConfirmation,
+        _ => ActiveJobStatus.assigned,
+      },
       clientFullName: response['clientFullName'] as String?,
       clientPhone: response['clientPhone'] as String,
       clientLatitude: (response['clientLatitude'] as num).toDouble(),

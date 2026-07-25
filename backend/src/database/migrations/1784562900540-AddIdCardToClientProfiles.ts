@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddIdCardToClientProfiles1784562900540
-  implements MigrationInterface
-{
+export class AddIdCardToClientProfiles1784562900540 implements MigrationInterface {
   name = 'AddIdCardToClientProfiles1784562900540';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

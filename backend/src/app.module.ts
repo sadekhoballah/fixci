@@ -13,6 +13,7 @@ import { UploadsModule } from './uploads/uploads.module';
 import { FirebaseAdminModule } from './firebase/firebase-admin.module';
 import { PaymentsModule } from './payments/payments.module';
 import { CraftsmenModule } from './craftsmen/craftsmen.module';
+import { ClientsModule } from './clients/clients.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
@@ -30,6 +31,7 @@ import { AuthModule } from './auth/auth.module';
     UploadsModule,
     PaymentsModule,
     CraftsmenModule,
+    ClientsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

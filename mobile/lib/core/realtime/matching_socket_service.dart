@@ -99,6 +99,12 @@ class MatchingSocketService {
       StreamController<RequestOutcomeEvent>.broadcast();
   final _craftsmanLocationController =
       StreamController<CraftsmanLocationEvent>.broadcast();
+  final _requestStartedController =
+      StreamController<RequestOutcomeEvent>.broadcast();
+  final _requestAwaitingConfirmationController =
+      StreamController<RequestOutcomeEvent>.broadcast();
+  final _requestCompletedController =
+      StreamController<RequestOutcomeEvent>.broadcast();
   final _connectionStatusController =
       StreamController<SocketConnectionStatus>.broadcast();
 
@@ -111,6 +117,16 @@ class MatchingSocketService {
       _noCraftsmanAvailableController.stream;
   Stream<CraftsmanLocationEvent> get onCraftsmanLocationUpdate =>
       _craftsmanLocationController.stream;
+  // Client-side: the craftsman has started (request:started) or marked the
+  // job done and is now awaiting the client's confirmation
+  // (request:awaiting_confirmation).
+  Stream<RequestOutcomeEvent> get onRequestStarted =>
+      _requestStartedController.stream;
+  Stream<RequestOutcomeEvent> get onRequestAwaitingConfirmation =>
+      _requestAwaitingConfirmationController.stream;
+  // Craftsman-side: the client just confirmed completion (request:completed).
+  Stream<RequestOutcomeEvent> get onRequestCompleted =>
+      _requestCompletedController.stream;
   Stream<SocketConnectionStatus> get connectionStatus =>
       _connectionStatusController.stream;
 
@@ -179,6 +195,21 @@ class MatchingSocketService {
         CraftsmanLocationEvent.fromJson(data as Map<String, dynamic>),
       );
     });
+    socket.on('request:started', (data) {
+      _requestStartedController.add(
+        RequestOutcomeEvent.fromJson(data as Map<String, dynamic>),
+      );
+    });
+    socket.on('request:awaiting_confirmation', (data) {
+      _requestAwaitingConfirmationController.add(
+        RequestOutcomeEvent.fromJson(data as Map<String, dynamic>),
+      );
+    });
+    socket.on('request:completed', (data) {
+      _requestCompletedController.add(
+        RequestOutcomeEvent.fromJson(data as Map<String, dynamic>),
+      );
+    });
 
     socket.connect();
   }
@@ -231,6 +262,9 @@ class MatchingSocketService {
     _requestUnavailableController.close();
     _noCraftsmanAvailableController.close();
     _craftsmanLocationController.close();
+    _requestStartedController.close();
+    _requestAwaitingConfirmationController.close();
+    _requestCompletedController.close();
     _connectionStatusController.close();
   }
 }

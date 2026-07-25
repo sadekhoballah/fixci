@@ -7,7 +7,7 @@ import '../../../core/auth/user_lookup_service.dart';
 import '../../../core/models/subscription_tier.dart';
 import '../../../core/models/user_role.dart';
 import '../../../core/platform/firebase_support.dart';
-import '../../client_home/screens/client_home_screen.dart';
+import '../../client_home/screens/client_shell_screen.dart';
 import '../../craftsman_home/screens/artisan_shell_screen.dart';
 import 'role_selection_screen.dart';
 import 'tier_selection_screen.dart';
@@ -47,7 +47,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (!mounted) return;
 
     final destination = switch (role) {
-      UserRole.client => const ClientHomeScreen(),
+      UserRole.client => const ClientShellScreen(),
       UserRole.craftsman => tier == null
           ? const TierSelectionScreen()
           : const ArtisanShellScreen(),

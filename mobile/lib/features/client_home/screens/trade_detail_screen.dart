@@ -5,13 +5,31 @@ import '../../service_request/service_request_controller.dart';
 import '../../service_request/service_request_state.dart';
 import '../../service_request/screens/searching_screen.dart';
 
-class TradeDetailScreen extends ConsumerWidget {
+class TradeDetailScreen extends ConsumerStatefulWidget {
   const TradeDetailScreen({super.key, required this.category});
 
   final ServiceCategory category;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TradeDetailScreen> createState() => _TradeDetailScreenState();
+}
+
+class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
+  ServiceCategory get category => widget.category;
+
+  @override
+  void initState() {
+    super.initState();
+    // Trigger the OS location prompt as soon as the client is looking at a
+    // trade, well before they tap "Demander maintenant" — see
+    // ServiceRequestController.prewarmLocation.
+    Future.microtask(
+      () => ref.read(serviceRequestControllerProvider.notifier).prewarmLocation(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     ref.listen(serviceRequestControllerProvider, (previous, next) {
       if (next.status == ServiceRequestStatus.searching &&
           previous?.status != ServiceRequestStatus.searching) {

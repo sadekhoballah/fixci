@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
+import '../../core/location/location_service.dart' as location_service;
 import '../../core/models/service_category.dart';
 import '../../core/network/api_client.dart';
 import '../../core/realtime/matching_socket_service.dart';
@@ -17,6 +17,8 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
   StreamSubscription<RequestAssignedEvent>? _assignedSub;
   StreamSubscription<RequestOutcomeEvent>? _noCraftsmanSub;
   StreamSubscription<CraftsmanLocationEvent>? _locationSub;
+  StreamSubscription<RequestOutcomeEvent>? _startedSub;
+  StreamSubscription<RequestOutcomeEvent>? _awaitingConfirmationSub;
   // Captured directly (rather than read via `ref` inside onDispose below) —
   // Riverpod forbids using `ref` from within a dispose callback.
   MatchingSocketService? _socket;
@@ -27,9 +29,19 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
       _assignedSub?.cancel();
       _noCraftsmanSub?.cancel();
       _locationSub?.cancel();
+      _startedSub?.cancel();
+      _awaitingConfirmationSub?.cancel();
       _socket?.disconnect();
     });
     return const ServiceRequestState();
+  }
+
+  // Fired as soon as the trade-detail screen opens, so the OS permission
+  // prompt (and a first GPS fix) happens well before the user taps "Demander
+  // maintenant" — submit() below still geolocates itself, but resolves
+  // near-instantly once permission is already granted.
+  Future<void> prewarmLocation() async {
+    await location_service.getCurrentPosition();
   }
 
   Future<void> submit(ServiceCategory category) async {
@@ -37,7 +49,7 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
       status: ServiceRequestStatus.locating,
       clearError: true,
     );
-    final position = await _getCurrentPosition();
+    final position = await location_service.getCurrentPosition();
     if (position == null) {
       state = state.copyWith(
         status: ServiceRequestStatus.error,
@@ -91,6 +103,8 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
       _assignedSub?.cancel();
       _noCraftsmanSub?.cancel();
       _locationSub?.cancel();
+      _startedSub?.cancel();
+      _awaitingConfirmationSub?.cancel();
       _socket?.disconnect();
       state = state.copyWith(
         status: ServiceRequestStatus.cancelled,
@@ -110,6 +124,8 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
     _assignedSub?.cancel();
     _noCraftsmanSub?.cancel();
     _locationSub?.cancel();
+    _startedSub?.cancel();
+    _awaitingConfirmationSub?.cancel();
     state = const ServiceRequestState();
     unawaited(submit(category));
   }
@@ -137,23 +153,75 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
         craftsmanLongitude: event.longitude,
       );
     });
+    _startedSub = socket.onRequestStarted.listen((event) {
+      if (event.requestId != requestId) return;
+      state = state.copyWith(status: ServiceRequestStatus.inProgress);
+    });
+    _awaitingConfirmationSub = socket.onRequestAwaitingConfirmation.listen((
+      event,
+    ) {
+      if (event.requestId != requestId) return;
+      state = state.copyWith(
+        status: ServiceRequestStatus.awaitingClientConfirmation,
+      );
+    });
   }
 
-  Future<Position?> _getCurrentPosition() async {
-    if (!await Geolocator.isLocationServiceEnabled()) return null;
-
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
+  // Client's half of mutual completion — confirms a job the craftsman has
+  // already marked done via /complete. See matching.controller.ts's
+  // confirm-complete endpoint.
+  Future<void> confirmCompletion() async {
+    final requestId = state.requestId;
+    if (requestId == null || state.isConfirming) return;
+    state = state.copyWith(isConfirming: true, clearError: true);
+    try {
+      await ref
+          .read(serviceRequestRepositoryProvider)
+          .confirmCompletion(requestId);
+      _assignedSub?.cancel();
+      _noCraftsmanSub?.cancel();
+      _locationSub?.cancel();
+      _startedSub?.cancel();
+      _awaitingConfirmationSub?.cancel();
+      _socket?.disconnect();
+      state = state.copyWith(
+        status: ServiceRequestStatus.completed,
+        isConfirming: false,
+      );
+    } on ApiException catch (e) {
+      state = state.copyWith(isConfirming: false, errorMessage: e.message);
+    } catch (_) {
+      state = state.copyWith(
+        isConfirming: false,
+        errorMessage: 'Impossible de confirmer la fin de la mission.',
+      );
     }
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      return null;
-    }
+  }
 
-    return Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-    );
+  Future<void> submitRating({required int stars, String? comment}) async {
+    final requestId = state.requestId;
+    if (requestId == null || state.isSubmittingRating) return;
+    state = state.copyWith(isSubmittingRating: true, clearError: true);
+    try {
+      await ref
+          .read(serviceRequestRepositoryProvider)
+          .submitRating(requestId, stars: stars, comment: comment);
+      state = state.copyWith(
+        status: ServiceRequestStatus.rated,
+        isSubmittingRating: false,
+      );
+    } on ApiException catch (e) {
+      state = state.copyWith(isSubmittingRating: false, errorMessage: e.message);
+    } catch (_) {
+      state = state.copyWith(
+        isSubmittingRating: false,
+        errorMessage: "Impossible d'envoyer votre évaluation.",
+      );
+    }
+  }
+
+  void skipRating() {
+    state = state.copyWith(status: ServiceRequestStatus.rated);
   }
 }
 

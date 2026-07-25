@@ -30,7 +30,7 @@ export interface CraftsmanStats {
 export interface ActiveJob {
   requestId: string;
   serviceCategory: string;
-  status: 'assigned' | 'in_progress';
+  status: 'assigned' | 'in_progress' | 'awaiting_client_confirmation';
   clientFullName: string | null;
   clientPhone: string;
   clientLatitude: number;
@@ -56,7 +56,7 @@ export interface JobHistoryItem {
 interface ActiveJobRow {
   id: string;
   service_category: string;
-  status: 'assigned' | 'in_progress';
+  status: 'assigned' | 'in_progress' | 'awaiting_client_confirmation';
   client_full_name: string | null;
   client_phone: string;
   latitude: string;
@@ -163,9 +163,10 @@ export class CraftsmenService {
     };
   }
 
-  // The job the craftsman is currently working (assigned or in_progress),
-  // if any — lets the app restore "you have an active job" state on cold
-  // start, without relying on client-held state surviving an app restart.
+  // The job the craftsman is currently working (assigned, in_progress, or
+  // marked done and awaiting the client's confirmation), if any — lets the
+  // app restore "you have an active job" state on cold start, without
+  // relying on client-held state surviving an app restart.
   async getActiveJob(userId: string): Promise<ActiveJob | null> {
     await this.findCraftsmanByUserId(userId);
 
@@ -177,7 +178,8 @@ export class CraftsmenService {
               ST_X(sr."client_location"::geometry) AS longitude
        FROM "service_requests" sr
        JOIN "users" u ON u."id" = sr."client_id"
-       WHERE sr."craftsman_id" = $1 AND sr."status" IN ('assigned', 'in_progress')
+       WHERE sr."craftsman_id" = $1
+         AND sr."status" IN ('assigned', 'in_progress', 'awaiting_client_confirmation')
        ORDER BY sr."assigned_at" DESC
        LIMIT 1`,
       [userId],

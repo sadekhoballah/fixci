@@ -53,9 +53,7 @@ export class MatchingService {
     category: ServiceCategory,
     longitude: number,
     latitude: number,
-  ): Promise<
-    Array<{ id: string; clientId: string; distanceMeters: number }>
-  > {
+  ): Promise<Array<{ id: string; clientId: string; distanceMeters: number }>> {
     const rows: Array<{
       id: string;
       client_id: string;
@@ -117,13 +115,14 @@ export class MatchingService {
     return rows.length === 1;
   }
 
-  // The job lifecycle past assignment: assigned -> in_progress -> completed,
-  // with cancellation possible from either of the first two. Each transition
-  // is a single atomic UPDATE scoped to both the expected prior status AND
-  // the calling craftsman's own id — same compare-and-swap shape as tryAssign
-  // above, and it's what makes "only the assigned craftsman can transition
-  // their own job" a property of the query itself rather than a separate
-  // ownership check that could race with a concurrent request.
+  // The job lifecycle past assignment: assigned -> in_progress ->
+  // awaiting_client_confirmation -> completed, with cancellation possible
+  // from either of the first two. Each transition is a single atomic UPDATE
+  // scoped to both the expected prior status AND the calling craftsman's own
+  // id — same compare-and-swap shape as tryAssign above, and it's what makes
+  // "only the assigned craftsman can transition their own job" a property of
+  // the query itself rather than a separate ownership check that could race
+  // with a concurrent request.
   async startJob(
     requestId: string,
     craftsmanId: string,
@@ -136,6 +135,9 @@ export class MatchingService {
     );
   }
 
+  // The craftsman's side of mutual completion: marks the job as done from
+  // their end, but doesn't close it out yet — the client still has to
+  // confirm (see confirmCompletion below) before it's truly `completed`.
   async completeJob(
     requestId: string,
     craftsmanId: string,
@@ -144,8 +146,28 @@ export class MatchingService {
       requestId,
       craftsmanId,
       ['in_progress'],
-      `"status" = 'completed', "completed_at" = now()`,
+      `"status" = 'awaiting_client_confirmation'`,
     );
+  }
+
+  // The client's side of mutual completion — only they can finalize a job
+  // the craftsman has marked done, mirroring how only the craftsman can
+  // start/complete their own job above. Scoped by client_id instead of
+  // craftsman_id for the same compare-and-swap safety.
+  async confirmCompletion(
+    requestId: string,
+    clientId: string,
+  ): Promise<ClientConfirmResult | null> {
+    const [rows]: [Array<{ id: string; craftsman_id: string }>, number] =
+      await this.dataSource.query(
+        `UPDATE "service_requests"
+         SET "status" = 'completed', "completed_at" = now(), "updated_at" = now()
+         WHERE "id" = $1 AND "client_id" = $2 AND "status" = 'awaiting_client_confirmation'
+         RETURNING "id", "craftsman_id"`,
+        [requestId, clientId],
+      );
+    if (rows.length === 0) return null;
+    return { requestId: rows[0].id, craftsmanId: rows[0].craftsman_id };
   }
 
   async cancelJob(
@@ -172,18 +194,70 @@ export class MatchingService {
     requestId: string,
     clientId: string,
   ): Promise<ClientCancelResult | null> {
-    const [rows]: [
-      Array<{ id: string; craftsman_id: string | null }>,
-      number,
-    ] = await this.dataSource.query(
-      `UPDATE "service_requests"
+    const [rows]: [Array<{ id: string; craftsman_id: string | null }>, number] =
+      await this.dataSource.query(
+        `UPDATE "service_requests"
        SET "status" = 'cancelled', "cancelled_at" = now(), "updated_at" = now()
        WHERE "id" = $1 AND "client_id" = $2 AND "status" = ANY($3)
        RETURNING "id", "craftsman_id"`,
-      [requestId, clientId, ['pending', 'assigned']],
-    );
+        [requestId, clientId, ['pending', 'assigned']],
+      );
     if (rows.length === 0) return null;
     return { requestId: rows[0].id, craftsmanId: rows[0].craftsman_id };
+  }
+
+  // Only the request's own client, only once the craftsman's work is fully
+  // wrapped up (completed — i.e. both sides already confirmed), and only
+  // once (the unique index on ratings.service_request_id is the hard
+  // backstop against a duplicate submission racing this check). Recomputes
+  // the craftsman's aggregate rating from the ratings table itself rather
+  // than incremental math — negligible cost at this volume, no drift risk.
+  async submitRating(
+    requestId: string,
+    clientId: string,
+    stars: number,
+    comment: string | null,
+  ): Promise<RatingResult | null> {
+    return this.dataSource.transaction(async (manager) => {
+      const requests: Array<{ craftsman_id: string | null }> =
+        await manager.query(
+          `SELECT "craftsman_id" FROM "service_requests"
+           WHERE "id" = $1 AND "client_id" = $2 AND "status" = 'completed'
+           FOR UPDATE`,
+          [requestId, clientId],
+        );
+      if (requests.length === 0 || !requests[0].craftsman_id) {
+        return null;
+      }
+      const craftsmanId = requests[0].craftsman_id;
+
+      const existing: unknown[] = await manager.query(
+        `SELECT 1 FROM "ratings" WHERE "service_request_id" = $1`,
+        [requestId],
+      );
+      if (existing.length > 0) return null;
+
+      await manager.query(
+        `INSERT INTO "ratings"
+           ("service_request_id", "client_id", "craftsman_id", "stars", "comment")
+         VALUES ($1, $2, $3, $4, $5)`,
+        [requestId, clientId, craftsmanId, stars, comment],
+      );
+
+      await manager.query(
+        `UPDATE "craftsman_profiles"
+         SET "average_rating" = (
+               SELECT avg("stars") FROM "ratings" WHERE "craftsman_id" = $1
+             ),
+             "ratings_count" = (
+               SELECT count(*) FROM "ratings" WHERE "craftsman_id" = $1
+             )
+         WHERE "user_id" = $1`,
+        [craftsmanId],
+      );
+
+      return { requestId, stars, comment };
+    });
   }
 
   private async transitionJob(
@@ -213,4 +287,15 @@ export interface JobTransitionResult {
 export interface ClientCancelResult {
   requestId: string;
   craftsmanId: string | null;
+}
+
+export interface ClientConfirmResult {
+  requestId: string;
+  craftsmanId: string;
+}
+
+export interface RatingResult {
+  requestId: string;
+  stars: number;
+  comment: string | null;
 }

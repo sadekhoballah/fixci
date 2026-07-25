@@ -4,6 +4,10 @@ enum ServiceRequestStatus {
   submitting,
   searching,
   assigned,
+  inProgress,
+  awaitingClientConfirmation,
+  completed,
+  rated,
   noCraftsmanAvailable,
   cancelled,
   error,
@@ -21,6 +25,8 @@ class ServiceRequestState {
     this.craftsmanLatitude,
     this.craftsmanLongitude,
     this.isCancelling = false,
+    this.isConfirming = false,
+    this.isSubmittingRating = false,
   });
 
   final ServiceRequestStatus status;
@@ -35,6 +41,9 @@ class ServiceRequestState {
   final double? craftsmanLatitude;
   final double? craftsmanLongitude;
   final bool isCancelling;
+  // Client tapped "Confirmer la fin de la mission", awaiting the backend.
+  final bool isConfirming;
+  final bool isSubmittingRating;
 
   ServiceRequestState copyWith({
     ServiceRequestStatus? status,
@@ -48,6 +57,8 @@ class ServiceRequestState {
     double? craftsmanLatitude,
     double? craftsmanLongitude,
     bool? isCancelling,
+    bool? isConfirming,
+    bool? isSubmittingRating,
   }) {
     return ServiceRequestState(
       status: status ?? this.status,
@@ -60,6 +71,8 @@ class ServiceRequestState {
       craftsmanLatitude: craftsmanLatitude ?? this.craftsmanLatitude,
       craftsmanLongitude: craftsmanLongitude ?? this.craftsmanLongitude,
       isCancelling: isCancelling ?? this.isCancelling,
+      isConfirming: isConfirming ?? this.isConfirming,
+      isSubmittingRating: isSubmittingRating ?? this.isSubmittingRating,
     );
   }
 }

@@ -67,6 +67,8 @@ class ActiveJobCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final inProgress = job.status == ActiveJobStatus.inProgress;
+    final awaitingConfirmation =
+        job.status == ActiveJobStatus.awaitingClientConfirmation;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -81,12 +83,20 @@ class ActiveJobCard extends StatelessWidget {
           Row(
             children: [
               Icon(
-                inProgress ? Icons.handyman_rounded : Icons.directions_walk_rounded,
+                awaitingConfirmation
+                    ? Icons.hourglass_top_rounded
+                    : inProgress
+                    ? Icons.handyman_rounded
+                    : Icons.directions_walk_rounded,
                 color: colorScheme.primary,
               ),
               const SizedBox(width: 8),
               Text(
-                inProgress ? 'Mission en cours' : 'Mission acceptée',
+                awaitingConfirmation
+                    ? 'En attente de confirmation'
+                    : inProgress
+                    ? 'Mission en cours'
+                    : 'Mission acceptée',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -155,34 +165,49 @@ class ActiveJobCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: isProcessing ? null : () => _confirmCancel(context),
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  child: const Text('Annuler'),
-                ),
+          if (awaitingConfirmation)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                flex: 2,
-                child: FilledButton(
-                  onPressed: isProcessing ? null : (inProgress ? onComplete : onStart),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              child: const Text(
+                'En attente de confirmation du client…',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: isProcessing ? null : () => _confirmCancel(context),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('Annuler'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 2,
+                  child: FilledButton(
+                    onPressed: isProcessing ? null : (inProgress ? onComplete : onStart),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      inProgress ? 'Terminer la mission' : 'Démarrer la mission',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
-                  child: Text(
-                    inProgress ? 'Terminer la mission' : 'Démarrer la mission',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );

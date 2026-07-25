@@ -5,7 +5,7 @@ import '../../../core/media/id_card_picker.dart';
 import '../../../core/models/service_category.dart';
 import '../../../core/models/user_role.dart';
 import '../../../shared/widgets/primary_button.dart';
-import '../../client_home/screens/client_home_screen.dart';
+import '../../client_home/screens/client_shell_screen.dart';
 import '../../craftsman_home/screens/artisan_shell_screen.dart';
 import '../onboarding_controller.dart';
 import '../onboarding_state.dart';
@@ -56,7 +56,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
         UserRole.craftsman when latest.selectedTier == null =>
           const TierSelectionScreen(),
         UserRole.craftsman => const ArtisanShellScreen(),
-        _ => const ClientHomeScreen(),
+        _ => const ClientShellScreen(),
       };
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => destination),

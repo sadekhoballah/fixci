@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/user_role.dart';
 import '../../../shared/widgets/primary_button.dart';
-import '../../client_home/screens/client_home_screen.dart';
+import '../../client_home/screens/client_shell_screen.dart';
 import '../../craftsman_home/screens/artisan_shell_screen.dart';
 import '../onboarding_controller.dart';
 import '../otp_controller.dart';
@@ -72,7 +72,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
         UserRole.craftsman when state.selectedTier == null =>
           const TierSelectionScreen(),
         UserRole.craftsman => const ArtisanShellScreen(),
-        _ => const ClientHomeScreen(),
+        _ => const ClientShellScreen(),
       };
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => destination),
