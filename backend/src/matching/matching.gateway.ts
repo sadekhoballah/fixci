@@ -23,7 +23,69 @@ import { ServiceCategory } from '../database/enums/service-category.enum';
 import { User } from '../database/entities/user.entity';
 import { UserRole } from '../database/enums/user-role.enum';
 import { PhoneTokenVerifierService } from '../firebase/phone-token-verifier.service';
+import { NotificationsService } from '../firebase/notifications.service';
 import { resolveVerifiedPhone } from '../auth/resolve-verified-phone';
+
+const SERVICE_CATEGORY_LABELS_FR: Record<ServiceCategory, string> = {
+  [ServiceCategory.PLUMBER]: 'plomberie',
+  [ServiceCategory.ELECTRICIAN]: 'électricité',
+  [ServiceCategory.AC_REPAIR]: 'climatisation',
+  [ServiceCategory.CLEANING]: 'ménage',
+  [ServiceCategory.CARPENTER]: 'menuiserie',
+  [ServiceCategory.MECHANIC]: 'mécanique',
+  [ServiceCategory.PAINTER]: 'peinture',
+  [ServiceCategory.ALUMINUM_WORK]: 'aluminium',
+  [ServiceCategory.CAMERA_INSTALLATION]: 'installation de caméras',
+  [ServiceCategory.TV_INSTALLATION]: 'installation TV',
+  [ServiceCategory.SATELLITE_INSTALLATION]: 'installation satellite',
+  [ServiceCategory.CONSTRUCTION]: 'construction',
+  [ServiceCategory.BLACKSMITH]: 'ferronnerie',
+  [ServiceCategory.HOUSEKEEPING]: 'ménage',
+  [ServiceCategory.HOME_TUTORING]: 'soutien scolaire',
+};
+
+// Generic copy for the lifecycle events relayed through notifyClient/
+// notifyCraftsman below — those call sites only ever have a requestId to
+// hand over, no richer context, unlike request:new/request:assigned in
+// runMatchingLoop which build their own richer text inline.
+const CLIENT_EVENT_COPY: Record<
+  | 'request:started'
+  | 'request:awaiting_confirmation'
+  | 'request:completed'
+  | 'request:cancelled',
+  { title: string; body: string }
+> = {
+  'request:started': {
+    title: 'Votre artisan a commencé',
+    body: "L'intervention est en cours.",
+  },
+  'request:awaiting_confirmation': {
+    title: 'Mission terminée par l’artisan',
+    body: 'Confirmez la fin de la mission dans l’application.',
+  },
+  'request:completed': {
+    title: 'Mission terminée',
+    body: 'Votre demande a été marquée comme terminée.',
+  },
+  'request:cancelled': {
+    title: 'Demande annulée',
+    body: "L'artisan a annulé cette demande.",
+  },
+};
+
+const CRAFTSMAN_EVENT_COPY: Record<
+  'request:cancelled' | 'request:completed',
+  { title: string; body: string }
+> = {
+  'request:cancelled': {
+    title: 'Demande annulée',
+    body: 'Le client a annulé cette demande.',
+  },
+  'request:completed': {
+    title: 'Mission confirmée',
+    body: 'Le client a confirmé la fin de la mission.',
+  },
+};
 
 function estimateArrivalMinutes(distanceMeters: number): number {
   const averageSpeedMetersPerMinute = 500; // ~30 km/h urban traffic, rough MVP heuristic
@@ -75,6 +137,7 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     private readonly matchingService: MatchingService,
     private readonly presenceService: PresenceService,
     private readonly phoneTokenVerifier: PhoneTokenVerifierService,
+    private readonly notificationsService: NotificationsService,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
 
@@ -231,6 +294,11 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     payload: { requestId: string },
   ): void {
     this.server.to(clientRoom(clientId)).emit(event, payload);
+    void this.notificationsService.sendToUser(
+      clientId,
+      CLIENT_EVENT_COPY[event],
+      { event, requestId: payload.requestId },
+    );
   }
 
   // Stops relaying this craftsman's location once their job wraps up
@@ -250,6 +318,11 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     payload: { requestId: string },
   ): void {
     this.server.to(craftsmanRoom(craftsmanId)).emit(event, payload);
+    void this.notificationsService.sendToUser(
+      craftsmanId,
+      CRAFTSMAN_EVENT_COPY[event],
+      { event, requestId: payload.requestId },
+    );
   }
 
   // Fire-and-forget from the controller: the HTTP response returns as soon as
@@ -285,6 +358,14 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
               candidate.distanceMeters,
             ),
           });
+        void this.notificationsService.sendToUser(
+          candidate.craftsmanId,
+          {
+            title: 'Nouvelle demande',
+            body: `Une demande de ${SERVICE_CATEGORY_LABELS_FR[request.serviceCategory]} à ${(candidate.distanceMeters / 1000).toFixed(1)} km de vous.`,
+          },
+          { event: 'request:new', requestId: request.id },
+        );
       }
 
       const acceptedCraftsmanId = await this.waitForAccept(
@@ -310,6 +391,16 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
               craftsmanFullName: craftsman?.fullName ?? null,
               craftsmanPhone: craftsman?.phone ?? null,
             });
+          void this.notificationsService.sendToUser(
+            request.clientId,
+            {
+              title: 'Artisan trouvé',
+              body: craftsman?.fullName
+                ? `${craftsman.fullName} arrive pour votre demande.`
+                : 'Un artisan a accepté votre demande.',
+            },
+            { event: 'request:assigned', requestId: request.id },
+          );
           // The winning craftsman otherwise gets no confirmation at all —
           // every *other* candidate in this round gets `request:unavailable`
           // below, but without this, whoever actually won the accept race
@@ -318,6 +409,14 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
           this.server
             .to(craftsmanRoom(acceptedCraftsmanId))
             .emit('request:assigned', { requestId: request.id });
+          void this.notificationsService.sendToUser(
+            acceptedCraftsmanId,
+            {
+              title: 'Demande acceptée',
+              body: 'Vous avez remporté cette demande. Rendez-vous sur les lieux.',
+            },
+            { event: 'request:assigned', requestId: request.id },
+          );
           for (const candidate of candidates) {
             if (candidate.craftsmanId !== acceptedCraftsmanId) {
               this.server
@@ -341,6 +440,14 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
       this.server
         .to(clientRoom(request.clientId))
         .emit('request:no_craftsman_available', { requestId: request.id });
+      void this.notificationsService.sendToUser(
+        request.clientId,
+        {
+          title: 'Aucun artisan disponible',
+          body: "Nous n'avons trouvé aucun artisan disponible pour le moment.",
+        },
+        { event: 'request:no_craftsman_available', requestId: request.id },
+      );
     }
   }
 

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/models/user_role.dart';
+import '../../../core/notifications/push_notification_service.dart';
 import '../../account/screens/account_screen.dart';
 import '../../craftsman_jobs/screens/craftsman_jobs_screen.dart';
 import 'artisan_home_screen.dart';
@@ -7,15 +10,25 @@ import 'craftsman_stats_screen.dart';
 // The craftsman side's app shell: Home (live requests), History, Stats,
 // Account. IndexedStack keeps every tab's state (notably Home's live socket
 // connection) alive across tab switches rather than tearing it down.
-class ArtisanShellScreen extends StatefulWidget {
+class ArtisanShellScreen extends ConsumerStatefulWidget {
   const ArtisanShellScreen({super.key});
 
   @override
-  State<ArtisanShellScreen> createState() => _ArtisanShellScreenState();
+  ConsumerState<ArtisanShellScreen> createState() => _ArtisanShellScreenState();
 }
 
-class _ArtisanShellScreenState extends State<ArtisanShellScreen> {
+class _ArtisanShellScreenState extends ConsumerState<ArtisanShellScreen> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Every "already logged in as a craftsman" path lands here — see
+    // PushNotificationService.init for why this is the chosen choke point.
+    ref
+        .read(pushNotificationServiceProvider)
+        .init(role: UserRole.craftsman);
+  }
 
   static const _tabs = [
     ArtisanHomeScreen(),

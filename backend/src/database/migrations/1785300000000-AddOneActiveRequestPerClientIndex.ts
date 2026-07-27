@@ -6,9 +6,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 // request as assigned) — a partial unique index is the only way to close
 // this atomically; a check-then-insert in application code has the exact
 // same race a double-tap can hit.
-export class AddOneActiveRequestPerClientIndex1785300000000
-  implements MigrationInterface
-{
+export class AddOneActiveRequestPerClientIndex1785300000000 implements MigrationInterface {
   name = 'AddOneActiveRequestPerClientIndex1785300000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

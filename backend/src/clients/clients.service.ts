@@ -18,7 +18,8 @@ export interface ClientMe {
 export interface ActiveRequest {
   requestId: string;
   serviceCategory: string;
-  status: 'pending' | 'assigned' | 'in_progress' | 'awaiting_client_confirmation';
+  status:
+    'pending' | 'assigned' | 'in_progress' | 'awaiting_client_confirmation';
   craftsmanFullName: string | null;
   craftsmanPhone: string | null;
 }
@@ -26,7 +27,8 @@ export interface ActiveRequest {
 interface ActiveRequestRow {
   id: string;
   service_category: string;
-  status: 'pending' | 'assigned' | 'in_progress' | 'awaiting_client_confirmation';
+  status:
+    'pending' | 'assigned' | 'in_progress' | 'awaiting_client_confirmation';
   craftsman_full_name: string | null;
   craftsman_phone: string | null;
 }

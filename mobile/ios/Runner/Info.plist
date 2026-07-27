@@ -55,6 +55,14 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Lets FCM wake the app in the background to receive a data payload,
+	     not just display the system notification banner — same reasoning as
+	     Android's default_notification_channel_id: this is what makes push
+	     work while the app isn't in the foreground. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

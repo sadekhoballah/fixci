@@ -1,8 +1,11 @@
 import { Global, Logger, Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { App, ServiceAccount, cert, initializeApp } from 'firebase-admin/app';
 import { existsSync, readFileSync } from 'fs';
 import { FIREBASE_ADMIN_APP } from './firebase-admin.constants';
 import { PhoneTokenVerifierService } from './phone-token-verifier.service';
+import { NotificationsService } from './notifications.service';
+import { User } from '../database/entities/user.entity';
 
 const logger = new Logger('FirebaseAdminModule');
 
@@ -43,13 +46,19 @@ function initializeFirebaseAdmin(): App | null {
 
 @Global()
 @Module({
+  imports: [TypeOrmModule.forFeature([User])],
   providers: [
     {
       provide: FIREBASE_ADMIN_APP,
       useFactory: initializeFirebaseAdmin,
     },
     PhoneTokenVerifierService,
+    NotificationsService,
   ],
-  exports: [FIREBASE_ADMIN_APP, PhoneTokenVerifierService],
+  exports: [
+    FIREBASE_ADMIN_APP,
+    PhoneTokenVerifierService,
+    NotificationsService,
+  ],
 })
 export class FirebaseAdminModule {}

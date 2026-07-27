@@ -1,8 +1,21 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 import 'core/platform/firebase_support.dart';
+
+// Runs in a separate background isolate with no state from main() carried
+// over — FCM requires this to be a top-level (or static) function, and it
+// must re-initialize Firebase itself since this isolate never ran main().
+// Just existing is enough to satisfy FirebaseMessaging.onBackgroundMessage;
+// the actual notification is already shown by the OS from the "notification"
+// payload the backend sends (see NotificationsService), not by code here —
+// this hook is only for data-only messages, which FixCi doesn't send today.
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+}
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +28,7 @@ void main() {
   // background; firebaseInitFuture lets that real first user await it.
   if (isFirebaseSupportedPlatform) {
     firebaseInitFuture = Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   }
   runApp(const ProviderScope(child: FixCiApp()));
 }

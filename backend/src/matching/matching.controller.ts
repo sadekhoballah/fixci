@@ -42,9 +42,7 @@ export class MatchingController {
       dto.longitude,
     );
     if (!request) {
-      throw new ConflictException(
-        'You already have an active service request',
-      );
+      throw new ConflictException('You already have an active service request');
     }
 
     void this.matchingGateway.runMatchingLoop(request);

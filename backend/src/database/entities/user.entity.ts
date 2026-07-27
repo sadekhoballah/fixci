@@ -24,6 +24,14 @@ export class User {
   @Column({ name: 'phone_verified', type: 'boolean', default: false })
   phoneVerified: boolean;
 
+  // The device this user last opened the app on. Single column, not a
+  // table: one active FCM registration per account is enough for an MVP
+  // where nobody is expected to be logged in on two devices at once — a
+  // fresh login just overwrites the old token, which is also what you want
+  // when someone reinstalls or switches phones.
+  @Column({ name: 'fcm_token', type: 'varchar', length: 255, nullable: true })
+  fcmToken: string | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

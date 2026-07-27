@@ -11,10 +11,23 @@
          for nearby matching. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Android 13+ requires this at runtime for any notification to show at
+         all (including FCM push) — requested explicitly by
+         PushNotificationService before registering for a token. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="Fix Pro"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Default channel/icon FCM falls back to for a background/killed-app
+             notification, since there's no Dart code running yet to build one
+             itself at that point. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="fixci_default_channel" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

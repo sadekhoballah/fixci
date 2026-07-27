@@ -11,7 +11,10 @@ import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { UsersService } from './users.service';
 import { RegisterUserDto } from './dto/register-user.dto';
+import { UpdateFcmTokenDto } from './dto/update-fcm-token.dto';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { ADMIN_PHONE_NUMBERS } from '../auth/admin-phones.constants';
 import { UserRole } from '../database/enums/user-role.enum';
 
@@ -59,5 +62,19 @@ export class UsersController {
       subscriptionTier,
       isAdmin: ADMIN_PHONE_NUMBERS.has(user.phone),
     };
+  }
+
+  // Called on every app launch once logged in, and again whenever FCM hands
+  // the app a refreshed token — see PushNotificationService on mobile.
+  // AuthGuard (not just FirebaseAuthGuard) because this needs an existing
+  // account to attach the token to.
+  @Post('me/fcm-token')
+  @UseGuards(AuthGuard)
+  async updateFcmToken(
+    @CurrentUser() user: { id: string },
+    @Body() dto: UpdateFcmTokenDto,
+  ) {
+    await this.usersService.updateFcmToken(user.id, dto.fcmToken);
+    return { ok: true };
   }
 }

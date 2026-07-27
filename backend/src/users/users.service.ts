@@ -29,6 +29,14 @@ export class UsersService {
     return this.userRepository.findOne({ where: { phone } });
   }
 
+  // Called on every app launch/login and whenever FCM hands the app a
+  // refreshed token — always overwrites rather than merging, since a device
+  // switch or reinstall means the old token is dead anyway (see the fcmToken
+  // column comment on the entity).
+  async updateFcmToken(userId: string, fcmToken: string): Promise<void> {
+    await this.userRepository.update({ id: userId }, { fcmToken });
+  }
+
   // Only meaningful for a craftsman — used by GET /users/lookup so a
   // returning craftsman (reinstalled app, cleared local storage) lands
   // straight back on their dashboard instead of being routed through tier
