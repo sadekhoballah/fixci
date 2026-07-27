@@ -7,13 +7,46 @@ import '../service_request_controller.dart';
 import '../service_request_state.dart';
 import '../widgets/star_rating_input.dart';
 
-class SearchingScreen extends ConsumerWidget {
+class SearchingScreen extends ConsumerStatefulWidget {
   const SearchingScreen({super.key, required this.category});
 
   final ServiceCategory category;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SearchingScreen> createState() => _SearchingScreenState();
+}
+
+// Mirrors ArtisanHomeScreen's WidgetsBindingObserver — the client side of the
+// same gap: without this, a client who backgrounds the app (tapping
+// "Appeler"/"WhatsApp" to reach the craftsman, or just locking the screen)
+// and comes back has no way to recover a socket connection/room membership
+// the OS may have quietly suspended while away. See
+// ServiceRequestController.handleAppResumed.
+class _SearchingScreenState extends ConsumerState<SearchingScreen>
+    with WidgetsBindingObserver {
+  ServiceCategory get category => widget.category;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState appState) {
+    if (appState == AppLifecycleState.resumed) {
+      ref.read(serviceRequestControllerProvider.notifier).handleAppResumed();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     ref.listen(serviceRequestControllerProvider, (previous, next) {
       if (next.status == ServiceRequestStatus.cancelled &&
           previous?.status != ServiceRequestStatus.cancelled) {

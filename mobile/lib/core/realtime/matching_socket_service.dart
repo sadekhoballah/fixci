@@ -88,6 +88,18 @@ enum SocketConnectionStatus { disconnected, connecting, connected }
 // loop that already exists server-side.
 class MatchingSocketService {
   socket_io.Socket? _socket;
+  // Reconnect resilience: socket.io's auto-reconnect (setReconnectionAttempts
+  // below) brings the transport back up transparently after a drop, but the
+  // *server* has no memory of which room this socket was in — matching.gateway.ts's
+  // client:join/craftsman:online handlers are what put it there, and those
+  // only ever ran once, on the original connect. Without replaying them on
+  // every 'connect' event (which socket.io fires again after each successful
+  // reconnect, not just the first), a socket that drops and recovers mid-request
+  // — very plausible on a real mobile network — silently stops receiving
+  // anything for that room forever, even though isConnected reports true.
+  bool _wantsClientJoin = false;
+  ({ServiceCategory category, double latitude, double longitude})?
+  _craftsmanOnlineParams;
 
   final _requestNewController =
       StreamController<IncomingRequestEvent>.broadcast();
@@ -158,6 +170,21 @@ class MatchingSocketService {
 
     socket.onConnect((_) {
       _connectionStatusController.add(SocketConnectionStatus.connected);
+      // Replays whichever room this socket is supposed to be in — a no-op
+      // duplicate of the direct emit in joinAsClient()/goOnline() on the very
+      // first connect (harmless: joining a room twice server-side is
+      // idempotent), and the actual fix on every reconnect after that.
+      if (_wantsClientJoin) {
+        socket.emit('client:join');
+      }
+      final onlineParams = _craftsmanOnlineParams;
+      if (onlineParams != null) {
+        socket.emit('craftsman:online', {
+          'serviceCategory': onlineParams.category.wireValue,
+          'latitude': onlineParams.latitude,
+          'longitude': onlineParams.longitude,
+        });
+      }
     });
     socket.onDisconnect((_) {
       _connectionStatusController.add(SocketConnectionStatus.disconnected);
@@ -218,6 +245,8 @@ class MatchingSocketService {
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;
+    _wantsClientJoin = false;
+    _craftsmanOnlineParams = null;
     _connectionStatusController.add(SocketConnectionStatus.disconnected);
   }
 
@@ -225,6 +254,7 @@ class MatchingSocketService {
   // handleClientJoin) so notifyClient/runMatchingLoop pushes reach it. Safe to
   // call right after connect() — see the goOnline note below on queued emits.
   void joinAsClient() {
+    _wantsClientJoin = true;
     _socket?.emit('client:join');
   }
 
@@ -233,6 +263,11 @@ class MatchingSocketService {
     required double latitude,
     required double longitude,
   }) {
+    _craftsmanOnlineParams = (
+      category: category,
+      latitude: latitude,
+      longitude: longitude,
+    );
     _socket?.emit('craftsman:online', {
       'serviceCategory': category.wireValue,
       'latitude': latitude,
@@ -248,6 +283,7 @@ class MatchingSocketService {
   }
 
   void goOffline() {
+    _craftsmanOnlineParams = null;
     _socket?.emit('craftsman:offline', {});
   }
 

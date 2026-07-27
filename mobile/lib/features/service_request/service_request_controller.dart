@@ -23,6 +23,10 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
   // Captured directly (rather than read via `ref` inside onDispose below) —
   // Riverpod forbids using `ref` from within a dispose callback.
   MatchingSocketService? _socket;
+  // Set once createRequest() returns. The socket listeners below are
+  // attached *before* this is known (see submit()), so they filter against
+  // this field instead of a requestId captured in a closure.
+  String? _requestId;
 
   @override
   ServiceRequestState build() {
@@ -106,6 +110,17 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
       myLatitude: position.latitude,
       myLongitude: position.longitude,
     );
+
+    // Join the client's own socket room *before* creating the request.
+    // POST /matching/requests kicks off runMatchingLoop (matching.gateway.ts)
+    // fire-and-forget as soon as the backend receives it — if a craftsman
+    // accepts before this socket finishes connecting/joining, the backend's
+    // request:assigned lands in an empty room and is lost for good, leaving
+    // the client stuck on "searching" with nothing to retry. Mirrors how a
+    // craftsman is already online (joined) before any request exists.
+    _requestId = null;
+    _listenForOutcome();
+
     try {
       final requestId = await ref
           .read(serviceRequestRepositoryProvider)
@@ -114,7 +129,7 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
             latitude: position.latitude,
             longitude: position.longitude,
           );
-      _listenForOutcome(requestId);
+      _requestId = requestId;
       state = state.copyWith(
         status: ServiceRequestStatus.searching,
         requestId: requestId,
@@ -129,6 +144,38 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
         status: ServiceRequestStatus.error,
         errorMessage: 'Une erreur est survenue.',
       );
+    }
+  }
+
+  // Mirrors CraftsmanHomeController.handleAppResumed — a client backgrounding
+  // the app (tapping "Appeler"/"WhatsApp" to reach the craftsman is the
+  // obvious real-world case, but a plain screen lock does it too) can leave
+  // the socket connection suspended by the OS with nothing here noticing once
+  // the app comes back to the foreground. Rejoining the room only covers
+  // *future* pushes though — anything emitted while backgrounded (started,
+  // awaiting_confirmation…) is already gone, so this also refetches the
+  // actual current status directly rather than trusting only what arrives
+  // from here on, exactly like the craftsman side's loadActiveJob() call.
+  Future<void> handleAppResumed() async {
+    if (state.requestId == null) return;
+    final socket = ref.read(matchingSocketServiceProvider);
+    socket.connect(); // no-op if already connected
+    socket.joinAsClient(); // re-affirms room membership; harmless if already in it
+
+    try {
+      final active = await ref
+          .read(serviceRequestRepositoryProvider)
+          .getActiveRequest();
+      if (active != null && active.requestId == state.requestId) {
+        state = state.copyWith(
+          status: active.status,
+          craftsmanFullName: active.craftsmanFullName,
+          craftsmanPhone: active.craftsmanPhone,
+        );
+      }
+    } catch (_) {
+      // Best-effort reconciliation — the socket rejoin above still covers
+      // updates from here on even if this particular refresh fails.
     }
   }
 
@@ -173,13 +220,13 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
     unawaited(submit(category));
   }
 
-  void _listenForOutcome(String requestId) {
+  void _listenForOutcome() {
     final socket = ref.read(matchingSocketServiceProvider);
     _socket = socket;
     socket.connect();
     socket.joinAsClient();
     _assignedSub = socket.onRequestAssigned.listen((event) {
-      if (event.requestId != requestId) return;
+      if (event.requestId != _requestId) return;
       state = state.copyWith(
         status: ServiceRequestStatus.assigned,
         craftsmanFullName: event.craftsmanFullName,
@@ -187,7 +234,7 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
       );
     });
     _noCraftsmanSub = socket.onNoCraftsmanAvailable.listen((event) {
-      if (event.requestId != requestId) return;
+      if (event.requestId != _requestId) return;
       state = state.copyWith(status: ServiceRequestStatus.noCraftsmanAvailable);
     });
     _locationSub = socket.onCraftsmanLocationUpdate.listen((event) {
@@ -197,13 +244,13 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
       );
     });
     _startedSub = socket.onRequestStarted.listen((event) {
-      if (event.requestId != requestId) return;
+      if (event.requestId != _requestId) return;
       state = state.copyWith(status: ServiceRequestStatus.inProgress);
     });
     _awaitingConfirmationSub = socket.onRequestAwaitingConfirmation.listen((
       event,
     ) {
-      if (event.requestId != requestId) return;
+      if (event.requestId != _requestId) return;
       state = state.copyWith(
         status: ServiceRequestStatus.awaitingClientConfirmation,
       );

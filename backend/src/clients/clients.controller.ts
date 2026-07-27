@@ -27,6 +27,11 @@ export class ClientsController {
     return { idCardStorageKey: dto.idCardStorageKey };
   }
 
+  @Get('me/active-request')
+  getActiveRequest(@CurrentUser() user: AuthenticatedUser) {
+    return this.clientsService.getActiveRequest(user.id);
+  }
+
   @Get('me/requests')
   async getRequestHistory(
     @CurrentUser() user: AuthenticatedUser,

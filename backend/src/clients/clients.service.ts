@@ -15,6 +15,22 @@ export interface ClientMe {
   completedMissionsCount: number;
 }
 
+export interface ActiveRequest {
+  requestId: string;
+  serviceCategory: string;
+  status: 'pending' | 'assigned' | 'in_progress' | 'awaiting_client_confirmation';
+  craftsmanFullName: string | null;
+  craftsmanPhone: string | null;
+}
+
+interface ActiveRequestRow {
+  id: string;
+  service_category: string;
+  status: 'pending' | 'assigned' | 'in_progress' | 'awaiting_client_confirmation';
+  craftsman_full_name: string | null;
+  craftsman_phone: string | null;
+}
+
 export interface RequestHistoryItem {
   requestId: string;
   serviceCategory: string;
@@ -85,6 +101,40 @@ export class ClientsService {
       { userId },
       { idCardStorageKey, isActive: true },
     );
+  }
+
+  // Ground truth for "what's my request actually doing right now" — unlike
+  // the craftsman side (getActiveJob), the client app has no other way to
+  // recover this: it otherwise relies entirely on live socket pushes, which
+  // a backgrounded app / dropped connection can silently miss. Called on
+  // app-resume (see ServiceRequestController.handleAppResumed) alongside the
+  // socket rejoin, so a client who missed a push still sees the true status
+  // once they're back. Same active-status set as the one-request-per-client
+  // unique index.
+  async getActiveRequest(userId: string): Promise<ActiveRequest | null> {
+    await this.findClientByUserId(userId);
+
+    const rows: ActiveRequestRow[] = await this.dataSource.query(
+      `SELECT sr."id", sr."service_category", sr."status",
+              u."full_name" AS craftsman_full_name, u."phone" AS craftsman_phone
+       FROM "service_requests" sr
+       LEFT JOIN "users" u ON u."id" = sr."craftsman_id"
+       WHERE sr."client_id" = $1
+         AND sr."status" IN ('pending', 'assigned', 'in_progress', 'awaiting_client_confirmation')
+       ORDER BY sr."created_at" DESC
+       LIMIT 1`,
+      [userId],
+    );
+    if (rows.length === 0) return null;
+
+    const row = rows[0];
+    return {
+      requestId: row.id,
+      serviceCategory: row.service_category,
+      status: row.status,
+      craftsmanFullName: row.craftsman_full_name,
+      craftsmanPhone: row.craftsman_phone,
+    };
   }
 
   // Every request this client ever made, past or present — backs the

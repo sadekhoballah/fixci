@@ -18,26 +18,37 @@ export interface CreatedServiceRequest {
 export class MatchingService {
   constructor(private readonly dataSource: DataSource) {}
 
+  // Returns null if this client already has an active request (pending,
+  // assigned, in_progress, or awaiting_client_confirmation) — enforced
+  // atomically by the service_requests_one_active_per_client partial unique
+  // index, not a check-then-insert, so a fast double-tap can't race past it.
   async createServiceRequest(
     clientId: string,
     serviceCategory: ServiceCategory,
     latitude: number,
     longitude: number,
-  ): Promise<CreatedServiceRequest> {
-    const rows: Array<{ id: string }> = await this.dataSource.query(
-      `INSERT INTO "service_requests"
-         ("client_id", "service_category", "client_location", "search_radius_meters")
-       VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5)
-       RETURNING "id"`,
-      [clientId, serviceCategory, longitude, latitude, INITIAL_RADIUS_METERS],
-    );
-    return {
-      id: rows[0].id,
-      clientId,
-      serviceCategory,
-      latitude,
-      longitude,
-    };
+  ): Promise<CreatedServiceRequest | null> {
+    try {
+      const rows: Array<{ id: string }> = await this.dataSource.query(
+        `INSERT INTO "service_requests"
+           ("client_id", "service_category", "client_location", "search_radius_meters")
+         VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5)
+         RETURNING "id"`,
+        [clientId, serviceCategory, longitude, latitude, INITIAL_RADIUS_METERS],
+      );
+      return {
+        id: rows[0].id,
+        clientId,
+        serviceCategory,
+        latitude,
+        longitude,
+      };
+    } catch (error) {
+      if ((error as { code?: string }).code === '23505') {
+        return null;
+      }
+      throw error;
+    }
   }
 
   // Catches the craftsman who logs in / goes available *after* a client's
