@@ -1,8 +1,11 @@
 import '../../core/models/service_category.dart';
 
+enum VerificationRole { craftsman, client }
+
 class PendingVerification {
   const PendingVerification({
     required this.userId,
+    required this.role,
     required this.fullName,
     required this.phone,
     required this.serviceCategory,
@@ -11,9 +14,11 @@ class PendingVerification {
   });
 
   final String userId;
-  final String? fullName;
+  final VerificationRole role;
   final String phone;
-  final ServiceCategory serviceCategory;
+  final String? fullName;
+  // Craftsman-only — null for a client entry.
+  final ServiceCategory? serviceCategory;
   final String? experienceDetails;
   final DateTime createdAt;
 }

@@ -9,6 +9,9 @@ export interface ClientMe {
   fullName: string | null;
   phone: string;
   idVerified: boolean;
+  // False only ever means an admin rejected this account (see
+  // AdminService.deactivateClient) — every account starts true.
+  isActive: boolean;
   completedMissionsCount: number;
 }
 
@@ -62,8 +65,26 @@ export class ClientsService {
       fullName: user.fullName,
       phone: user.phone,
       idVerified: profile.idVerified,
+      isActive: profile.isActive,
       completedMissionsCount: Number(count),
     };
+  }
+
+  // Lets a rejected (isActive: false) client attach a fresh ID photo without
+  // going through a whole new registration — mirrors
+  // CraftsmenService.resubmitIdCard. Un-deactivates them (isActive: true) so
+  // they drop back into AdminService.getPendingVerifications' queue for
+  // another look; idVerified stays false either way, for the admin to decide
+  // again.
+  async resubmitIdCard(
+    userId: string,
+    idCardStorageKey: string,
+  ): Promise<void> {
+    await this.findClientByUserId(userId);
+    await this.clientProfileRepository.update(
+      { userId },
+      { idCardStorageKey, isActive: true },
+    );
   }
 
   // Every request this client ever made, past or present — backs the

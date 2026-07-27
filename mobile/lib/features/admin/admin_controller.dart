@@ -27,11 +27,23 @@ class AdminController extends Notifier<AdminState> {
     }
   }
 
-  Future<void> approve(String userId) =>
-      _resolve(userId, (repo) => repo.verifyCraftsman(userId));
+  Future<void> approve(String userId) => _resolve(userId, (repo) {
+    final role = _roleOf(userId);
+    return role == VerificationRole.client
+        ? repo.verifyClient(userId)
+        : repo.verifyCraftsman(userId);
+  });
 
-  Future<void> reject(String userId) =>
-      _resolve(userId, (repo) => repo.deactivateCraftsman(userId));
+  Future<void> reject(String userId) => _resolve(userId, (repo) {
+    final role = _roleOf(userId);
+    return role == VerificationRole.client
+        ? repo.deactivateClient(userId)
+        : repo.deactivateCraftsman(userId);
+  });
+
+  VerificationRole _roleOf(String userId) => state.entries
+      .firstWhere((e) => e.userId == userId)
+      .role;
 
   Future<void> _resolve(
     String userId,

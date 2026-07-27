@@ -1,6 +1,7 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Query, UseGuards } from '@nestjs/common';
 import { ClientsService } from './clients.service';
 import { GetJobHistoryQueryDto } from '../craftsmen/dto/get-job-history-query.dto';
+import { ResubmitIdCardDto } from '../craftsmen/dto/resubmit-id-card.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth-request';
@@ -15,6 +16,15 @@ export class ClientsController {
   @Get('me')
   getMe(@CurrentUser() user: AuthenticatedUser) {
     return this.clientsService.getMe(user.id);
+  }
+
+  @Patch('me/id-card')
+  async resubmitIdCard(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ResubmitIdCardDto,
+  ) {
+    await this.clientsService.resubmitIdCard(user.id, dto.idCardStorageKey);
+    return { idCardStorageKey: dto.idCardStorageKey };
   }
 
   @Get('me/requests')

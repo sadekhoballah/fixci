@@ -29,6 +29,13 @@ export class ClientProfile {
   @Column({ name: 'id_verified', type: 'boolean', default: false })
   idVerified: boolean;
 
+  // Admin kill switch, mirroring CraftsmanProfile.isActive — set false by
+  // AdminService.deactivateClient (the "reject" action on the review
+  // screen). False only ever means an admin rejected this account; every
+  // account starts true.
+  @Column({ name: 'is_active', type: 'boolean', default: true })
+  isActive: boolean;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

@@ -126,7 +126,10 @@ class _VerificationCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(entry.serviceCategory.icon, color: colorScheme.primary),
+              Icon(
+                entry.serviceCategory?.icon ?? Icons.person_rounded,
+                color: colorScheme.primary,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -138,7 +141,9 @@ class _VerificationCard extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${entry.serviceCategory.label} · ${entry.phone}',
+            entry.serviceCategory != null
+                ? '${entry.serviceCategory!.label} · ${entry.phone}'
+                : 'Client · ${entry.phone}',
             style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
           ),
           if (entry.experienceDetails != null &&
@@ -155,7 +160,7 @@ class _VerificationCard extends ConsumerWidget {
             style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
-          _IdCardPreview(userId: entry.userId),
+          _IdCardPreview(userId: entry.userId, role: entry.role),
           const SizedBox(height: 14),
           Row(
             children: [
@@ -193,9 +198,10 @@ class _VerificationCard extends ConsumerWidget {
 }
 
 class _IdCardPreview extends ConsumerStatefulWidget {
-  const _IdCardPreview({required this.userId});
+  const _IdCardPreview({required this.userId, required this.role});
 
   final String userId;
+  final VerificationRole role;
 
   @override
   ConsumerState<_IdCardPreview> createState() => _IdCardPreviewState();
@@ -209,7 +215,7 @@ class _IdCardPreviewState extends ConsumerState<_IdCardPreview> {
     super.initState();
     _bytesFuture = ref
         .read(adminRepositoryProvider)
-        .getIdCardBytes(widget.userId);
+        .getIdCardBytes(widget.userId, widget.role);
   }
 
   @override

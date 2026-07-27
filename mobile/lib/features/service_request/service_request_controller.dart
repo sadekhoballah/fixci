@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../core/location/location_service.dart' as location_service;
 import '../../core/models/service_category.dart';
 import '../../core/network/api_client.dart';
@@ -44,19 +45,61 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
     await location_service.getCurrentPosition();
   }
 
+  // Mirrors CraftsmanHomeController.requestLocationAccess's sequence, applied
+  // to the client's own request flow: request the app permission if that's
+  // the blocker, then deep-link straight to the relevant system settings
+  // screen instead of just telling the client to go find it themselves —
+  // neither platform lets an app flip location on programmatically, so a
+  // direct settings deep-link is the closest thing to "automatic activation"
+  // available. Returns null (with state already set to an actionable error)
+  // if location still isn't available after this.
+  Future<Position?> _resolvePosition() async {
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      await Geolocator.openLocationSettings();
+      state = state.copyWith(
+        status: ServiceRequestStatus.error,
+        errorMessage: 'Activez la localisation puis réessayez.',
+      );
+      return null;
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.deniedForever) {
+      await Geolocator.openAppSettings();
+      state = state.copyWith(
+        status: ServiceRequestStatus.error,
+        errorMessage: "Autorisez l'accès à la localisation puis réessayez.",
+      );
+      return null;
+    }
+    if (permission == LocationPermission.denied) {
+      state = state.copyWith(
+        status: ServiceRequestStatus.error,
+        errorMessage: 'Localisation refusée.',
+      );
+      return null;
+    }
+
+    final position = await location_service.getCurrentPosition();
+    if (position == null) {
+      state = state.copyWith(
+        status: ServiceRequestStatus.error,
+        errorMessage: 'Impossible de récupérer votre position.',
+      );
+    }
+    return position;
+  }
+
   Future<void> submit(ServiceCategory category) async {
     state = state.copyWith(
       status: ServiceRequestStatus.locating,
       clearError: true,
     );
-    final position = await location_service.getCurrentPosition();
-    if (position == null) {
-      state = state.copyWith(
-        status: ServiceRequestStatus.error,
-        errorMessage: 'Activez la localisation pour envoyer une demande.',
-      );
-      return;
-    }
+    final position = await _resolvePosition();
+    if (position == null) return;
 
     state = state.copyWith(
       status: ServiceRequestStatus.submitting,
