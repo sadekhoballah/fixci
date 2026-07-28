@@ -15,6 +15,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { CraftsmenModule } from './craftsmen/craftsmen.module';
 import { ClientsModule } from './clients/clients.module';
 import { AdminModule } from './admin/admin.module';
+import { AdminAuthModule } from './admin-auth/admin-auth.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
@@ -33,6 +34,7 @@ import { AuthModule } from './auth/auth.module';
     PaymentsModule,
     CraftsmenModule,
     ClientsModule,
+    AdminAuthModule,
     AdminModule,
   ],
   controllers: [AppController],

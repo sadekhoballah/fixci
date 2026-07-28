@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   NotFoundException,
@@ -14,14 +15,14 @@ import type { Response } from 'express';
 import { existsSync } from 'fs';
 import { basename, join } from 'path';
 import { AdminService } from './admin.service';
-import { AuthGuard } from '../auth/auth.guard';
-import { AdminGuard } from '../auth/admin.guard';
+import { AdminJwtGuard } from '../auth/admin-jwt.guard';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 import { ClientProfile } from '../database/entities/client-profile.entity';
 import { ID_CARDS_DIR } from '../uploads/uploads.constants';
+import { DeactivateAccountDto } from './dto/deactivate-account.dto';
 
 @Controller('admin')
-@UseGuards(AuthGuard, AdminGuard)
+@UseGuards(AdminJwtGuard)
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
@@ -43,8 +44,11 @@ export class AdminController {
   }
 
   @Patch('craftsmen/:id/deactivate')
-  async deactivate(@Param('id', ParseUUIDPipe) id: string) {
-    await this.adminService.deactivateCraftsman(id);
+  async deactivate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: DeactivateAccountDto,
+  ) {
+    await this.adminService.deactivateCraftsman(id, dto.reason);
     return { userId: id, isActive: false };
   }
 
@@ -55,8 +59,11 @@ export class AdminController {
   }
 
   @Patch('clients/:id/deactivate')
-  async deactivateClient(@Param('id', ParseUUIDPipe) id: string) {
-    await this.adminService.deactivateClient(id);
+  async deactivateClient(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: DeactivateAccountDto,
+  ) {
+    await this.adminService.deactivateClient(id, dto.reason);
     return { userId: id, isActive: false };
   }
 

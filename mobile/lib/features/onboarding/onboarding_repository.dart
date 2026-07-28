@@ -21,13 +21,13 @@ class OnboardingRepository {
     return response['storageKey'] as String;
   }
 
-  Future<bool> registerUser(OnboardingState state) async {
+  Future<void> registerUser(OnboardingState state) async {
     final role = state.role;
     if (role == null) {
       throw ApiException('Veuillez choisir un rôle avant de continuer.');
     }
 
-    final response = await _apiClient.post('/users/register', {
+    await _apiClient.post('/users/register', {
       'phone': state.phone.trim(),
       'fullName': state.fullName.trim(),
       'role': role.wireValue,
@@ -39,7 +39,6 @@ class OnboardingRepository {
       if (state.isPhoneVerified && state.firebaseIdToken != null)
         'firebaseIdToken': state.firebaseIdToken,
     });
-    return response['isAdmin'] as bool? ?? false;
   }
 
   // Kicks off a Wave charge for the given plan and returns our reference —

@@ -23,8 +23,8 @@ class PendingVerification {
   final DateTime createdAt;
 }
 
-class AdminState {
-  const AdminState({
+class AdminKycState {
+  const AdminKycState({
     this.entries = const [],
     this.isLoading = true,
     this.errorMessage,
@@ -38,14 +38,14 @@ class AdminState {
   // by userId, so each card's buttons disable independently.
   final Set<String> processingUserIds;
 
-  AdminState copyWith({
+  AdminKycState copyWith({
     List<PendingVerification>? entries,
     bool? isLoading,
     String? errorMessage,
     bool clearError = false,
     Set<String>? processingUserIds,
   }) {
-    return AdminState(
+    return AdminKycState(
       entries: entries ?? this.entries,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),

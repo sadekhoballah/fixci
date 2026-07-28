@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/session_storage.dart';
 import '../../../core/media/id_card_picker.dart';
-import '../../admin/screens/admin_verifications_screen.dart';
 import '../../craftsman_home/craftsman_home_controller.dart';
 import '../../onboarding/screens/tier_selection_screen.dart';
 
@@ -15,16 +14,12 @@ class AccountScreen extends ConsumerStatefulWidget {
 
 class _AccountScreenState extends ConsumerState<AccountScreen> {
   String? _phone;
-  bool _isAdmin = false;
 
   @override
   void initState() {
     super.initState();
     ref.read(sessionStorageProvider).loadPhone().then((phone) {
       if (mounted) setState(() => _phone = phone);
-    });
-    ref.read(sessionStorageProvider).loadIsAdmin().then((isAdmin) {
-      if (mounted) setState(() => _isAdmin = isAdmin);
     });
   }
 
@@ -38,21 +33,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final controller = ref.read(craftsmanHomeControllerProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Compte'),
-        actions: [
-          if (_isAdmin)
-            IconButton(
-              tooltip: 'Vérifications en attente',
-              icon: const Icon(Icons.admin_panel_settings_rounded),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const AdminVerificationsScreen(),
-                ),
-              ),
-            ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Compte')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(

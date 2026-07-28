@@ -142,7 +142,6 @@ class OnboardingController extends Notifier<OnboardingState> {
         final storage = ref.read(sessionStorageProvider);
         await storage.saveRole(existing.role);
         await storage.savePhone(state.phone.trim());
-        await storage.saveIsAdmin(existing.isAdmin);
         if (existing.subscriptionTier != null) {
           await storage.saveTier(existing.subscriptionTier!);
         }
@@ -172,14 +171,11 @@ class OnboardingController extends Notifier<OnboardingState> {
   Future<bool> submitRegistration() async {
     state = state.copyWith(isSubmitting: true, clearSubmissionError: true);
     try {
-      final isAdmin = await ref
-          .read(onboardingRepositoryProvider)
-          .registerUser(state);
+      await ref.read(onboardingRepositoryProvider).registerUser(state);
       state = state.copyWith(isSubmitting: false, registrationSucceeded: true);
       final storage = ref.read(sessionStorageProvider);
       await storage.saveRole(state.role!);
       await storage.savePhone(state.phone.trim());
-      await storage.saveIsAdmin(isAdmin);
       devBypassPhone = state.phone.trim();
       return true;
     } on ApiException catch (e) {

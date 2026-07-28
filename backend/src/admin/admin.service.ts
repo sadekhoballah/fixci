@@ -4,6 +4,7 @@ import { IsNull, Not, Repository } from 'typeorm';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 import { ClientProfile } from '../database/entities/client-profile.entity';
 import { PresenceService } from '../matching/presence.service';
+import { NotificationsService } from '../firebase/notifications.service';
 
 export interface PendingVerification {
   userId: string;
@@ -25,6 +26,7 @@ export class AdminService {
     @InjectRepository(ClientProfile)
     private readonly clientProfileRepository: Repository<ClientProfile>,
     private readonly presenceService: PresenceService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // A single combined queue for both account types, oldest first — mirrors
@@ -94,15 +96,27 @@ export class AdminService {
   // The "reject" action from the review screen: stops the craftsman from
   // ever going online again (see PresenceService.setOnline) and immediately
   // pulls them out of presence if they're online right now.
-  async deactivateCraftsman(userId: string): Promise<void> {
+  async deactivateCraftsman(userId: string, reason?: string): Promise<void> {
     const result = await this.craftsmanProfileRepository.update(
       { userId },
-      { isActive: false, isAvailable: false },
+      {
+        isActive: false,
+        isAvailable: false,
+        idRejectionReason: reason ?? null,
+      },
     );
     if (result.affected === 0) {
       throw new NotFoundException('No craftsman profile for this account');
     }
     await this.presenceService.setOffline(userId);
+    await this.notificationsService.sendToUser(
+      userId,
+      {
+        title: 'Compte non validé',
+        body: reason ?? 'Votre document a été refusé. Merci de le soumettre à nouveau.',
+      },
+      { type: 'id_verification_rejected' },
+    );
   }
 
   async verifyClient(userId: string): Promise<void> {
@@ -118,13 +132,21 @@ export class AdminService {
   // Clients have no presence/online concept to pull them out of — unlike
   // deactivateCraftsman, this is just the isActive flip the client app reads
   // to show the "rejected, please resubmit" state.
-  async deactivateClient(userId: string): Promise<void> {
+  async deactivateClient(userId: string, reason?: string): Promise<void> {
     const result = await this.clientProfileRepository.update(
       { userId },
-      { isActive: false },
+      { isActive: false, idRejectionReason: reason ?? null },
     );
     if (result.affected === 0) {
       throw new NotFoundException('No client profile for this account');
     }
+    await this.notificationsService.sendToUser(
+      userId,
+      {
+        title: 'Compte non validé',
+        body: reason ?? 'Votre document a été refusé. Merci de le soumettre à nouveau.',
+      },
+      { type: 'id_verification_rejected' },
+    );
   }
 }

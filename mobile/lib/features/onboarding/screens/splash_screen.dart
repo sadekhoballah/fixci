@@ -43,13 +43,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (role != null && !await _stillRegistered(phone)) {
       await storage.clearSession();
       role = null;
-    } else if (role != null) {
-      // completeAfterVerification() is the only other place isAdmin gets
-      // saved, and that only runs right after OTP verification — an
-      // already-logged-in session (the common case on every subsequent
-      // launch) would otherwise carry a stale isAdmin forever. Best-effort:
-      // a lookup failure here just leaves the cached flag as-is.
-      await _refreshIsAdminFlag();
     }
     if (!mounted) return;
 
@@ -80,19 +73,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (phone == null) return false;
     devBypassPhone = phone;
     return ref.read(userLookupServiceProvider).isPhoneStillRegistered();
-  }
-
-  Future<void> _refreshIsAdminFlag() async {
-    try {
-      final existing = await ref
-          .read(userLookupServiceProvider)
-          .findExistingAccount();
-      if (existing != null) {
-        await ref.read(sessionStorageProvider).saveIsAdmin(existing.isAdmin);
-      }
-    } catch (_) {
-      // Best-effort — the cached isAdmin flag (if any) stays as-is.
-    }
   }
 
   @override

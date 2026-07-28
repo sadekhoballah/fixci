@@ -42,6 +42,12 @@ export class CraftsmanProfile {
   @Column({ name: 'id_verified', type: 'boolean', default: false })
   idVerified: boolean;
 
+  // Set by AdminService.deactivateCraftsman when an admin rejects the KYC
+  // submission — shown back to the craftsman alongside the "rejected,
+  // please resubmit" state so they know what to fix.
+  @Column({ name: 'id_rejection_reason', type: 'text', nullable: true })
+  idRejectionReason: string | null;
+
   // PostGIS geography(Point,4326); TypeORM round-trips this as raw EWKB hex on
   // plain find/save, so reads/writes that need coordinates go through raw
   // ST_ functions (ST_AsGeoJSON/ST_SetSRID) via the query builder instead.

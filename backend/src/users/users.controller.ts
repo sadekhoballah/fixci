@@ -15,7 +15,6 @@ import { UpdateFcmTokenDto } from './dto/update-fcm-token.dto';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { ADMIN_PHONE_NUMBERS } from '../auth/admin-phones.constants';
 import { UserRole } from '../database/enums/user-role.enum';
 
 @Controller('users')
@@ -31,7 +30,6 @@ export class UsersController {
       fullName: user.fullName,
       role: user.role,
       phoneVerified: user.phoneVerified,
-      isAdmin: ADMIN_PHONE_NUMBERS.has(user.phone),
     };
   }
 
@@ -60,7 +58,6 @@ export class UsersController {
       role: user.role,
       phoneVerified: user.phoneVerified,
       subscriptionTier,
-      isAdmin: ADMIN_PHONE_NUMBERS.has(user.phone),
     };
   }
 

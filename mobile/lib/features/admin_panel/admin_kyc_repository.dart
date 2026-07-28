@@ -1,13 +1,13 @@
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/service_category.dart';
-import '../../core/network/api_client.dart';
-import 'admin_state.dart';
+import 'admin_api_client.dart';
+import 'admin_kyc_state.dart';
 
-class AdminRepository {
-  AdminRepository(this._apiClient);
+class AdminKycRepository {
+  AdminKycRepository(this._apiClient);
 
-  final ApiClient _apiClient;
+  final AdminApiClient _apiClient;
 
   Future<List<PendingVerification>> getPendingVerifications() async {
     final response = await _apiClient.get('/admin/verifications');
@@ -33,14 +33,18 @@ class AdminRepository {
   Future<void> verifyCraftsman(String userId) =>
       _apiClient.patch('/admin/craftsmen/$userId/verify', const {});
 
-  Future<void> deactivateCraftsman(String userId) =>
-      _apiClient.patch('/admin/craftsmen/$userId/deactivate', const {});
+  Future<void> deactivateCraftsman(String userId, String? reason) =>
+      _apiClient.patch('/admin/craftsmen/$userId/deactivate', {
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      });
 
   Future<void> verifyClient(String userId) =>
       _apiClient.patch('/admin/clients/$userId/verify', const {});
 
-  Future<void> deactivateClient(String userId) =>
-      _apiClient.patch('/admin/clients/$userId/deactivate', const {});
+  Future<void> deactivateClient(String userId, String? reason) =>
+      _apiClient.patch('/admin/clients/$userId/deactivate', {
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      });
 
   Future<Uint8List> getIdCardBytes(String userId, VerificationRole role) =>
       _apiClient.getBytes(
@@ -50,9 +54,12 @@ class AdminRepository {
       );
 
   ServiceCategory _parseCategory(String wireValue) => ServiceCategory.values
-      .firstWhere((c) => c.wireValue == wireValue, orElse: () => ServiceCategory.plumber);
+      .firstWhere(
+        (c) => c.wireValue == wireValue,
+        orElse: () => ServiceCategory.plumber,
+      );
 }
 
-final adminRepositoryProvider = Provider<AdminRepository>(
-  (ref) => AdminRepository(ref.watch(apiClientProvider)),
+final adminKycRepositoryProvider = Provider<AdminKycRepository>(
+  (ref) => AdminKycRepository(ref.watch(adminApiClientProvider)),
 );

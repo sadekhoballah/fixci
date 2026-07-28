@@ -1,9 +1,10 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../admin_controller.dart';
-import '../admin_repository.dart';
-import '../admin_state.dart';
+import '../admin_auth_controller.dart';
+import '../admin_kyc_controller.dart';
+import '../admin_kyc_repository.dart';
+import '../admin_kyc_state.dart';
 
 String _formatDate(DateTime dt) {
   final local = dt.toLocal();
@@ -11,16 +12,26 @@ String _formatDate(DateTime dt) {
   return '${two(local.day)}/${two(local.month)}/${local.year} ${two(local.hour)}:${two(local.minute)}';
 }
 
-class AdminVerificationsScreen extends ConsumerWidget {
-  const AdminVerificationsScreen({super.key});
+class AdminKycScreen extends ConsumerWidget {
+  const AdminKycScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(adminControllerProvider);
-    final controller = ref.read(adminControllerProvider.notifier);
+    final state = ref.watch(adminKycControllerProvider);
+    final controller = ref.read(adminKycControllerProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Vérifications en attente')),
+      appBar: AppBar(
+        title: const Text('Vérifications en attente'),
+        actions: [
+          IconButton(
+            tooltip: 'Se déconnecter',
+            icon: const Icon(Icons.logout_rounded),
+            onPressed: () =>
+                ref.read(adminAuthControllerProvider.notifier).logout(),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: state.isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -51,7 +62,7 @@ class AdminVerificationsScreen extends ConsumerWidget {
                       onReject: () => _confirmReject(
                         context,
                         entry,
-                        () => controller.reject(entry.userId),
+                        (reason) => controller.reject(entry.userId, reason),
                       ),
                     );
                   },
@@ -65,15 +76,32 @@ class AdminVerificationsScreen extends ConsumerWidget {
 Future<void> _confirmReject(
   BuildContext context,
   PendingVerification entry,
-  Future<void> Function() onConfirm,
+  Future<void> Function(String? reason) onConfirm,
 ) async {
+  final reasonController = TextEditingController();
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: const Text('Rejeter cette demande ?'),
-      content: Text(
-        '${entry.fullName ?? "Ce compte"} ne pourra plus recevoir de missions '
-        "tant qu'il ne sera pas réactivé.",
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${entry.fullName ?? "Ce compte"} ne pourra plus recevoir de missions '
+            "tant qu'il ne sera pas réactivé. Une notification lui sera envoyée.",
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: reasonController,
+            decoration: const InputDecoration(
+              labelText: 'Raison du rejet (optionnel)',
+              hintText: 'Ex. : photo illisible',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 2,
+          ),
+        ],
       ),
       actions: [
         TextButton(
@@ -88,7 +116,11 @@ Future<void> _confirmReject(
       ],
     ),
   );
-  if (confirmed == true) await onConfirm();
+  if (confirmed == true) {
+    final reason = reasonController.text.trim();
+    await onConfirm(reason.isEmpty ? null : reason);
+  }
+  reasonController.dispose();
 }
 
 class _VerificationCard extends ConsumerWidget {
@@ -134,7 +166,10 @@ class _VerificationCard extends ConsumerWidget {
               Expanded(
                 child: Text(
                   entry.fullName ?? 'Sans nom',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ],
@@ -144,14 +179,20 @@ class _VerificationCard extends ConsumerWidget {
             entry.serviceCategory != null
                 ? '${entry.serviceCategory!.label} · ${entry.phone}'
                 : 'Client · ${entry.phone}',
-            style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
+            style: TextStyle(
+              fontSize: 13,
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
           if (entry.experienceDetails != null &&
               entry.experienceDetails!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               entry.experienceDetails!,
-              style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 13,
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
           const SizedBox(height: 4),
@@ -214,7 +255,7 @@ class _IdCardPreviewState extends ConsumerState<_IdCardPreview> {
   void initState() {
     super.initState();
     _bytesFuture = ref
-        .read(adminRepositoryProvider)
+        .read(adminKycRepositoryProvider)
         .getIdCardBytes(widget.userId, widget.role);
   }
 
@@ -230,7 +271,9 @@ class _IdCardPreviewState extends ConsumerState<_IdCardPreview> {
             if (snapshot.connectionState != ConnectionState.done) {
               return const ColoredBox(
                 color: Color(0xFFF0F0F0),
-                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                child: Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
               );
             }
             if (snapshot.hasError || !snapshot.hasData) {

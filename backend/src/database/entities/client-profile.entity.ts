@@ -29,6 +29,12 @@ export class ClientProfile {
   @Column({ name: 'id_verified', type: 'boolean', default: false })
   idVerified: boolean;
 
+  // Set by AdminService.deactivateClient when an admin rejects the KYC
+  // submission — shown back to the client alongside the "rejected, please
+  // resubmit" state so they know what to fix.
+  @Column({ name: 'id_rejection_reason', type: 'text', nullable: true })
+  idRejectionReason: string | null;
+
   // Admin kill switch, mirroring CraftsmanProfile.isActive — set false by
   // AdminService.deactivateClient (the "reject" action on the review
   // screen). False only ever means an admin rejected this account; every

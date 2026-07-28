@@ -4,15 +4,10 @@ import '../models/user_role.dart';
 import '../network/api_client.dart';
 
 class ExistingAccount {
-  const ExistingAccount({
-    required this.role,
-    required this.subscriptionTier,
-    required this.isAdmin,
-  });
+  const ExistingAccount({required this.role, required this.subscriptionTier});
 
   final UserRole role;
   final SubscriptionTier? subscriptionTier;
-  final bool isAdmin;
 }
 
 class UserLookupService {
@@ -39,11 +34,7 @@ class UserLookupService {
         'free' => SubscriptionTier.free,
         _ => null,
       };
-      return ExistingAccount(
-        role: role,
-        subscriptionTier: tier,
-        isAdmin: response['isAdmin'] as bool? ?? false,
-      );
+      return ExistingAccount(role: role, subscriptionTier: tier);
     } on ApiException catch (e) {
       if (e.statusCode == 404) return null;
       rethrow;

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/auth/session_storage.dart';
 import '../../../core/media/id_card_picker.dart';
 import '../../../core/media/image_validation.dart';
 import '../../../core/network/api_client.dart';
-import '../../admin/screens/admin_verifications_screen.dart';
 
 class _ClientMe {
   const _ClientMe({
@@ -33,7 +31,6 @@ class ClientAccountScreen extends ConsumerStatefulWidget {
 class _ClientAccountScreenState extends ConsumerState<ClientAccountScreen> {
   _ClientMe? _me;
   String? _errorMessage;
-  bool _isAdmin = false;
   bool _isResubmittingIdCard = false;
   String? _resubmitError;
 
@@ -41,9 +38,6 @@ class _ClientAccountScreenState extends ConsumerState<ClientAccountScreen> {
   void initState() {
     super.initState();
     _load();
-    ref.read(sessionStorageProvider).loadIsAdmin().then((isAdmin) {
-      if (mounted) setState(() => _isAdmin = isAdmin);
-    });
   }
 
   Future<void> _load() async {
@@ -149,21 +143,7 @@ class _ClientAccountScreenState extends ConsumerState<ClientAccountScreen> {
     final me = _me;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Compte'),
-        actions: [
-          if (_isAdmin)
-            IconButton(
-              tooltip: 'Vérifications en attente',
-              icon: const Icon(Icons.admin_panel_settings_rounded),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const AdminVerificationsScreen(),
-                ),
-              ),
-            ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Compte')),
       body: SafeArea(
         child: me == null
             ? Center(
