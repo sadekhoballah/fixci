@@ -1,28 +1,129 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/service_category.dart';
+import '../../service_request/screens/searching_screen.dart';
+import '../../service_request/service_request_controller.dart';
+import '../../service_request/service_request_repository.dart';
+import '../../service_request/service_request_state.dart';
 import 'trade_detail_screen.dart';
 
-class ClientHomeScreen extends StatelessWidget {
+class ClientHomeScreen extends ConsumerWidget {
   const ClientHomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeRequest = ref.watch(clientActiveRequestNoticeProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('De quoi avez-vous besoin ?')),
       body: SafeArea(
-        child: GridView.builder(
-          padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: 1.05,
-          ),
-          itemCount: ServiceCategory.values.length,
-          itemBuilder: (context, index) {
-            final category = ServiceCategory.values[index];
-            return _CategoryCard(category: category);
+        child: Column(
+          children: [
+            activeRequest.when(
+              data: (active) => active == null
+                  ? const SizedBox.shrink()
+                  : _ActiveRequestBanner(active: active),
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+            ),
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.all(16),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 1.05,
+                ),
+                itemCount: ServiceCategory.values.length,
+                itemBuilder: (context, index) {
+                  final category = ServiceCategory.values[index];
+                  return _CategoryCard(category: category);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// The fix for a client who left the live-tracking screen (back button, app
+// restart, a push-notification tap that only lands on the shell) while a
+// request was still active — without this, that request just sits on the
+// server with no way back into the app to see or act on it, most critically
+// when it's awaiting_client_confirmation: the mission looks "done" to the
+// craftsman but never actually closes until the client confirms.
+class _ActiveRequestBanner extends ConsumerWidget {
+  const _ActiveRequestBanner({required this.active});
+
+  final ActiveRequest active;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final needsConfirmation =
+        active.status == ServiceRequestStatus.awaitingClientConfirmation;
+    final bg = needsConfirmation
+        ? const Color(0xFFFDE8E8)
+        : const Color(0xFFFFF3CD);
+    final fg = needsConfirmation
+        ? const Color(0xFFC62828)
+        : const Color(0xFF7A5B00);
+    final message = switch (active.status) {
+      ServiceRequestStatus.awaitingClientConfirmation =>
+        "L'artisan a terminé — confirmez la fin de la mission pour la clôturer.",
+      ServiceRequestStatus.inProgress => 'Votre mission est en cours.',
+      ServiceRequestStatus.assigned => 'Un artisan est en route vers vous.',
+      _ => 'Recherche d\'un artisan disponible pour votre demande…',
+    };
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            ref
+                .read(serviceRequestControllerProvider.notifier)
+                .resumeActiveRequest(active);
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    SearchingScreen(category: active.serviceCategory),
+              ),
+            );
           },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(
+                  needsConfirmation
+                      ? Icons.priority_high_rounded
+                      : Icons.pending_rounded,
+                  color: fg,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Mission en cours',
+                        style: TextStyle(fontWeight: FontWeight.w800, color: fg),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(message, style: TextStyle(fontSize: 13, color: fg)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: fg),
+              ],
+            ),
+          ),
         ),
       ),
     );

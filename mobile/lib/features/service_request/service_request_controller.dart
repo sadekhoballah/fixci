@@ -147,6 +147,24 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
     }
   }
 
+  // Reattaches this (freshly built) controller to a request that's still
+  // active server-side but that this controller instance never created
+  // itself — the client Home screen's "mission en cours" banner uses this
+  // before pushing SearchingScreen, covering the case submit()/retry() can't:
+  // the client left the tracking screen entirely (back button, app restart,
+  // tapping a push notification) so the old controller instance — and its
+  // socket subscriptions — was disposed along with it.
+  void resumeActiveRequest(ActiveRequest active) {
+    _requestId = active.requestId;
+    state = state.copyWith(
+      status: active.status,
+      requestId: active.requestId,
+      craftsmanFullName: active.craftsmanFullName,
+      craftsmanPhone: active.craftsmanPhone,
+    );
+    _listenForOutcome();
+  }
+
   // Mirrors CraftsmanHomeController.handleAppResumed — a client backgrounding
   // the app (tapping "Appeler"/"WhatsApp" to reach the craftsman is the
   // obvious real-world case, but a plain screen lock does it too) can leave

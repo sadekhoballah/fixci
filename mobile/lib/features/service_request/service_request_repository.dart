@@ -6,12 +6,14 @@ import 'service_request_state.dart';
 class ActiveRequest {
   const ActiveRequest({
     required this.requestId,
+    required this.serviceCategory,
     required this.status,
     required this.craftsmanFullName,
     required this.craftsmanPhone,
   });
 
   final String requestId;
+  final ServiceCategory serviceCategory;
   final ServiceRequestStatus status;
   final String? craftsmanFullName;
   final String? craftsmanPhone;
@@ -39,13 +41,18 @@ class ServiceRequestRepository {
       _apiClient.patch('/matching/requests/$requestId/cancel', const {});
 
   // Ground truth for "what's my request actually doing" — see
-  // ServiceRequestController.handleAppResumed. Mirrors
-  // CraftsmanHomeRepository.getActiveJob; null means no active request.
+  // ServiceRequestController.handleAppResumed and resumeActiveRequest.
+  // Mirrors CraftsmanHomeRepository.getActiveJob; null means no active
+  // request.
   Future<ActiveRequest?> getActiveRequest() async {
     final response = await _apiClient.get('/clients/me/active-request');
     if (response.isEmpty) return null;
     return ActiveRequest(
       requestId: response['requestId'] as String,
+      serviceCategory: ServiceCategory.values.firstWhere(
+        (c) => c.wireValue == response['serviceCategory'],
+        orElse: () => ServiceCategory.plumber,
+      ),
       status: switch (response['status']) {
         'assigned' => ServiceRequestStatus.assigned,
         'in_progress' => ServiceRequestStatus.inProgress,
@@ -76,3 +83,13 @@ class ServiceRequestRepository {
 final serviceRequestRepositoryProvider = Provider<ServiceRequestRepository>(
   (ref) => ServiceRequestRepository(ref.watch(apiClientProvider)),
 );
+
+// Backs the "you have an unfinished mission" banner on the client Home
+// screen — the fix for a client leaving the request-tracking screen (Home,
+// app restart, a push-notification tap that lands on the shell rather than
+// the live-tracking screen) and having no way back to a request that's
+// still active server-side. Refetches on every fresh watch (Home re-mount)
+// and whenever ClientShellScreen invalidates it on app resume.
+final clientActiveRequestNoticeProvider = FutureProvider.autoDispose<
+  ActiveRequest?
+>((ref) => ref.read(serviceRequestRepositoryProvider).getActiveRequest());
