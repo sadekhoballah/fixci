@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   MaxLength,
   ValidateIf,
@@ -23,6 +24,10 @@ export class RegisterUserDto {
 
   @IsEnum(UserRole)
   role: UserRole;
+
+  // Picked manually at registration, both roles — see District entity.
+  @IsUUID()
+  districtId: string;
 
   @ValidateIf((dto: RegisterUserDto) => dto.role === UserRole.CRAFTSMAN)
   @IsEnum(ServiceCategory)

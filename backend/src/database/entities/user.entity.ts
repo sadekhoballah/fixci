@@ -2,10 +2,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { UserRole } from '../enums/user-role.enum';
+import { District } from './district.entity';
 
 @Entity('users')
 export class User {
@@ -20,6 +23,17 @@ export class User {
 
   @Column({ type: 'enum', enum: UserRole, enumName: 'user_role_enum' })
   role: UserRole;
+
+  // Picked manually at registration (no geofencing) — shared by both roles
+  // since a User row exists regardless of client/craftsman, and gates
+  // whether this account can actually operate (see District entity) rather
+  // than whether it can register at all.
+  @Column({ name: 'district_id', type: 'uuid' })
+  districtId: string;
+
+  @ManyToOne(() => District)
+  @JoinColumn({ name: 'district_id' })
+  district: District;
 
   @Column({ name: 'phone_verified', type: 'boolean', default: false })
   phoneVerified: boolean;

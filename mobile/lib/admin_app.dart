@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'features/admin_panel/admin_auth_controller.dart';
-import 'features/admin_panel/screens/admin_kyc_screen.dart';
 import 'features/admin_panel/screens/admin_login_screen.dart';
+import 'features/admin_panel/screens/admin_shell_screen.dart';
 
 class AdminApp extends StatelessWidget {
   const AdminApp({super.key});
@@ -32,7 +32,7 @@ class _AdminRoot extends ConsumerWidget {
         body: Center(child: CircularProgressIndicator()),
       ),
       AdminAuthStatus.loggedOut => const AdminLoginScreen(),
-      AdminAuthStatus.loggedIn => const AdminKycScreen(),
+      AdminAuthStatus.loggedIn => const AdminShellScreen(),
     };
   }
 }

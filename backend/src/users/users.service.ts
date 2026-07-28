@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
@@ -8,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../database/entities/user.entity';
 import { ClientProfile } from '../database/entities/client-profile.entity';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
+import { District } from '../database/entities/district.entity';
 import { UserRole } from '../database/enums/user-role.enum';
 import { SubscriptionTier } from '../database/enums/subscription-tier.enum';
 import { RegisterUserDto } from './dto/register-user.dto';
@@ -21,6 +23,8 @@ export class UsersService {
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     @InjectRepository(CraftsmanProfile)
     private readonly craftsmanProfileRepository: Repository<CraftsmanProfile>,
+    @InjectRepository(District)
+    private readonly districtRepository: Repository<District>,
     private readonly dataSource: DataSource,
     private readonly phoneTokenVerifier: PhoneTokenVerifierService,
   ) {}
@@ -56,6 +60,18 @@ export class UsersService {
       throw new ConflictException('Phone number already registered');
     }
 
+    // Registration itself is never blocked by a closed district — that's
+    // what makes it a waitlist rather than a rejection (see District
+    // entity). Only existence is checked here; the toggle state is
+    // enforced later, at the point where it actually matters (going
+    // online / creating a service request).
+    const district = await this.districtRepository.findOne({
+      where: { id: dto.districtId },
+    });
+    if (!district) {
+      throw new NotFoundException('District introuvable');
+    }
+
     // Verified outside the transaction: this is a network call to Firebase,
     // not something that needs (or should hold open) a DB transaction.
     let phoneVerified = false;
@@ -85,6 +101,7 @@ export class UsersService {
             phone: dto.phone,
             fullName: dto.fullName ?? null,
             role: dto.role,
+            districtId: dto.districtId,
             phoneVerified,
           }),
         );

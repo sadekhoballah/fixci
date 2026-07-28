@@ -5,6 +5,7 @@ import '../../core/auth/session_storage.dart';
 import '../../core/auth/user_lookup_service.dart';
 import '../../core/media/id_card_picker.dart';
 import '../../core/media/image_validation.dart';
+import '../../core/models/district.dart';
 import '../../core/models/service_category.dart';
 import '../../core/models/subscription_tier.dart';
 import '../../core/models/user_role.dart';
@@ -50,6 +51,10 @@ class OnboardingController extends Notifier<OnboardingState> {
 
   void setServiceCategory(ServiceCategory category) {
     state = state.copyWith(serviceCategory: category);
+  }
+
+  void setDistrict(District district) {
+    state = state.copyWith(district: district);
   }
 
   void selectTier(SubscriptionTier tier) {

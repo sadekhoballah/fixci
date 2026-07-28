@@ -13,6 +13,7 @@ import { CreateServiceRequestDto } from './dto/create-service-request.dto';
 import { CreateRatingDto } from './dto/create-rating.dto';
 import { MatchingService } from './matching.service';
 import { MatchingGateway } from './matching.gateway';
+import { DistrictsService } from '../districts/districts.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth-request';
@@ -24,6 +25,7 @@ export class MatchingController {
   constructor(
     private readonly matchingService: MatchingService,
     private readonly matchingGateway: MatchingGateway,
+    private readonly districtsService: DistrictsService,
   ) {}
 
   @Post('requests')
@@ -33,6 +35,11 @@ export class MatchingController {
   ) {
     if (user.role !== UserRole.CLIENT) {
       throw new ForbiddenException('Only clients can create service requests');
+    }
+    if (!(await this.districtsService.isClientOrderingActiveForUser(user.id))) {
+      throw new ForbiddenException(
+        "Le service n'est pas encore disponible dans votre zone.",
+      );
     }
 
     const request = await this.matchingService.createServiceRequest(

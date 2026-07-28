@@ -16,6 +16,7 @@ import { CraftsmenModule } from './craftsmen/craftsmen.module';
 import { ClientsModule } from './clients/clients.module';
 import { AdminModule } from './admin/admin.module';
 import { AdminAuthModule } from './admin-auth/admin-auth.module';
+import { DistrictsModule } from './districts/districts.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
@@ -36,6 +37,7 @@ import { AuthModule } from './auth/auth.module';
     ClientsModule,
     AdminAuthModule,
     AdminModule,
+    DistrictsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

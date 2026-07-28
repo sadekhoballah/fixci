@@ -5,6 +5,7 @@ import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../redis/redis.constants';
 import { ServiceCategory } from '../database/enums/service-category.enum';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
+import { DistrictsService } from '../districts/districts.service';
 
 export interface NearbyCraftsman {
   craftsmanId: string;
@@ -20,6 +21,7 @@ export class PresenceService {
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
     @InjectRepository(CraftsmanProfile)
     private readonly craftsmanProfileRepository: Repository<CraftsmanProfile>,
+    private readonly districtsService: DistrictsService,
   ) {}
 
   private geoKey(category: ServiceCategory): string {
@@ -37,7 +39,11 @@ export class PresenceService {
   // findable as a matching candidate immediately, without touching the
   // matching algorithm itself. Returns false instead of throwing so callers
   // in different contexts (HTTP vs. socket) can each decide how to surface
-  // that.
+  // that. Also gated on the craftsman's district being open for
+  // registration (see District entity) — CraftsmenService.setAvailability
+  // checks this too beforehand for a precise error message, but the check
+  // lives here as well so the socket path (which just silently no-ops on
+  // false) can't bypass it.
   async setOnline(
     craftsmanId: string,
     category: ServiceCategory,
@@ -48,6 +54,9 @@ export class PresenceService {
       where: { userId: craftsmanId },
     });
     if (!profile?.isActive) return false;
+    if (!(await this.districtsService.isArtisanRegistrationActiveForUser(craftsmanId))) {
+      return false;
+    }
 
     await Promise.all([
       this.redis.geoadd(

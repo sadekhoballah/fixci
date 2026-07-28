@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import '../../../core/media/id_card_picker.dart';
+import '../../../core/models/district.dart';
 import '../../../core/models/service_category.dart';
 import '../../../core/models/user_role.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../client_home/screens/client_shell_screen.dart';
 import '../../craftsman_home/screens/artisan_shell_screen.dart';
 import '../onboarding_controller.dart';
+import '../onboarding_repository.dart';
 import '../onboarding_state.dart';
 import 'otp_verification_screen.dart';
 import 'registration_success_screen.dart';
@@ -116,6 +118,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   labelText: 'Numéro de téléphone',
                 ),
               ),
+              const SizedBox(height: 16),
+              _DistrictPicker(state: state, controller: controller),
               if (isCraftsman) ...[
                 const SizedBox(height: 16),
                 DropdownButtonFormField<ServiceCategory>(
@@ -168,6 +172,49 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DistrictPicker extends ConsumerWidget {
+  const _DistrictPicker({required this.state, required this.controller});
+
+  final OnboardingState state;
+  final OnboardingController controller;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final districtsAsync = ref.watch(districtsProvider);
+    final isCraftsman = state.role == UserRole.craftsman;
+
+    return districtsAsync.when(
+      loading: () => const LinearProgressIndicator(),
+      error: (_, _) => Text(
+        'Impossible de charger la liste des zones.',
+        style: TextStyle(color: Theme.of(context).colorScheme.error),
+      ),
+      data: (districts) => DropdownButtonFormField<District>(
+        initialValue: state.district,
+        isExpanded: true,
+        decoration: const InputDecoration(labelText: 'Votre zone / commune'),
+        items: districts
+            .map(
+              (d) => DropdownMenuItem(
+                value: d,
+                child: Text(
+                  (isCraftsman
+                          ? d.isArtisanRegistrationActive
+                          : d.isClientOrderingActive)
+                      ? d.name
+                      : '${d.name} (liste d\'attente)',
+                ),
+              ),
+            )
+            .toList(),
+        onChanged: (value) {
+          if (value != null) controller.setDistrict(value);
+        },
       ),
     );
   }

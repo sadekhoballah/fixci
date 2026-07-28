@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import '../../core/models/district.dart';
 import '../../core/models/service_category.dart';
 import '../../core/models/subscription_tier.dart';
 import '../../core/models/user_role.dart';
@@ -9,6 +10,7 @@ class OnboardingState {
     this.firstName = '',
     this.lastName = '',
     this.phone = '',
+    this.district,
     this.serviceCategory,
     this.experienceDetails = '',
     this.idCardStorageKey,
@@ -28,6 +30,7 @@ class OnboardingState {
   final String firstName;
   final String lastName;
   final String phone;
+  final District? district;
   final ServiceCategory? serviceCategory;
   final String experienceDetails;
   final String? idCardStorageKey;
@@ -67,6 +70,7 @@ class OnboardingState {
     if (firstName.trim().isEmpty) return false;
     if (lastName.trim().isEmpty) return false;
     if (phone.trim().isEmpty) return false;
+    if (district == null) return false;
     if (!idCardAttached) return false;
     if (role == UserRole.craftsman) {
       return serviceCategory != null && experienceDetails.trim().isNotEmpty;
@@ -79,6 +83,7 @@ class OnboardingState {
     String? firstName,
     String? lastName,
     String? phone,
+    District? district,
     ServiceCategory? serviceCategory,
     String? experienceDetails,
     String? idCardStorageKey,
@@ -103,6 +108,7 @@ class OnboardingState {
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       phone: phone ?? this.phone,
+      district: district ?? this.district,
       serviceCategory: serviceCategory ?? this.serviceCategory,
       experienceDetails: experienceDetails ?? this.experienceDetails,
       idCardStorageKey: clearIdCard

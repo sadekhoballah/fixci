@@ -10,6 +10,7 @@ import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity'
 import { UserRole } from '../database/enums/user-role.enum';
 import { SubscriptionTier } from '../database/enums/subscription-tier.enum';
 import { PresenceService } from '../matching/presence.service';
+import { DistrictsService } from '../districts/districts.service';
 import { SetAvailabilityDto } from './dto/set-availability.dto';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -94,6 +95,7 @@ export class CraftsmenService {
     @InjectRepository(CraftsmanProfile)
     private readonly craftsmanProfileRepository: Repository<CraftsmanProfile>,
     private readonly presenceService: PresenceService,
+    private readonly districtsService: DistrictsService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -121,6 +123,15 @@ export class CraftsmenService {
     const { profile } = await this.findCraftsmanByUserId(userId);
 
     if (dto.available) {
+      // Checked here (not just inside setOnline) so this specific case gets
+      // its own accurate message — otherwise a craftsman in a closed
+      // district would see "Ce compte a été désactivé" below, which wrongly
+      // implies something is wrong with their account rather than their zone.
+      if (!(await this.districtsService.isArtisanRegistrationActiveForUser(userId))) {
+        throw new ForbiddenException(
+          "Cette zone n'est pas encore ouverte aux artisans.",
+        );
+      }
       const wentOnline = await this.presenceService.setOnline(
         profile.userId,
         profile.serviceCategory,

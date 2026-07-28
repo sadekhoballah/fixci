@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
 import '../../core/media/id_card_picker.dart';
+import '../../core/models/district.dart';
 import '../../core/models/subscription_tier.dart';
 import '../../core/models/user_role.dart';
 import 'onboarding_state.dart';
@@ -9,6 +10,13 @@ class OnboardingRepository {
   OnboardingRepository(this._apiClient);
 
   final ApiClient _apiClient;
+
+  Future<List<District>> getDistricts() async {
+    final response = await _apiClient.get('/districts');
+    return (response['items'] as List)
+        .map((raw) => District.fromJson(raw as Map<String, dynamic>))
+        .toList();
+  }
 
   Future<String> uploadIdCard(PickedImage image) async {
     final response = await _apiClient.postMultipart(
@@ -31,6 +39,7 @@ class OnboardingRepository {
       'phone': state.phone.trim(),
       'fullName': state.fullName.trim(),
       'role': role.wireValue,
+      'districtId': state.district!.id,
       'idCardStorageKey': state.idCardStorageKey,
       if (role == UserRole.craftsman && state.serviceCategory != null)
         'serviceCategory': state.serviceCategory!.wireValue,
@@ -62,4 +71,11 @@ class OnboardingRepository {
 
 final onboardingRepositoryProvider = Provider<OnboardingRepository>(
   (ref) => OnboardingRepository(ref.watch(apiClientProvider)),
+);
+
+// Fetched once per app session — the registration screen's district
+// dropdown watches this instead of a hardcoded list, since the founder can
+// add new districts from the admin panel at any time.
+final districtsProvider = FutureProvider<List<District>>(
+  (ref) => ref.watch(onboardingRepositoryProvider).getDistricts(),
 );
