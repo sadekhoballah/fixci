@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/service_category.dart';
 import '../../service_request/screens/searching_screen.dart';
-import '../../service_request/service_request_controller.dart';
 import '../../service_request/service_request_repository.dart';
 import '../../service_request/service_request_state.dart';
 import 'trade_detail_screen.dart';
@@ -86,13 +85,12 @@ class _ActiveRequestBanner extends ConsumerWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () {
-            ref
-                .read(serviceRequestControllerProvider.notifier)
-                .resumeActiveRequest(active);
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) =>
-                    SearchingScreen(category: active.serviceCategory),
+                builder: (_) => SearchingScreen(
+                  category: active.serviceCategory,
+                  resumeFrom: active,
+                ),
               ),
             );
           },

@@ -4,13 +4,18 @@ import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/service_category.dart';
 import '../service_request_controller.dart';
+import '../service_request_repository.dart' show ActiveRequest;
 import '../service_request_state.dart';
 import '../widgets/star_rating_input.dart';
 
 class SearchingScreen extends ConsumerStatefulWidget {
-  const SearchingScreen({super.key, required this.category});
+  const SearchingScreen({super.key, required this.category, this.resumeFrom});
 
   final ServiceCategory category;
+  // Set when opened from the client Home screen's "mission en cours" banner
+  // rather than from a fresh submit() — see initState below for why this
+  // can't just be applied by the caller before pushing this route.
+  final ActiveRequest? resumeFrom;
 
   @override
   ConsumerState<SearchingScreen> createState() => _SearchingScreenState();
@@ -30,6 +35,18 @@ class _SearchingScreenState extends ConsumerState<SearchingScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Deliberately not done by the banner's onTap before pushing this route:
+    // serviceRequestControllerProvider is autoDispose, and a bare ref.read()
+    // with nothing watching it yet doesn't keep it alive — Riverpod disposes
+    // it again (silently reverting to a blank state) before this screen ever
+    // gets to build() and actually watch it. Calling it here, right before
+    // the first build() runs in the very same frame, closes that gap.
+    final resumeFrom = widget.resumeFrom;
+    if (resumeFrom != null) {
+      ref
+          .read(serviceRequestControllerProvider.notifier)
+          .resumeActiveRequest(resumeFrom);
+    }
   }
 
   @override
