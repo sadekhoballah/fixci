@@ -25,18 +25,7 @@ sudo systemctl restart fixci-backend
 echo "==> Apache reverse proxy (/api -> 127.0.0.1:3000)"
 sudo cp deploy/apache-fixci-api.conf /etc/apache2/conf-available/fixci-api.conf
 sudo a2enmod proxy proxy_http
-# Deliberately NOT `a2enconf` here: that loads the file at the *global*
-# server scope (conf-enabled/), which the request never reaches once
-# 000-default.conf's <VirtualHost *:80> claims every port-80 request —
-# ProxyPass has to live inside that VirtualHost to actually apply. Insert an
-# Include line just before </VirtualHost> instead (idempotent — skips if
-# already present).
-VHOST=/etc/apache2/sites-enabled/000-default.conf
-if ! sudo grep -q "conf-available/fixci-api.conf" "$VHOST"; then
-  sudo sed -i \
-    's|^</VirtualHost>|\tInclude conf-available/fixci-api.conf\n</VirtualHost>|' \
-    "$VHOST"
-fi
+sudo a2enconf fixci-api
 sudo systemctl reload apache2
 
 echo "==> Done. Check status with:"
