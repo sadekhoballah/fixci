@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -10,6 +11,7 @@ import { User } from '../database/entities/user.entity';
 import { ClientProfile } from '../database/entities/client-profile.entity';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 import { District } from '../database/entities/district.entity';
+import { BlacklistedPhone } from '../database/entities/blacklisted-phone.entity';
 import { UserRole } from '../database/enums/user-role.enum';
 import { SubscriptionTier } from '../database/enums/subscription-tier.enum';
 import { RegisterUserDto } from './dto/register-user.dto';
@@ -25,6 +27,8 @@ export class UsersService {
     private readonly craftsmanProfileRepository: Repository<CraftsmanProfile>,
     @InjectRepository(District)
     private readonly districtRepository: Repository<District>,
+    @InjectRepository(BlacklistedPhone)
+    private readonly blacklistedPhoneRepository: Repository<BlacklistedPhone>,
     private readonly dataSource: DataSource,
     private readonly phoneTokenVerifier: PhoneTokenVerifierService,
   ) {}
@@ -58,6 +62,15 @@ export class UsersService {
     });
     if (existing) {
       throw new ConflictException('Phone number already registered');
+    }
+
+    // Unlike a closed district (a waitlist — see below), a blacklisted
+    // phone is a hard rejection: no account gets created at all.
+    const blacklisted = await this.blacklistedPhoneRepository.findOne({
+      where: { phone: dto.phone },
+    });
+    if (blacklisted) {
+      throw new ForbiddenException('This phone number cannot be registered');
     }
 
     // Registration itself is never blocked by a closed district — that's

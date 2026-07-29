@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'admin_blacklist_screen.dart';
 import 'admin_districts_screen.dart';
 import 'admin_kyc_screen.dart';
 import 'admin_ops_screen.dart';
 
-// Minimal shell for the post-login admin dashboard. 3 destinations so far,
-// but modules 3/5 (blacklist, broadcast) each get their own screen added
-// here later — an IndexedStack + NavigationBar scales to that without
-// needing routing/GoRouter for what's still a handful of tabs.
+// Minimal shell for the post-login admin dashboard. 4 destinations so far,
+// but module 5 (broadcast) gets its own screen added here later — an
+// IndexedStack + NavigationBar scales to that without needing
+// routing/GoRouter for what's still a handful of tabs.
 class AdminShellScreen extends StatefulWidget {
   const AdminShellScreen({super.key});
 
@@ -21,6 +22,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     AdminKycScreen(),
     AdminDistrictsScreen(),
     AdminOpsScreen(),
+    AdminBlacklistScreen(),
   ];
 
   @override
@@ -42,6 +44,10 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           NavigationDestination(
             icon: Icon(Icons.insights_outlined),
             label: 'Live Ops',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.block_rounded),
+            label: 'Liste noire',
           ),
         ],
       ),

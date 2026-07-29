@@ -9,6 +9,7 @@ import { Rating } from '../database/entities/rating.entity';
 import { SubscriptionPayment } from '../database/entities/subscription-payment.entity';
 import { AdminUser } from '../database/entities/admin-user.entity';
 import { District } from '../database/entities/district.entity';
+import { BlacklistedPhone } from '../database/entities/blacklisted-phone.entity';
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ const baseOptions = {
     SubscriptionPayment,
     AdminUser,
     District,
+    BlacklistedPhone,
   ],
   synchronize: false,
 };

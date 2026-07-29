@@ -18,6 +18,7 @@ import { AdminModule } from './admin/admin.module';
 import { AdminAuthModule } from './admin-auth/admin-auth.module';
 import { DistrictsModule } from './districts/districts.module';
 import { OpsModule } from './ops/ops.module';
+import { BlacklistModule } from './blacklist/blacklist.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
@@ -40,6 +41,7 @@ import { AuthModule } from './auth/auth.module';
     AdminModule,
     DistrictsModule,
     OpsModule,
+    BlacklistModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

@@ -106,6 +106,20 @@ class AdminApiClient {
     return _handleResponse(response);
   }
 
+  Future<Map<String, dynamic>> delete(String path) async {
+    final http.Response response;
+    try {
+      response = await _client
+          .delete(Uri.parse('${ApiConfig.baseUrl}$path'), headers: _headers())
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      throw AdminApiException(
+        'Impossible de contacter le serveur. Vérifiez votre connexion.',
+      );
+    }
+    return _handleResponse(response);
+  }
+
   Map<String, dynamic> _handleResponse(http.Response response) {
     final rawDecoded = response.body.isEmpty
         ? null
