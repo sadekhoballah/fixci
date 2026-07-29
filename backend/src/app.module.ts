@@ -17,6 +17,7 @@ import { ClientsModule } from './clients/clients.module';
 import { AdminModule } from './admin/admin.module';
 import { AdminAuthModule } from './admin-auth/admin-auth.module';
 import { DistrictsModule } from './districts/districts.module';
+import { OpsModule } from './ops/ops.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
@@ -38,6 +39,7 @@ import { AuthModule } from './auth/auth.module';
     AdminAuthModule,
     AdminModule,
     DistrictsModule,
+    OpsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

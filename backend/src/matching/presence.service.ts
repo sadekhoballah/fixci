@@ -12,6 +12,12 @@ export interface NearbyCraftsman {
   distanceMeters: number;
 }
 
+export interface OnlineCraftsman {
+  craftsmanId: string;
+  category: ServiceCategory;
+  onlineSince: Date | null;
+}
+
 // Presence (who's online, where) lives entirely in Redis, not Postgres:
 // going online/offline is frequent and ephemeral, and GEOSEARCH gives O(log N)
 // nearest-candidate lookups without touching the DB on the matching hot path.
@@ -30,6 +36,10 @@ export class PresenceService {
 
   private categoryKey(craftsmanId: string): string {
     return `presence:category:${craftsmanId}`;
+  }
+
+  private onlineSinceKey(craftsmanId: string): string {
+    return `presence:online_since:${craftsmanId}`;
   }
 
   // The single choke point both go-online paths (REST PATCH
@@ -66,6 +76,9 @@ export class PresenceService {
         craftsmanId,
       ),
       this.redis.set(this.categoryKey(craftsmanId), category),
+      // NX: only stamp the first time they come online, so a reconnect
+      // while already online doesn't reset "online since" for the ops roster.
+      this.redis.set(this.onlineSinceKey(craftsmanId), Date.now().toString(), 'NX'),
     ]);
     return true;
   }
@@ -93,7 +106,31 @@ export class PresenceService {
         craftsmanId,
       );
     }
-    await this.redis.del(this.categoryKey(craftsmanId));
+    await Promise.all([
+      this.redis.del(this.categoryKey(craftsmanId)),
+      this.redis.del(this.onlineSinceKey(craftsmanId)),
+    ]);
+  }
+
+  // Admin ops roster — every craftsman currently online, across all
+  // categories. No coordinates: the roster is a text list, not a map.
+  async listOnline(): Promise<OnlineCraftsman[]> {
+    const results: OnlineCraftsman[] = [];
+    for (const category of Object.values(ServiceCategory)) {
+      const craftsmanIds = await this.redis.zrange(this.geoKey(category), 0, -1);
+      if (craftsmanIds.length === 0) continue;
+      const sinceValues = await Promise.all(
+        craftsmanIds.map((id) => this.redis.get(this.onlineSinceKey(id))),
+      );
+      craftsmanIds.forEach((craftsmanId, i) => {
+        results.push({
+          craftsmanId,
+          category,
+          onlineSince: sinceValues[i] ? new Date(Number(sinceValues[i])) : null,
+        });
+      });
+    }
+    return results;
   }
 
   async findNearest(
