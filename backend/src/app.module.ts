@@ -20,6 +20,7 @@ import { DistrictsModule } from './districts/districts.module';
 import { OpsModule } from './ops/ops.module';
 import { BlacklistModule } from './blacklist/blacklist.module';
 import { BroadcastModule } from './broadcast/broadcast.module';
+import { DirectoryModule } from './directory/directory.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
@@ -44,6 +45,7 @@ import { AuthModule } from './auth/auth.module';
     OpsModule,
     BlacklistModule,
     BroadcastModule,
+    DirectoryModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

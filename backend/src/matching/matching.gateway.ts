@@ -172,10 +172,11 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('client:join')
-  handleClientJoin(@ConnectedSocket() client: Socket) {
+  async handleClientJoin(@ConnectedSocket() client: Socket) {
     const user = this.requireUser(client);
     if (user.role !== UserRole.CLIENT) return;
     void client.join(clientRoom(user.id));
+    await this.presenceService.setClientOnline(user.id);
   }
 
   @SubscribeMessage('craftsman:online')
@@ -255,11 +256,17 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
   // no TTL on these keys. runMatchingLoop then "finds" them as a candidate,
   // emits into an empty room, and burns a full ACCEPT_TIMEOUT_MS round for
   // nobody, every round, until the request expires with no craftsman ever
-  // actually notified.
+  // actually notified. Same staleness risk for a client's online_clients
+  // set membership, just with a lower-stakes consequence (a stale "online"
+  // badge on the admin directory, nothing matching-critical).
   async handleDisconnect(client: Socket): Promise<void> {
     const user = (client.data as { user?: SocketUser }).user;
-    if (!user || user.role !== UserRole.CRAFTSMAN) return;
-    await this.presenceService.setOffline(user.id);
+    if (!user) return;
+    if (user.role === UserRole.CRAFTSMAN) {
+      await this.presenceService.setOffline(user.id);
+    } else {
+      await this.presenceService.setClientOffline(user.id);
+    }
   }
 
   @SubscribeMessage('request:accept')

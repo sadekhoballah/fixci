@@ -42,6 +42,8 @@ export class PresenceService {
     return `presence:online_since:${craftsmanId}`;
   }
 
+  private readonly onlineClientsKey = 'presence:online_clients';
+
   // The single choke point both go-online paths (REST PATCH
   // /craftsmen/me/availability and the socket craftsman:online event) go
   // through — an admin-deactivated craftsman (craftsman_profiles.is_active)
@@ -131,6 +133,24 @@ export class PresenceService {
       });
     }
     return results;
+  }
+
+  // "Online" for a client means "has the app open right now" (the
+  // client:join socket event, sent on launch) — unlike a craftsman there's
+  // no explicit go-online action, so this is just connection tracking, not
+  // a matching input. Single flag per user, same one-active-device
+  // assumption as fcmToken (see User entity) — no reference counting for
+  // multiple simultaneous sockets.
+  async setClientOnline(clientId: string): Promise<void> {
+    await this.redis.sadd(this.onlineClientsKey, clientId);
+  }
+
+  async setClientOffline(clientId: string): Promise<void> {
+    await this.redis.srem(this.onlineClientsKey, clientId);
+  }
+
+  async listOnlineClientIds(): Promise<string[]> {
+    return this.redis.smembers(this.onlineClientsKey);
   }
 
   async findNearest(
