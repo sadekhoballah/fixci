@@ -10,6 +10,7 @@ import { SubscriptionPayment } from '../database/entities/subscription-payment.e
 import { AdminUser } from '../database/entities/admin-user.entity';
 import { District } from '../database/entities/district.entity';
 import { BlacklistedPhone } from '../database/entities/blacklisted-phone.entity';
+import { BroadcastNotification } from '../database/entities/broadcast-notification.entity';
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ const baseOptions = {
     AdminUser,
     District,
     BlacklistedPhone,
+    BroadcastNotification,
   ],
   synchronize: false,
 };
