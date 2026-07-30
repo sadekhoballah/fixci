@@ -86,6 +86,46 @@ export class MatchingService {
     }));
   }
 
+  // Fallback candidate source for MatchingGateway's wake-up phase, when
+  // Redis presence has nobody live at all: queries craftsman_profiles.location,
+  // which PresenceService.setOnline/updateLocation keep as a best-effort
+  // "last seen here" marker independent of live Redis membership. Joins
+  // districts to mirror the same open-zone gate PresenceService.setOnline
+  // enforces on the live path — a wake-up push should never reach a
+  // craftsman whose district has since closed. Deliberately ignores
+  // is_available: that flag is exactly what drifts stale when a socket
+  // drops without a clean disconnect, so it's not trustworthy here.
+  // A craftsman who has never once gone online has location IS NULL and is
+  // correctly excluded — there is no location to wake them up with.
+  async findNearestByLastKnownLocation(
+    category: ServiceCategory,
+    longitude: number,
+    latitude: number,
+    excludeCraftsmanIds: string[],
+    limit: number,
+  ): Promise<Array<{ craftsmanId: string; distanceMeters: number }>> {
+    const rows: Array<{ user_id: string; distance_meters: string }> =
+      await this.dataSource.query(
+        `SELECT cp."user_id",
+                ST_Distance(cp."location", ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS distance_meters
+         FROM "craftsman_profiles" cp
+         JOIN "users" u ON u."id" = cp."user_id"
+         JOIN "districts" d ON d."id" = u."district_id"
+         WHERE cp."service_category" = $3
+           AND cp."is_active" = true
+           AND cp."location" IS NOT NULL
+           AND d."is_artisan_registration_active" = true
+           AND NOT (cp."user_id" = ANY($4::uuid[]))
+         ORDER BY distance_meters ASC
+         LIMIT $5`,
+        [longitude, latitude, category, excludeCraftsmanIds, limit],
+      );
+    return rows.map((row) => ({
+      craftsmanId: row.user_id,
+      distanceMeters: Number(row.distance_meters),
+    }));
+  }
+
   async updateSearchRadius(
     requestId: string,
     radiusMeters: number,

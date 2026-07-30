@@ -16,6 +16,8 @@ import { CreatedServiceRequest, MatchingService } from './matching.service';
 import {
   ACCEPT_TIMEOUT_MS,
   CANDIDATES_PER_ROUND,
+  WAKEUP_ACCEPT_TIMEOUT_MS,
+  WAKEUP_CANDIDATES,
   buildRadiusSequence,
 } from './matching.constants';
 import { clientRoom, craftsmanRoom } from './matching.rooms';
@@ -336,6 +338,11 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
   // the request row exists, and this loop runs independently, pushing
   // updates over sockets as candidates are broadcast to / assigned / expired.
   async runMatchingLoop(request: CreatedServiceRequest): Promise<void> {
+    // Everyone ever pushed to across every live round — excluded from the
+    // wake-up phase's query below so nobody who already had a live shot
+    // (and either declined or went quiet) gets double-pushed.
+    const triedCraftsmanIds = new Set<string>();
+
     for (const radius of buildRadiusSequence()) {
       await this.matchingService.updateSearchRadius(request.id, radius);
 
@@ -346,6 +353,9 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
         radius,
         CANDIDATES_PER_ROUND,
       );
+      for (const candidate of candidates) {
+        triedCraftsmanIds.add(candidate.craftsmanId);
+      }
 
       // Deliberately not skipping the wait when candidates.length === 0:
       // this round's ACCEPT_TIMEOUT_MS is also the window during which a
@@ -381,64 +391,63 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
       );
 
       if (acceptedCraftsmanId) {
-        const assigned = await this.matchingService.tryAssign(
-          request.id,
+        const won = await this.assignAndNotify(
+          request,
           acceptedCraftsmanId,
+          candidates.map((candidate) => candidate.craftsmanId),
         );
-        if (assigned) {
-          const craftsman = await this.userRepository.findOne({
-            where: { id: acceptedCraftsmanId },
-          });
-          this.activeAssignments.set(acceptedCraftsmanId, request.clientId);
-          this.server
-            .to(clientRoom(request.clientId))
-            .emit('request:assigned', {
-              requestId: request.id,
-              craftsmanId: acceptedCraftsmanId,
-              craftsmanFullName: craftsman?.fullName ?? null,
-              craftsmanPhone: craftsman?.phone ?? null,
-            });
-          void this.notificationsService.sendToUser(
-            request.clientId,
-            {
-              title: 'Artisan trouvé',
-              body: craftsman?.fullName
-                ? `${craftsman.fullName} arrive pour votre demande.`
-                : 'Un artisan a accepté votre demande.',
-            },
-            { event: 'request:assigned', requestId: request.id },
-          );
-          // The winning craftsman otherwise gets no confirmation at all —
-          // every *other* candidate in this round gets `request:unavailable`
-          // below, but without this, whoever actually won the accept race
-          // has no way to know their tap succeeded versus the request
-          // having simply gone quiet.
-          this.server
-            .to(craftsmanRoom(acceptedCraftsmanId))
-            .emit('request:assigned', { requestId: request.id });
-          void this.notificationsService.sendToUser(
-            acceptedCraftsmanId,
-            {
-              title: 'Demande acceptée',
-              body: 'Vous avez remporté cette demande. Rendez-vous sur les lieux.',
-            },
-            { event: 'request:assigned', requestId: request.id },
-          );
-          for (const candidate of candidates) {
-            if (candidate.craftsmanId !== acceptedCraftsmanId) {
-              this.server
-                .to(craftsmanRoom(candidate.craftsmanId))
-                .emit('request:unavailable', { requestId: request.id });
-            }
-          }
-          return;
-        }
+        if (won) return;
       }
 
       for (const candidate of candidates) {
         this.server
           .to(craftsmanRoom(candidate.craftsmanId))
           .emit('request:unavailable', { requestId: request.id });
+      }
+    }
+
+    // Fallback for the common early-stage-marketplace case: zero craftsmen
+    // currently hold a live socket in Redis (app backgrounded/killed), but at
+    // least one has a last-known Postgres location on file. Push a
+    // notification so their app cold-opens; CraftsmanHomeController's
+    // _goOnlineFromGps runs unconditionally on every load, which
+    // re-establishes the socket, calls craftsman:online, and
+    // handleCraftsmanOnline's existing findPendingNear catch-up re-emits
+    // request:new for this still-pending request with zero new code on that
+    // path. Their subsequent request:accept resolves this very waitForAccept
+    // call via the same requestId — no new accept mechanism needed.
+    const wakeupCandidates =
+      await this.matchingService.findNearestByLastKnownLocation(
+        request.serviceCategory,
+        request.longitude,
+        request.latitude,
+        Array.from(triedCraftsmanIds),
+        WAKEUP_CANDIDATES,
+      );
+
+    if (wakeupCandidates.length > 0) {
+      for (const candidate of wakeupCandidates) {
+        void this.notificationsService.sendToUser(
+          candidate.craftsmanId,
+          {
+            title: 'Nouvelle demande à proximité',
+            body: `Une demande de ${SERVICE_CATEGORY_LABELS_FR[request.serviceCategory]} à ${(candidate.distanceMeters / 1000).toFixed(1)} km de vous. Ouvrez l'application pour l'accepter.`,
+          },
+          { event: 'request:new', requestId: request.id },
+        );
+      }
+
+      const wakeupAcceptedCraftsmanId = await this.waitForAccept(
+        request.id,
+        WAKEUP_ACCEPT_TIMEOUT_MS,
+      );
+      if (wakeupAcceptedCraftsmanId) {
+        const won = await this.assignAndNotify(
+          request,
+          wakeupAcceptedCraftsmanId,
+          wakeupCandidates.map((candidate) => candidate.craftsmanId),
+        );
+        if (won) return;
       }
     }
 
@@ -456,6 +465,67 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
         { event: 'request:no_craftsman_available', requestId: request.id },
       );
     }
+  }
+
+  // Shared by both the radius-round win path and the wake-up-phase win path:
+  // once a craftsman's accept resolves tryAssign's compare-and-swap, the
+  // notify-winner/notify-client/notify-losers sequence is identical
+  // regardless of which mechanism (live round vs. wake-up push) got them
+  // there.
+  private async assignAndNotify(
+    request: CreatedServiceRequest,
+    acceptedCraftsmanId: string,
+    otherCandidateIds: string[],
+  ): Promise<boolean> {
+    const assigned = await this.matchingService.tryAssign(
+      request.id,
+      acceptedCraftsmanId,
+    );
+    if (!assigned) return false;
+
+    const craftsman = await this.userRepository.findOne({
+      where: { id: acceptedCraftsmanId },
+    });
+    this.activeAssignments.set(acceptedCraftsmanId, request.clientId);
+    this.server.to(clientRoom(request.clientId)).emit('request:assigned', {
+      requestId: request.id,
+      craftsmanId: acceptedCraftsmanId,
+      craftsmanFullName: craftsman?.fullName ?? null,
+      craftsmanPhone: craftsman?.phone ?? null,
+    });
+    void this.notificationsService.sendToUser(
+      request.clientId,
+      {
+        title: 'Artisan trouvé',
+        body: craftsman?.fullName
+          ? `${craftsman.fullName} arrive pour votre demande.`
+          : 'Un artisan a accepté votre demande.',
+      },
+      { event: 'request:assigned', requestId: request.id },
+    );
+    // The winning craftsman otherwise gets no confirmation at all — every
+    // *other* candidate gets `request:unavailable` below, but without this,
+    // whoever actually won the accept race has no way to know their tap
+    // succeeded versus the request having simply gone quiet.
+    this.server
+      .to(craftsmanRoom(acceptedCraftsmanId))
+      .emit('request:assigned', { requestId: request.id });
+    void this.notificationsService.sendToUser(
+      acceptedCraftsmanId,
+      {
+        title: 'Demande acceptée',
+        body: 'Vous avez remporté cette demande. Rendez-vous sur les lieux.',
+      },
+      { event: 'request:assigned', requestId: request.id },
+    );
+    for (const otherId of otherCandidateIds) {
+      if (otherId !== acceptedCraftsmanId) {
+        this.server
+          .to(craftsmanRoom(otherId))
+          .emit('request:unavailable', { requestId: request.id });
+      }
+    }
+    return true;
   }
 
   private waitForAccept(

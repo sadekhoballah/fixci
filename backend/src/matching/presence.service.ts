@@ -82,6 +82,7 @@ export class PresenceService {
       // while already online doesn't reset "online since" for the ops roster.
       this.redis.set(this.onlineSinceKey(craftsmanId), Date.now().toString(), 'NX'),
     ]);
+    void this.persistLastKnownLocation(craftsmanId, longitude, latitude);
     return true;
   }
 
@@ -97,6 +98,26 @@ export class PresenceService {
       longitude,
       latitude,
       craftsmanId,
+    );
+    void this.persistLastKnownLocation(craftsmanId, longitude, latitude);
+  }
+
+  // Postgres's only record of "where was this craftsman last seen" —
+  // MatchingGateway's wake-up phase queries this once Redis presence is
+  // completely empty for a category. Best-effort/fire-and-forget: a failure
+  // here must never block a craftsman actually going online or pinging their
+  // location, since Redis presence (the live path) already succeeded by the
+  // time this is called.
+  private async persistLastKnownLocation(
+    craftsmanId: string,
+    longitude: number,
+    latitude: number,
+  ): Promise<void> {
+    await this.craftsmanProfileRepository.manager.query(
+      `UPDATE "craftsman_profiles"
+       SET "location" = ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+       WHERE "user_id" = $3`,
+      [longitude, latitude, craftsmanId],
     );
   }
 
