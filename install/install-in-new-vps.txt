@@ -1,0 +1,113 @@
+Fix Pro — full install walkthrough on a brand-new Ubuntu 24.04 VPS
+====================================================================
+
+You do NOT need to pre-install Flutter, Node, Docker, or anything else by
+hand. infra/00-provision.sh installs the entire toolchain itself
+(infra/20-toolchains.sh, phase 2). Prerequisites are just: a fresh Ubuntu
+24.04 server, SSH access with a sudo user, and a fixpro-secrets-*.zip
+backup of the secrets listed in infra/README.md.
+
+
+Step 1 — SSH into the VPS
+--------------------------
+    ssh <your-vps-user>@<vps-ip>
+
+If the provider only gave you `root`, create a normal sudo user first
+(don't run everything as root):
+    adduser samoce            # any username — the scripts don't hardcode one
+    usermod -aG sudo samoce
+    su - samoce
+
+
+Step 2 — Get the fixci repo onto the VPS (one-time bootstrap)
+---------------------------------------------------------------
+The infra/ scripts live inside fixci, so you need one clone before any
+script can run. fixci is private and the dedicated deploy key doesn't
+exist yet, so use your own GitHub credentials just this once — easiest is
+agent-forwarding your existing key from your laptop:
+
+    # from your LAPTOP, not the VPS:
+    ssh -A <vps-user>@<vps-ip>
+
+Then, on the VPS (now carrying your forwarded key):
+    cd ~
+    git clone git@github.com:sadekhoballah/fixci.git
+
+
+Step 3 — Get fixpro-secrets-*.zip onto the VPS
+------------------------------------------------
+From your dev machine (or wherever the zip ended up — USB/Drive):
+    scp fixpro-secrets-<date>.zip <vps-user>@<vps-ip>:~/
+
+On the VPS, unzip it somewhere temporary (you'll copy pieces out of it as
+the script asks, then delete it):
+    sudo apt install -y unzip   # if not already present
+    unzip -e fixpro-secrets-*.zip -d ~/fixpro-secrets-tmp
+
+
+Step 4 — Run the provisioning script
+---------------------------------------
+    cd ~/fixci/infra
+    ./00-provision.sh
+
+It runs straight through phases 1-3 (system packages, Docker, ufw, Node,
+Flutter, Python venv, deploy-key generation) with no input needed from
+you, EXCEPT printing the deploy-key public key partway through phase 3
+and pausing — go add it as a read-only Deploy Key on all three repos at
+the GitHub URLs it prints, then press Enter.
+
+
+Step 5 — First secrets pause (script stops and prints instructions)
+-----------------------------------------------------------------------
+The script pauses and tells you to place these files (copy from
+~/fixpro-secrets-tmp/, not scp from the old machine, since you already
+have them in the zip):
+
+    cp ~/fixpro-secrets-tmp/backend.env ~/fixci/backend/.env
+    cp ~/fixpro-secrets-tmp/fixci-ff69c-firebase-adminsdk-fbsvc-7ed69dc256.json ~/fixci/backend/
+    cp ~/fixpro-secrets-tmp/dashboard.env ~/fix-pro-dashboard/.env
+
+Then EDIT ~/fixci/backend/.env before pressing Enter:
+    NODE_ENV=production
+    ALLOWED_ORIGINS=https://fix-pro.app
+    ALLOW_DEV_AUTH_BYPASS=        (make sure it's blank — never true in production)
+
+Generate fresh secrets and paste them in:
+    node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+
+Run it twice, put one value in ADMIN_JWT_SECRET, the other in
+WAVE_WEBHOOK_SECRET.
+
+Press Enter — the script builds and starts the backend, then
+fix-pro-web, then the admin panel (this is the slow step — a real
+Flutter Web build, give it a few minutes), then the dashboard.
+
+
+Step 6 — Second secrets pause (Cloudflare Tunnel)
+-----------------------------------------------------
+    sudo mkdir -p /etc/cloudflared
+    sudo cp ~/fixpro-secrets-tmp/b4d53db2-efc0-4ae1-a694-9ba925888424.json /etc/cloudflared/
+    sudo cp ~/fixpro-secrets-tmp/config.yml /etc/cloudflared/
+
+Press Enter. The script installs cloudflared, tightens permissions on
+those two files, and starts the tunnel.
+
+
+Step 7 — Clean up the secrets
+----------------------------------
+    rm -rf ~/fixpro-secrets-tmp ~/fixpro-secrets-*.zip
+
+
+Step 8 — Verify, then decommission the old tunnel
+------------------------------------------------------
+    ./70-verify.sh
+
+From your LAPTOP (not the VPS): curl -I https://fix-pro.app/ — once that
+confirms the new VPS is serving traffic, go back to the old dev machine
+and follow fixci/infra/teardown-old-tunnel.md to stop the tunnel there
+(only the tunnel — leave the backend/Postgres/Redis running there for
+local dev).
+
+That's the whole thing end to end. If any phase errors out, capture the
+output and debug from there — nothing here has been run against a real
+VPS yet, only shellcheck'd and read-through-reviewed (see infra/README.md).
