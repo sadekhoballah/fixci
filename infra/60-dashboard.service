@@ -1,0 +1,20 @@
+[Unit]
+Description=Fix Pro Streamlit analytics dashboard (read-only, localhost-only)
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=__VPS_USER__
+WorkingDirectory=__VPS_HOME__/fix-pro-dashboard
+EnvironmentFile=__VPS_HOME__/fix-pro-dashboard/.env
+# --server.address=127.0.0.1: Streamlit has no built-in auth, so this is
+# deliberately not reachable off-box and is NOT on the public cloudflared
+# ingress. Reach it via: ssh -L 8501:127.0.0.1:8501 <user>@<vps>, then
+# browse localhost:8501. See infra/README.md.
+ExecStart=__VPS_HOME__/fix-pro-dashboard/.venv/bin/streamlit run app.py --server.address=127.0.0.1 --server.port=8501 --server.headless=true
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
