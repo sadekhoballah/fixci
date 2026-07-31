@@ -81,7 +81,9 @@ export class ClientsService {
 
     return {
       fullName: user.fullName,
-      phone: user.phone,
+      // Non-null assertion safe here: userId always comes from AuthGuard,
+      // which never resolves to a deleted (phone: null) account.
+      phone: user.phone!,
       idVerified: profile.idVerified,
       isActive: profile.isActive,
       completedMissionsCount: Number(count),

@@ -77,5 +77,14 @@
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="geo"/>
         </intent>
+        <!-- Needed for url_launcher's canLaunchUrl to see the browser app on
+             Android 11+ (package visibility) — used by the privacy-policy
+             links on the registration screen and both account screens.
+             Without this, canLaunchUrl silently returns false and the link
+             appears to do nothing when tapped. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 </manifest>

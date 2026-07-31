@@ -5,6 +5,8 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { unlink } from 'fs/promises';
+import { join } from 'path';
 import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../database/entities/user.entity';
@@ -16,8 +18,21 @@ import { UserRole } from '../database/enums/user-role.enum';
 import { SubscriptionTier } from '../database/enums/subscription-tier.enum';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { PhoneTokenVerifierService } from '../firebase/phone-token-verifier.service';
+import { PresenceService } from '../matching/presence.service';
+import { UPLOADS_ROOT } from '../uploads/uploads.constants';
 
 const UNIQUE_VIOLATION = '23505';
+
+// The same 4 "unresolved" statuses service_requests_one_active_per_client
+// already treats as "still open" — self-service deletion is blocked while
+// either party has one, so an account can't vanish out from under a
+// counterparty mid-job.
+const ACTIVE_REQUEST_STATUSES = [
+  'pending',
+  'assigned',
+  'in_progress',
+  'awaiting_client_confirmation',
+];
 
 @Injectable()
 export class UsersService {
@@ -25,12 +40,15 @@ export class UsersService {
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     @InjectRepository(CraftsmanProfile)
     private readonly craftsmanProfileRepository: Repository<CraftsmanProfile>,
+    @InjectRepository(ClientProfile)
+    private readonly clientProfileRepository: Repository<ClientProfile>,
     @InjectRepository(District)
     private readonly districtRepository: Repository<District>,
     @InjectRepository(BlacklistedPhone)
     private readonly blacklistedPhoneRepository: Repository<BlacklistedPhone>,
     private readonly dataSource: DataSource,
     private readonly phoneTokenVerifier: PhoneTokenVerifierService,
+    private readonly presenceService: PresenceService,
   ) {}
 
   async findByPhone(phone: string): Promise<User | null> {
@@ -144,6 +162,80 @@ export class UsersService {
         throw new ConflictException('Phone number already registered');
       }
       throw error;
+    }
+  }
+
+  // Self-service, irreversible account deletion. Never a hard DELETE:
+  // service_requests.client_id/craftsman_id and ratings.client_id/
+  // craftsman_id are ON DELETE RESTRICT (the other party's history depends
+  // on this row existing), so this anonymizes in place instead — the same
+  // pattern Uber/Airbnb use. Blocked entirely while the account has any
+  // request in one of the four "unresolved" statuses, so a client/craftsman
+  // can't vanish out from under a counterparty mid-job.
+  async deleteAccount(userId: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user || user.deletedAt) {
+      throw new NotFoundException('Compte introuvable');
+    }
+
+    let idCardStorageKey: string | null = null;
+
+    await this.dataSource.transaction(async (manager) => {
+      const [{ count }]: [{ count: string }] = await manager.query(
+        `SELECT count(*) FROM "service_requests"
+         WHERE ("client_id" = $1 OR "craftsman_id" = $1)
+           AND "status"::text = ANY($2::text[])`,
+        [userId, ACTIVE_REQUEST_STATUSES],
+      );
+      if (Number(count) > 0) {
+        throw new ConflictException(
+          'Vous avez une mission en cours. Terminez-la ou annulez-la avant de supprimer votre compte.',
+        );
+      }
+
+      if (user.role === UserRole.CRAFTSMAN) {
+        const profile = await manager.findOne(CraftsmanProfile, {
+          where: { userId },
+        });
+        idCardStorageKey = profile?.idCardStorageKey ?? null;
+        await manager.update(
+          CraftsmanProfile,
+          { userId },
+          {
+            experienceDetails: null,
+            idCardStorageKey: null,
+            location: null,
+            isAvailable: false,
+            isActive: false,
+          },
+        );
+      } else {
+        const profile = await manager.findOne(ClientProfile, {
+          where: { userId },
+        });
+        idCardStorageKey = profile?.idCardStorageKey ?? null;
+        await manager.update(
+          ClientProfile,
+          { userId },
+          { idCardStorageKey: null, isActive: false },
+        );
+      }
+
+      await manager.update(
+        User,
+        { id: userId },
+        { phone: null, fullName: null, fcmToken: null, deletedAt: new Date() },
+      );
+    });
+
+    // Best-effort, outside the transaction: the DB row is already the
+    // source of truth by this point, so a disk/Redis failure here must
+    // never undo (or appear to fail) an already-committed deletion.
+    if (idCardStorageKey) {
+      await unlink(join(UPLOADS_ROOT, idCardStorageKey)).catch(() => undefined);
+    }
+    if (user.role === UserRole.CRAFTSMAN) {
+      await this.presenceService.setOffline(userId).catch(() => undefined);
     }
   }
 }

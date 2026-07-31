@@ -1,8 +1,13 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/auth/session_storage.dart';
 import '../../../core/media/id_card_picker.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/platform/firebase_support.dart';
 import '../../craftsman_home/craftsman_home_controller.dart';
+import '../../onboarding/screens/role_selection_screen.dart';
 import '../../onboarding/screens/tier_selection_screen.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
@@ -14,6 +19,7 @@ class AccountScreen extends ConsumerStatefulWidget {
 
 class _AccountScreenState extends ConsumerState<AccountScreen> {
   String? _phone;
+  bool _isDeletingAccount = false;
 
   @override
   void initState() {
@@ -21,6 +27,68 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     ref.read(sessionStorageProvider).loadPhone().then((phone) {
       if (mounted) setState(() => _phone = phone);
     });
+  }
+
+  Future<void> _openPrivacyPolicy() async {
+    final uri = Uri.parse('https://fix-pro.app/privacy/');
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
+  Future<void> _confirmAndDeleteAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Supprimer votre compte ?'),
+        content: const Text(
+          'Cette action est irréversible. Vos données personnelles '
+          '(nom, photo de pièce d\'identité, localisation) seront '
+          'supprimées. Votre historique de missions et vos avis restent '
+          'visibles pour les clients concernés, sans vous identifier.\n\n'
+          'Vous devez terminer ou annuler toute mission en cours avant de '
+          'continuer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Supprimer définitivement'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isDeletingAccount = true);
+    try {
+      await ref.read(apiClientProvider).delete('/users/me');
+      await ref.read(sessionStorageProvider).clearSession();
+      if (isFirebaseSupportedPlatform && FirebaseAuth.instance.currentUser != null) {
+        await FirebaseAuth.instance.signOut();
+      }
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+        (route) => false,
+      );
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() => _isDeletingAccount = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isDeletingAccount = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Échec de la suppression du compte.')),
+        );
+      }
+    }
   }
 
   @override
@@ -100,6 +168,25 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               errorMessage: home.errorMessage,
               onResubmitFromGallery: controller.resubmitIdCardFromGallery,
               onResubmitFromCamera: controller.resubmitIdCardFromCamera,
+            ),
+            const SizedBox(height: 24),
+            Center(
+              child: TextButton(
+                onPressed: _openPrivacyPolicy,
+                child: const Text('Politique de confidentialité'),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: _isDeletingAccount ? null : _confirmAndDeleteAccount,
+              icon: _isDeletingAccount
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.delete_outline_rounded, size: 18),
+              label: const Text('Supprimer mon compte'),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
             ),
           ],
         ),

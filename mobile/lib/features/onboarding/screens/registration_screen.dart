@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/media/id_card_picker.dart';
 import '../../../core/models/district.dart';
 import '../../../core/models/service_category.dart';
@@ -161,6 +162,31 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 ),
               ],
               const SizedBox(height: 32),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: GestureDetector(
+                  onTap: () async {
+                    final uri = Uri.parse('https://fix-pro.app/privacy/');
+                    if (await canLaunchUrl(uri)) await launchUrl(uri);
+                  },
+                  child: Text.rich(
+                    TextSpan(
+                      text: 'En vous inscrivant, vous acceptez notre ',
+                      children: [
+                        TextSpan(
+                          text: 'politique de confidentialité',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                        const TextSpan(text: '.'),
+                      ],
+                    ),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ),
               PrimaryButton(
                 label: state.isSubmitting ? 'Inscription...' : "S'inscrire",
                 onPressed:

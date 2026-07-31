@@ -15,8 +15,8 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 20, unique: true })
-  phone: string;
+  @Column({ type: 'varchar', length: 20, unique: true, nullable: true })
+  phone: string | null;
 
   @Column({ name: 'full_name', type: 'varchar', length: 120, nullable: true })
   fullName: string | null;
@@ -51,4 +51,12 @@ export class User {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
+
+  // Set once, permanently, by UsersService.deleteAccount. phone/fullName/
+  // fcmToken are nulled out at the same time — this column is what lets
+  // code distinguish "self-deleted" from craftsman_profiles/
+  // client_profiles.is_active:false (an admin KYC rejection, which is
+  // recoverable via the resubmit flow).
+  @Column({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt: Date | null;
 }

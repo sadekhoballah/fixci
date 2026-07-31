@@ -5,6 +5,7 @@ import { ClientProfile } from '../database/entities/client-profile.entity';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 import { District } from '../database/entities/district.entity';
 import { BlacklistModule } from '../blacklist/blacklist.module';
+import { MatchingModule } from '../matching/matching.module';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
@@ -12,6 +13,7 @@ import { UsersService } from './users.service';
   imports: [
     TypeOrmModule.forFeature([User, ClientProfile, CraftsmanProfile, District]),
     BlacklistModule,
+    MatchingModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

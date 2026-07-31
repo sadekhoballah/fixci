@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   NotFoundException,
   Post,
   Req,
@@ -73,5 +75,17 @@ export class UsersController {
   ) {
     await this.usersService.updateFcmToken(user.id, dto.fcmToken);
     return { ok: true };
+  }
+
+  // Self-service, irreversible account deletion — see
+  // UsersService.deleteAccount for what actually happens. AuthGuard (not
+  // FirebaseAuthGuard) because, like every other "me" endpoint, this only
+  // ever acts on the caller's own account, resolved from their verified
+  // phone number.
+  @Delete('me')
+  @UseGuards(AuthGuard)
+  @HttpCode(204)
+  async deleteMe(@CurrentUser() user: { id: string }): Promise<void> {
+    await this.usersService.deleteAccount(user.id);
   }
 }

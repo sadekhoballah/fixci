@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { District } from '../database/entities/district.entity';
 import { User } from '../database/entities/user.entity';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
@@ -19,7 +19,7 @@ export interface DistrictWithCounts {
 export interface WaitlistEntry {
   userId: string;
   fullName: string | null;
-  phone: string;
+  phone: string | null;
   serviceCategory: string | null;
   registeredAt: Date;
 }
@@ -113,12 +113,12 @@ export class DistrictsService {
 
     const [craftsmanProfiles, clientProfiles] = await Promise.all([
       this.craftsmanProfileRepository.find({
-        where: { user: { districtId: id } },
+        where: { user: { districtId: id, deletedAt: IsNull() } },
         relations: { user: true },
         order: { createdAt: 'ASC' },
       }),
       this.clientProfileRepository.find({
-        where: { user: { districtId: id } },
+        where: { user: { districtId: id, deletedAt: IsNull() } },
         relations: { user: true },
         order: { createdAt: 'ASC' },
       }),

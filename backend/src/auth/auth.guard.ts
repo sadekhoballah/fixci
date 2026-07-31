@@ -31,7 +31,12 @@ export class AuthGuard extends FirebaseAuthGuard implements CanActivate {
     if (!user) {
       throw new UnauthorizedException('No account for this phone number');
     }
-    request.user = { id: user.id, phone: user.phone, role: user.role };
+    // Non-null assertion is safe here: user was looked up by this exact
+    // non-null `phone`, and a deleted account (phone set to NULL by
+    // UsersService.deleteAccount) can never match that lookup in the first
+    // place — this guard simply won't find them, and the guard above
+    // already throws for that case.
+    request.user = { id: user.id, phone: user.phone!, role: user.role };
     return true;
   }
 }

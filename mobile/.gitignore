@@ -47,3 +47,10 @@ app.*.map.json
 # Firebase config — environment-specific, never commit
 /android/app/google-services.json
 /ios/Runner/GoogleService-Info.plist
+
+# Release signing — this is the app's permanent signing identity; losing
+# it means Fix Pro can never be updated again under the same package
+# identity once published. Never commit either file.
+/android/key.properties
+/android/*.jks
+/android/*.keystore

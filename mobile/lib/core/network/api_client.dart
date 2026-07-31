@@ -77,6 +77,23 @@ class ApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> delete(String path) async {
+    final http.Response response;
+    try {
+      response = await _client
+          .delete(
+            Uri.parse('${ApiConfig.baseUrl}$path'),
+            headers: await _authHeaders(),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      throw ApiException(
+        'Impossible de contacter le serveur. Vérifiez votre connexion.',
+      );
+    }
+    return _handleResponse(response);
+  }
+
   Future<Map<String, dynamic>> post(
     String path,
     Map<String, dynamic> body,

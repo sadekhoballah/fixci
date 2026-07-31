@@ -10,7 +10,7 @@ export interface PendingVerification {
   userId: string;
   role: 'craftsman' | 'client';
   fullName: string | null;
-  phone: string;
+  phone: string | null;
   // Craftsman-only fields — absent for client entries.
   serviceCategory: string | null;
   experienceDetails: string | null;

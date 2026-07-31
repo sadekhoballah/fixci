@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, Repository } from 'typeorm';
+import { ILike, IsNull, Repository } from 'typeorm';
 import { User } from '../database/entities/user.entity';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 import { UserRole } from '../database/enums/user-role.enum';
@@ -10,7 +10,7 @@ import { PresenceService } from '../matching/presence.service';
 export interface DirectoryEntry {
   userId: string;
   fullName: string | null;
-  phone: string;
+  phone: string | null;
   districtName: string;
   isOnline: boolean;
 }
@@ -32,8 +32,8 @@ export class DirectoryService {
     const onlineIds = new Set(await this.presenceService.listOnlineClientIds());
     const users = await this.userRepository.find({
       where: search
-        ? { role: UserRole.CLIENT, phone: ILike(`%${search}%`) }
-        : { role: UserRole.CLIENT },
+        ? { role: UserRole.CLIENT, phone: ILike(`%${search}%`), deletedAt: IsNull() }
+        : { role: UserRole.CLIENT, deletedAt: IsNull() },
       relations: { district: true },
       order: { fullName: 'ASC' },
     });
@@ -60,6 +60,7 @@ export class DirectoryService {
       .createQueryBuilder('cp')
       .innerJoinAndSelect('cp.user', 'user')
       .innerJoinAndSelect('user.district', 'district')
+      .where('user.deletedAt IS NULL')
       .orderBy('user.fullName', 'ASC');
     if (search) {
       qb.andWhere('user.phone ILIKE :search', { search: `%${search}%` });
