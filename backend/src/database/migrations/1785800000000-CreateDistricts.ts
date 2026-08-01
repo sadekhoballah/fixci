@@ -40,10 +40,9 @@ export class CreateDistricts1785800000000 implements MigrationInterface {
       )
     `);
     for (const name of SEED_DISTRICTS) {
-      await queryRunner.query(
-        `INSERT INTO "districts" ("name") VALUES ($1)`,
-        [name],
-      );
+      await queryRunner.query(`INSERT INTO "districts" ("name") VALUES ($1)`, [
+        name,
+      ]);
     }
   }
 

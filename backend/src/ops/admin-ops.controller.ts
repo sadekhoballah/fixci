@@ -1,4 +1,10 @@
-import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { AdminJwtGuard } from '../auth/admin-jwt.guard';
 import { OpsService, OpsStatsRange } from './ops.service';
 

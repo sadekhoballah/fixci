@@ -27,8 +27,6 @@ export class AddDistrictIdToUsers1785900000000 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE "users" DROP CONSTRAINT "FK_users_district"`,
     );
-    await queryRunner.query(
-      `ALTER TABLE "users" DROP COLUMN "district_id"`,
-    );
+    await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "district_id"`);
   }
 }

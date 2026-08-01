@@ -122,7 +122,6 @@ class _FakeSessionStorage implements SessionStorage {
   UserRole? _role;
   SubscriptionTier? _tier;
   String? _phone;
-  bool _isAdmin = false;
 
   @override
   Future<void> saveRole(UserRole role) async => _role = role;
@@ -143,17 +142,10 @@ class _FakeSessionStorage implements SessionStorage {
   Future<String?> loadPhone() async => _phone;
 
   @override
-  Future<void> saveIsAdmin(bool isAdmin) async => _isAdmin = isAdmin;
-
-  @override
-  Future<bool> loadIsAdmin() async => _isAdmin;
-
-  @override
   Future<void> clearSession() async {
     _role = null;
     _tier = null;
     _phone = null;
-    _isAdmin = false;
   }
 }
 

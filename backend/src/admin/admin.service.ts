@@ -113,7 +113,9 @@ export class AdminService {
       userId,
       {
         title: 'Compte non validé',
-        body: reason ?? 'Votre document a été refusé. Merci de le soumettre à nouveau.',
+        body:
+          reason ??
+          'Votre document a été refusé. Merci de le soumettre à nouveau.',
       },
       { type: 'id_verification_rejected' },
     );
@@ -144,7 +146,9 @@ export class AdminService {
       userId,
       {
         title: 'Compte non validé',
-        body: reason ?? 'Votre document a été refusé. Merci de le soumettre à nouveau.',
+        body:
+          reason ??
+          'Votre document a été refusé. Merci de le soumettre à nouveau.',
       },
       { type: 'id_verification_rejected' },
     );

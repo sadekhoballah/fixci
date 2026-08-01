@@ -61,7 +61,10 @@ export class OpsService {
         };
       })
       .filter((row): row is OnlineCraftsmanRow => row !== null)
-      .sort((a, b) => (b.onlineSince?.getTime() ?? 0) - (a.onlineSince?.getTime() ?? 0));
+      .sort(
+        (a, b) =>
+          (b.onlineSince?.getTime() ?? 0) - (a.onlineSince?.getTime() ?? 0),
+      );
   }
 
   async getStats(range: OpsStatsRange): Promise<OpsStats> {
@@ -86,7 +89,11 @@ export class OpsService {
         .groupBy('district.id')
         .addGroupBy('district.name')
         .orderBy('count', 'DESC')
-        .getRawMany<{ districtId: string; districtName: string; count: string }>(),
+        .getRawMany<{
+          districtId: string;
+          districtName: string;
+          count: string;
+        }>(),
       this.serviceRequestRepository
         .createQueryBuilder('sr')
         .select('sr.serviceCategory', 'category')
@@ -97,7 +104,9 @@ export class OpsService {
         .getRawMany<{ category: ServiceCategory; count: string }>(),
     ]);
 
-    const countByStatus = new Map(statusRows.map((r) => [r.status, Number(r.count)]));
+    const countByStatus = new Map(
+      statusRows.map((r) => [r.status, Number(r.count)]),
+    );
 
     return {
       range,
@@ -120,7 +129,9 @@ export class OpsService {
   private rangeStart(range: OpsStatsRange): Date | null {
     const now = new Date();
     if (range === 'today') {
-      return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      return new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+      );
     }
     if (range === 'week') {
       return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);

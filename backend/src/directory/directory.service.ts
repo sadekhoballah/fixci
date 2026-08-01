@@ -32,7 +32,11 @@ export class DirectoryService {
     const onlineIds = new Set(await this.presenceService.listOnlineClientIds());
     const users = await this.userRepository.find({
       where: search
-        ? { role: UserRole.CLIENT, phone: ILike(`%${search}%`), deletedAt: IsNull() }
+        ? {
+            role: UserRole.CLIENT,
+            phone: ILike(`%${search}%`),
+            deletedAt: IsNull(),
+          }
         : { role: UserRole.CLIENT, deletedAt: IsNull() },
       relations: { district: true },
       order: { fullName: 'ASC' },

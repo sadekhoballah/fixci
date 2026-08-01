@@ -66,7 +66,11 @@ export class PresenceService {
       where: { userId: craftsmanId },
     });
     if (!profile?.isActive) return false;
-    if (!(await this.districtsService.isArtisanRegistrationActiveForUser(craftsmanId))) {
+    if (
+      !(await this.districtsService.isArtisanRegistrationActiveForUser(
+        craftsmanId,
+      ))
+    ) {
       return false;
     }
 
@@ -80,7 +84,11 @@ export class PresenceService {
       this.redis.set(this.categoryKey(craftsmanId), category),
       // NX: only stamp the first time they come online, so a reconnect
       // while already online doesn't reset "online since" for the ops roster.
-      this.redis.set(this.onlineSinceKey(craftsmanId), Date.now().toString(), 'NX'),
+      this.redis.set(
+        this.onlineSinceKey(craftsmanId),
+        Date.now().toString(),
+        'NX',
+      ),
     ]);
     void this.persistLastKnownLocation(craftsmanId, longitude, latitude);
     return true;
@@ -140,7 +148,11 @@ export class PresenceService {
   async listOnline(): Promise<OnlineCraftsman[]> {
     const results: OnlineCraftsman[] = [];
     for (const category of Object.values(ServiceCategory)) {
-      const craftsmanIds = await this.redis.zrange(this.geoKey(category), 0, -1);
+      const craftsmanIds = await this.redis.zrange(
+        this.geoKey(category),
+        0,
+        -1,
+      );
       if (craftsmanIds.length === 0) continue;
       const sinceValues = await Promise.all(
         craftsmanIds.map((id) => this.redis.get(this.onlineSinceKey(id))),

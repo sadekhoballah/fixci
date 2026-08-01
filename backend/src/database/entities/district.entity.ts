@@ -18,7 +18,11 @@ export class District {
   // online (see PresenceService.setOnline) — registration itself is never
   // blocked, so this is what actually makes a closed district a waitlist
   // rather than a rejection.
-  @Column({ name: 'is_artisan_registration_active', type: 'boolean', default: true })
+  @Column({
+    name: 'is_artisan_registration_active',
+    type: 'boolean',
+    default: true,
+  })
   isArtisanRegistrationActive: boolean;
 
   // Gates whether a client in this district can create a service request

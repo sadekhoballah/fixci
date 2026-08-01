@@ -8,9 +8,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 // the codebase ever clears — distinct from craftsman_profiles/
 // client_profiles.is_active, which already means "admin rejected this
 // account's KYC" and is recoverable via the resubmit flow.
-export class AddDeletedAtAndNullablePhoneToUsers1786200000000
-  implements MigrationInterface
-{
+export class AddDeletedAtAndNullablePhoneToUsers1786200000000 implements MigrationInterface {
   name = 'AddDeletedAtAndNullablePhoneToUsers1786200000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

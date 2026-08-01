@@ -127,7 +127,11 @@ export class CraftsmenService {
       // its own accurate message — otherwise a craftsman in a closed
       // district would see "Ce compte a été désactivé" below, which wrongly
       // implies something is wrong with their account rather than their zone.
-      if (!(await this.districtsService.isArtisanRegistrationActiveForUser(userId))) {
+      if (
+        !(await this.districtsService.isArtisanRegistrationActiveForUser(
+          userId,
+        ))
+      ) {
         throw new ForbiddenException(
           "Cette zone n'est pas encore ouverte aux artisans.",
         );

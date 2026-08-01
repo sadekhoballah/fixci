@@ -9,7 +9,10 @@ import { MatchingGateway } from './matching.gateway';
 import { PresenceService } from './presence.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, CraftsmanProfile]), DistrictsModule],
+  imports: [
+    TypeOrmModule.forFeature([User, CraftsmanProfile]),
+    DistrictsModule,
+  ],
   controllers: [MatchingController],
   providers: [MatchingService, MatchingGateway, PresenceService],
   exports: [PresenceService],

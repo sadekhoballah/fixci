@@ -36,7 +36,10 @@ export class AdminAuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload: AdminJwtPayload = { sub: adminUser.id, role: adminUser.role };
+    const payload: AdminJwtPayload = {
+      sub: adminUser.id,
+      role: adminUser.role,
+    };
     return { token: await this.jwtService.signAsync(payload) };
   }
 }

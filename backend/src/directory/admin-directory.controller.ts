@@ -24,7 +24,10 @@ export class AdminDirectoryController {
     @Query('search') search?: string,
     @Query('category') category?: string,
   ) {
-    if (category && !Object.values(ServiceCategory).includes(category as ServiceCategory)) {
+    if (
+      category &&
+      !Object.values(ServiceCategory).includes(category as ServiceCategory)
+    ) {
       throw new BadRequestException('Invalid category');
     }
     return {
