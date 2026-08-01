@@ -46,6 +46,11 @@ export const appDataSourceOptions: DataSourceOptions = baseOptions;
 export const dataSourceOptions: DataSourceOptions = {
   ...baseOptions,
   migrations: ['src/database/migrations/*.ts'],
+  // 'each' (not the default 'all'): a migration that adds an enum value and
+  // a later one that uses it in the same run must land in separate,
+  // independently-committed transactions — Postgres rejects referencing an
+  // enum value added earlier in a still-open transaction.
+  migrationsTransactionMode: 'each',
 };
 
 export default new DataSource(dataSourceOptions);
