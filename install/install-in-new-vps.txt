@@ -52,9 +52,10 @@ Step 4 — Run the provisioning script
 
 It runs straight through phases 1-3 (system packages, Docker, ufw, Node,
 Flutter, Python venv, deploy-key generation) with no input needed from
-you, EXCEPT printing the deploy-key public key partway through phase 3
-and pausing — go add it as a read-only Deploy Key on all three repos at
-the GitHub URLs it prints, then press Enter.
+you, EXCEPT printing three deploy-key public keys (one per repo — GitHub
+won't let the same key be a deploy key on more than one repo) partway
+through phase 3 and pausing — go add each one as a read-only Deploy Key
+on its matching repo at the GitHub URLs it prints, then press Enter.
 
 
 Step 5 — First secrets pause (script stops and prints instructions)

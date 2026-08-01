@@ -26,10 +26,11 @@ cd fixci/infra
 ```
 
 That first clone (only that one) needs the founder's **own** GitHub
-credentials on the VPS, since `infra/`'s own deploy key doesn't exist until
-phase 3 runs. `30-clone-repos.sh` then generates a dedicated deploy key and
-re-clones `fixci` (a no-op, it's already there) plus the other two repos —
-every clone/pull *after* this first bootstrap one uses that deploy key, not
+credentials on the VPS, since `infra/`'s own deploy keys don't exist until
+phase 3 runs. `30-clone-repos.sh` then generates a dedicated deploy key per
+repo (GitHub won't let one key be a deploy key on more than one repo),
+repoints `fixci`'s origin at its own key, and clones the other two — every
+clone/pull *after* this first bootstrap one uses these deploy keys, not
 the founder's personal credentials.
 
 `00-provision.sh` sequences everything below and pauses at the two secrets
@@ -42,9 +43,10 @@ alone, `git clone` is skipped if the directory exists, etc.).
    so 80/443 never need to accept inbound traffic on the box itself).
 2. `20-toolchains.sh` — nvm + Node 24, Flutter SDK (pinned to `3.44.6` to
    match the dev machine), Python venv tooling.
-3. `30-clone-repos.sh` — generates one SSH deploy key, pauses for you to
-   add it (read-only) to all three repos, then clones them as siblings:
-   `~/fixci`, `~/fix-pro-web`, `~/fix-pro-dashboard`.
+3. `30-clone-repos.sh` — generates one SSH deploy key *per repo* (GitHub
+   rejects reusing the same public key as a deploy key across repos), pauses
+   for you to add each one (read-only) to its matching repo, then clones
+   all three as siblings: `~/fixci`, `~/fix-pro-web`, `~/fix-pro-dashboard`.
 4. **Pause — secrets hand-off #1** (backend `.env`, Firebase Admin JSON,
    dashboard `.env`). See "Secrets" below.
 5. Backend: `docker compose up -d` (empty DB — no data migration by

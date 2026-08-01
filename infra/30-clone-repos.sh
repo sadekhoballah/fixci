@@ -1,38 +1,42 @@
 #!/usr/bin/env bash
-# Phase 3: one read-only SSH deploy key added to all three private repos,
-# then clone them as siblings: ~/fixci, ~/fix-pro-web, ~/fix-pro-dashboard.
-# Deliberately does NOT use the founder's personal SSH key — a deploy key is
-# scoped read-only to these repos specifically. Idempotent (skips key
-# generation / clone if already done).
+# Phase 3: one read-only SSH deploy key PER REPO (GitHub rejects attaching
+# the same public key as a deploy key to more than one repo, account-wide),
+# then clone all three as siblings: ~/fixci, ~/fix-pro-web,
+# ~/fix-pro-dashboard. Deliberately does NOT use the founder's personal SSH
+# key — each deploy key is scoped read-only to one repo. Idempotent (skips
+# key generation / clone if already done).
 set -euo pipefail
 
-KEY_PATH="$HOME/.ssh/fixci_deploy_key"
+REPOS="fixci fix-pro-web fix-pro-dashboard"
 
-if [ ! -f "$KEY_PATH" ]; then
-  echo "==> Generating deploy key"
-  ssh-keygen -t ed25519 -C "fixci-vps-deploy" -f "$KEY_PATH" -N ""
-fi
+for repo in $REPOS; do
+  KEY_PATH="$HOME/.ssh/${repo}_deploy_key"
+  if [ ! -f "$KEY_PATH" ]; then
+    echo "==> Generating deploy key for $repo"
+    ssh-keygen -t ed25519 -C "${repo}-vps-deploy" -f "$KEY_PATH" -N ""
+  fi
 
-if ! grep -q "IdentityFile $KEY_PATH" "$HOME/.ssh/config" 2>/dev/null; then
-  mkdir -p "$HOME/.ssh"
-  {
-    echo "Host github.com"
-    echo "  IdentityFile $KEY_PATH"
-    echo "  IdentitiesOnly yes"
-  } >> "$HOME/.ssh/config"
-  chmod 600 "$HOME/.ssh/config"
-fi
+  if ! grep -q "Host github.com-$repo" "$HOME/.ssh/config" 2>/dev/null; then
+    mkdir -p "$HOME/.ssh"
+    {
+      echo "Host github.com-$repo"
+      echo "  HostName github.com"
+      echo "  IdentityFile $KEY_PATH"
+      echo "  IdentitiesOnly yes"
+    } >> "$HOME/.ssh/config"
+    chmod 600 "$HOME/.ssh/config"
+  fi
+done
 
 echo
 echo "=================================================================="
-echo " Add this key as a read-only Deploy Key on ALL THREE repos:"
+echo " Add each key as a read-only Deploy Key on its matching repo:"
 echo
-cat "$KEY_PATH.pub"
-echo
-echo "   https://github.com/sadekhoballah/fixci/settings/keys/new"
-echo "   https://github.com/sadekhoballah/fix-pro-web/settings/keys/new"
-echo "   https://github.com/sadekhoballah/fix-pro-dashboard/settings/keys/new"
-echo
+for repo in $REPOS; do
+  echo "   https://github.com/sadekhoballah/$repo/settings/keys/new"
+  cat "$HOME/.ssh/${repo}_deploy_key.pub"
+  echo
+done
 echo " Press Enter once all three are added."
 echo "=================================================================="
 read -r _
@@ -42,12 +46,16 @@ read -r _
 ssh-keyscan -t ed25519 github.com >> "$HOME/.ssh/known_hosts" 2>/dev/null
 
 cd "$HOME"
-for repo in fixci fix-pro-web fix-pro-dashboard; do
+for repo in $REPOS; do
   if [ -d "$repo/.git" ]; then
-    echo "==> $repo already cloned, skipping"
+    # fixci in particular was bootstrapped with the founder's personal key
+    # and a plain git@github.com URL — repoint it at its own deploy key so
+    # future pulls don't depend on that (temporary) agent-forwarded access.
+    echo "==> $repo already cloned, repointing origin to its dedicated deploy key"
+    (cd "$repo" && git remote set-url origin "git@github.com-$repo:sadekhoballah/$repo.git")
   else
     echo "==> Cloning $repo"
-    git clone "git@github.com:sadekhoballah/$repo.git"
+    git clone "git@github.com-$repo:sadekhoballah/$repo.git"
   fi
 done
 
