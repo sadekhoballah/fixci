@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/subscription_tier.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../craftsman_home/screens/artisan_shell_screen.dart';
 import '../onboarding_controller.dart';
@@ -58,12 +59,13 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         title: Text(
           widget.isChangingPlan
-              ? 'Changer de forfait'
-              : 'Choisissez votre formule',
+              ? l10n.changePlanTitle
+              : l10n.chooseTierTitle,
         ),
       ),
       body: SafeArea(
@@ -72,15 +74,15 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Choisissez la formule qui vous convient',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+              Text(
+                l10n.chooseTierHeading,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
               Text(
                 widget.isChangingPlan
-                    ? 'Le nouveau forfait remplacera le vôtre après le paiement.'
-                    : 'Vous pourrez changer de formule à tout moment.',
+                    ? l10n.tierChangeNotice
+                    : l10n.tierSelectionNotice,
                 style: TextStyle(
                   fontSize: 14,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -104,7 +106,7 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
               ),
               const SizedBox(height: 16),
               PrimaryButton(
-                label: _continuing ? 'Chargement...' : 'Continuer',
+                label: _continuing ? l10n.loadingButton : l10n.continueButton,
                 onPressed: (_selected == null || _continuing)
                     ? null
                     : _continue,
@@ -131,6 +133,7 @@ class _TierOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -162,7 +165,9 @@ class _TierOption extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    tier.isPaid ? '${tier.priceCfa} CFA / mois' : 'Gratuit',
+                    tier.isPaid
+                        ? l10n.priceCfaPerMonth(tier.priceCfa)
+                        : l10n.freeLabel,
                     style: TextStyle(
                       fontSize: 14,
                       color: colorScheme.onSurfaceVariant,

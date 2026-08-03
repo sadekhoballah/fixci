@@ -92,5 +92,18 @@
       "name": { "type": "String" }
     }
   },
-  "accountCreatedMessage": "Votre compte a été créé."
+  "accountCreatedMessage": "Votre compte a été créé.",
+  "changePlanTitle": "Changer de forfait",
+  "chooseTierTitle": "Choisissez votre formule",
+  "chooseTierHeading": "Choisissez la formule qui vous convient",
+  "tierChangeNotice": "Le nouveau forfait remplacera le vôtre après le paiement.",
+  "tierSelectionNotice": "Vous pourrez changer de formule à tout moment.",
+  "loadingButton": "Chargement...",
+  "priceCfaPerMonth": "{price} CFA / mois",
+  "@priceCfaPerMonth": {
+    "placeholders": {
+      "price": { "type": "int" }
+    }
+  },
+  "freeLabel": "Gratuit"
 }

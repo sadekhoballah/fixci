@@ -41,5 +41,13 @@
   "resendCode": "Resend code",
   "resendCodeCooldown": "Resend code ({seconds}s)",
   "welcomeMessage": "Welcome, {name}!",
-  "accountCreatedMessage": "Your account has been created."
+  "accountCreatedMessage": "Your account has been created.",
+  "changePlanTitle": "Change plan",
+  "chooseTierTitle": "Choose your plan",
+  "chooseTierHeading": "Choose the plan that suits you",
+  "tierChangeNotice": "The new plan will replace yours after payment.",
+  "tierSelectionNotice": "You can change plans at any time.",
+  "loadingButton": "Loading...",
+  "priceCfaPerMonth": "{price} CFA / month",
+  "freeLabel": "Free"
 }

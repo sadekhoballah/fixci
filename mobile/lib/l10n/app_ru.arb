@@ -41,5 +41,13 @@
   "resendCode": "Отправить код повторно",
   "resendCodeCooldown": "Отправить код повторно ({seconds} с)",
   "welcomeMessage": "Добро пожаловать, {name}!",
-  "accountCreatedMessage": "Ваш аккаунт создан."
+  "accountCreatedMessage": "Ваш аккаунт создан.",
+  "changePlanTitle": "Изменить тариф",
+  "chooseTierTitle": "Выберите ваш тариф",
+  "chooseTierHeading": "Выберите подходящий вам тариф",
+  "tierChangeNotice": "Новый тариф заменит текущий после оплаты.",
+  "tierSelectionNotice": "Вы сможете сменить тариф в любое время.",
+  "loadingButton": "Загрузка...",
+  "priceCfaPerMonth": "{price} CFA / месяц",
+  "freeLabel": "Бесплатно"
 }
