@@ -85,5 +85,12 @@
     "placeholders": {
       "seconds": { "type": "int" }
     }
-  }
+  },
+  "welcomeMessage": "Bienvenue, {name} !",
+  "@welcomeMessage": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "accountCreatedMessage": "Votre compte a été créé."
 }

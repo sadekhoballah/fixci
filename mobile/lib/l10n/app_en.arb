@@ -39,5 +39,7 @@
   "verifyingButton": "Verifying...",
   "verifyButton": "Verify",
   "resendCode": "Resend code",
-  "resendCodeCooldown": "Resend code ({seconds}s)"
+  "resendCodeCooldown": "Resend code ({seconds}s)",
+  "welcomeMessage": "Welcome, {name}!",
+  "accountCreatedMessage": "Your account has been created."
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/user_role.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../client_home/screens/client_shell_screen.dart';
 import '../onboarding_controller.dart';
@@ -22,6 +23,7 @@ class RegistrationSuccessScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(onboardingControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -37,7 +39,7 @@ class RegistrationSuccessScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'Bienvenue, ${state.fullName} !',
+                l10n.welcomeMessage(state.fullName),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 22,
@@ -45,13 +47,13 @@ class RegistrationSuccessScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Votre compte a été créé.',
+              Text(
+                l10n.accountCreatedMessage,
                 textAlign: TextAlign.center,
               ),
               const Spacer(),
               PrimaryButton(
-                label: 'Continuer',
+                label: l10n.continueButton,
                 onPressed: () => _continue(context, state.role),
               ),
             ],

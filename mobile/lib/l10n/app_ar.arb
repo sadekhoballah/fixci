@@ -39,5 +39,7 @@
   "verifyingButton": "جارٍ التحقق...",
   "verifyButton": "تحقق",
   "resendCode": "إعادة إرسال الرمز",
-  "resendCodeCooldown": "إعادة إرسال الرمز ({seconds} ث)"
+  "resendCodeCooldown": "إعادة إرسال الرمز ({seconds} ث)",
+  "welcomeMessage": "مرحباً بك، {name}!",
+  "accountCreatedMessage": "تم إنشاء حسابك."
 }

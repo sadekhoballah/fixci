@@ -39,5 +39,7 @@
   "verifyingButton": "Проверка...",
   "verifyButton": "Подтвердить",
   "resendCode": "Отправить код повторно",
-  "resendCodeCooldown": "Отправить код повторно ({seconds} с)"
+  "resendCodeCooldown": "Отправить код повторно ({seconds} с)",
+  "welcomeMessage": "Добро пожаловать, {name}!",
+  "accountCreatedMessage": "Ваш аккаунт создан."
 }
