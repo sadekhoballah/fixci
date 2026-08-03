@@ -135,5 +135,6 @@
   "jobAwaitingConfirmationMessage": "L'artisan a terminé — confirmez la fin de la mission pour la clôturer.",
   "jobInProgressMessage": "Votre mission est en cours.",
   "jobAssignedMessage": "Un artisan est en route vers vous.",
-  "jobSearchingMessage": "Recherche d'un artisan disponible pour votre demande…"
+  "jobSearchingMessage": "Recherche d'un artisan disponible pour votre demande…",
+  "requestNowButton": "Demander maintenant"
 }

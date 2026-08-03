@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/service_category.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../service_request/service_request_controller.dart';
 import '../../service_request/service_request_state.dart';
 import '../../service_request/screens/searching_screen.dart';
@@ -155,9 +156,12 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
                       color: Colors.white,
                     ),
                   )
-                : const Text(
-                    'Demander maintenant',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                : Text(
+                    AppLocalizations.of(context)!.requestNowButton,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
           ),
         ),

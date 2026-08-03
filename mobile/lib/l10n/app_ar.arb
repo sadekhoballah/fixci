@@ -69,5 +69,6 @@
   "jobAwaitingConfirmationMessage": "أنهى الحرفي العمل — أكّد إنهاء المهمة لإغلاقها.",
   "jobInProgressMessage": "مهمتك قيد التنفيذ.",
   "jobAssignedMessage": "أحد الحرفيين في طريقه إليك.",
-  "jobSearchingMessage": "جارٍ البحث عن حرفي متاح لطلبك…"
+  "jobSearchingMessage": "جارٍ البحث عن حرفي متاح لطلبك…",
+  "requestNowButton": "اطلب الآن"
 }

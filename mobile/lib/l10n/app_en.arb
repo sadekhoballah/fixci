@@ -69,5 +69,6 @@
   "jobAwaitingConfirmationMessage": "The craftsman has finished — confirm completion to close the job.",
   "jobInProgressMessage": "Your job is in progress.",
   "jobAssignedMessage": "A craftsman is on the way to you.",
-  "jobSearchingMessage": "Looking for an available craftsman for your request…"
+  "jobSearchingMessage": "Looking for an available craftsman for your request…",
+  "requestNowButton": "Request now"
 }

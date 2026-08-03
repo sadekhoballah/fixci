@@ -69,5 +69,6 @@
   "jobAwaitingConfirmationMessage": "Мастер завершил работу — подтвердите завершение, чтобы закрыть заявку.",
   "jobInProgressMessage": "Ваша заявка выполняется.",
   "jobAssignedMessage": "Мастер уже в пути к вам.",
-  "jobSearchingMessage": "Ищем доступного мастера для вашей заявки…"
+  "jobSearchingMessage": "Ищем доступного мастера для вашей заявки…",
+  "requestNowButton": "Заказать сейчас"
 }
