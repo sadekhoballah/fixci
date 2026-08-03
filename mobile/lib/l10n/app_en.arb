@@ -158,5 +158,11 @@
   "onlineStatus": "Online",
   "offlineStatus": "Offline",
   "verifiedStatus": "Verified",
-  "notVerifiedStatus": "Not verified"
+  "notVerifiedStatus": "Not verified",
+  "locationEnabledTitle": "Location enabled",
+  "locationDisabledTitle": "Location disabled",
+  "locationEnabledMessage": "Nearby clients can find you.",
+  "locationDisabledMessage": "Enable location to receive requests.",
+  "activateButton": "Enable",
+  "activeStatus": "Active"
 }

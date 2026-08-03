@@ -158,5 +158,11 @@
   "onlineStatus": "В сети",
   "offlineStatus": "Не в сети",
   "verifiedStatus": "Подтверждён",
-  "notVerifiedStatus": "Не подтверждён"
+  "notVerifiedStatus": "Не подтверждён",
+  "locationEnabledTitle": "Геолокация включена",
+  "locationDisabledTitle": "Геолокация выключена",
+  "locationEnabledMessage": "Клиенты поблизости смогут вас найти.",
+  "locationDisabledMessage": "Включите геолокацию, чтобы получать заявки.",
+  "activateButton": "Включить",
+  "activeStatus": "Активна"
 }

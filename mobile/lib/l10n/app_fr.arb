@@ -261,5 +261,11 @@
   "onlineStatus": "En ligne",
   "offlineStatus": "Hors ligne",
   "verifiedStatus": "Vérifié",
-  "notVerifiedStatus": "Non vérifié"
+  "notVerifiedStatus": "Non vérifié",
+  "locationEnabledTitle": "Localisation activée",
+  "locationDisabledTitle": "Localisation désactivée",
+  "locationEnabledMessage": "Les clients à proximité peuvent vous trouver.",
+  "locationDisabledMessage": "Activez la localisation pour recevoir des demandes.",
+  "activateButton": "Activer",
+  "activeStatus": "Active"
 }

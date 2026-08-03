@@ -158,5 +158,11 @@
   "onlineStatus": "متصل",
   "offlineStatus": "غير متصل",
   "verifiedStatus": "موثّق",
-  "notVerifiedStatus": "غير موثّق"
+  "notVerifiedStatus": "غير موثّق",
+  "locationEnabledTitle": "الموقع مفعّل",
+  "locationDisabledTitle": "الموقع غير مفعّل",
+  "locationEnabledMessage": "يمكن للعملاء القريبين إيجادك.",
+  "locationDisabledMessage": "فعّل الموقع لاستقبال الطلبات.",
+  "activateButton": "تفعيل",
+  "activeStatus": "مفعّل"
 }

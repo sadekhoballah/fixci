@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../../l10n/app_localizations.dart';
 
 // Compact GPS status card: shows why location matters, and a single button
 // whose action follows the official Android/iOS flow — request the app
@@ -26,6 +27,7 @@ class LocationStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final active = _hasAccess;
     final activeColor = const Color(0xFF1B8A3B);
     final inactiveColor = const Color(0xFFC62828);
@@ -49,14 +51,14 @@ class LocationStatusCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  active ? 'Localisation activée' : 'Localisation désactivée',
+                  active ? l10n.locationEnabledTitle : l10n.locationDisabledTitle,
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   active
-                      ? 'Les clients à proximité peuvent vous trouver.'
-                      : 'Activez la localisation pour recevoir des demandes.',
+                      ? l10n.locationEnabledMessage
+                      : l10n.locationDisabledMessage,
                   style: TextStyle(
                     fontSize: 12,
                     color: colorScheme.onSurfaceVariant,
@@ -77,9 +79,9 @@ class LocationStatusCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
-              child: const Text(
-                'Activer',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+              child: Text(
+                l10n.activateButton,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
               ),
             )
           else
@@ -89,9 +91,9 @@ class LocationStatusCard extends StatelessWidget {
                 color: activeColor,
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: const Text(
-                'Active',
-                style: TextStyle(
+              child: Text(
+                l10n.activeStatus,
+                style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
                   color: Colors.white,
