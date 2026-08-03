@@ -253,5 +253,8 @@
     }
   },
   "declineButton": "Ignorer",
-  "acceptButton": "Accepter"
+  "acceptButton": "Accepter",
+  "statsTab": "Stats",
+  "noNearbyRequestsMessage": "Aucune demande à proximité pour le moment",
+  "goOnlineToReceiveRequestsMessage": "Passez en service pour recevoir des demandes"
 }

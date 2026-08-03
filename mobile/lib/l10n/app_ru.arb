@@ -150,5 +150,8 @@
   "startJobButton": "Начать заказ",
   "incomingRequestDistanceEta": "{km} км · ~{minutes} мин",
   "declineButton": "Отклонить",
-  "acceptButton": "Принять"
+  "acceptButton": "Принять",
+  "statsTab": "Статистика",
+  "noNearbyRequestsMessage": "Пока нет заявок поблизости",
+  "goOnlineToReceiveRequestsMessage": "Выйдите на линию, чтобы получать заявки"
 }

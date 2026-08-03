@@ -150,5 +150,8 @@
   "startJobButton": "بدء المهمة",
   "incomingRequestDistanceEta": "{km} كم · ~{minutes} دقيقة",
   "declineButton": "تجاهل",
-  "acceptButton": "قبول"
+  "acceptButton": "قبول",
+  "statsTab": "إحصائيات",
+  "noNearbyRequestsMessage": "لا توجد طلبات قريبة حالياً",
+  "goOnlineToReceiveRequestsMessage": "فعّل الخدمة لاستقبال الطلبات"
 }

@@ -150,5 +150,8 @@
   "startJobButton": "Start the job",
   "incomingRequestDistanceEta": "{km} km · ~{minutes} min",
   "declineButton": "Decline",
-  "acceptButton": "Accept"
+  "acceptButton": "Accept",
+  "statsTab": "Stats",
+  "noNearbyRequestsMessage": "No nearby requests right now",
+  "goOnlineToReceiveRequestsMessage": "Go online to receive requests"
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../l10n/app_localizations.dart';
 import '../craftsman_home_controller.dart';
 import '../live_requests_controller.dart';
 import '../live_requests_state.dart';
@@ -174,7 +175,7 @@ class _EmptyRequestsState extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Aucune demande à proximité pour le moment',
+            AppLocalizations.of(context)!.noNearbyRequestsMessage,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: colorScheme.onSurfaceVariant),
           ),
@@ -197,7 +198,7 @@ class _OfflinePrompt extends StatelessWidget {
           Icon(Icons.pause_circle_outline, size: 56, color: colorScheme.outline),
           const SizedBox(height: 16),
           Text(
-            'Passez en service pour recevoir des demandes',
+            AppLocalizations.of(context)!.goOnlineToReceiveRequestsMessage,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 15, color: colorScheme.onSurfaceVariant),
           ),
