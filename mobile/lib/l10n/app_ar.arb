@@ -195,5 +195,10 @@
   "requestRejectedMessage": "تم رفض طلبك، ربما بسبب معلومات غير صحيحة (صورة غير واضحة، مستند غير صالح...). يمكنك إرسال بطاقة هوية جديدة.",
   "pendingVerificationTitle": "بانتظار التحقق",
   "pendingVerificationMessage": "بطاقة هويتك قيد المراجعة من قبل فريقنا.",
-  "resubmitIdCardButton": "إرسال بطاقة هوية جديدة"
+  "resubmitIdCardButton": "إرسال بطاقة هوية جديدة",
+  "clientDeleteAccountConfirmContent": "هذا الإجراء لا رجعة فيه. سيتم حذف بياناتك الشخصية (الاسم، صورة بطاقة الهوية، الموقع). يبقى سجل مهامك وتقييماتك مرئياً للحرفيين المعنيين، دون التعريف بك.\n\nيجب عليك إنهاء أو إلغاء أي مهمة جارية قبل المتابعة.",
+  "unableToLoadAccountMessage": "تعذّر تحميل حسابك.",
+  "unableToSelectImageMessage": "تعذّر اختيار الصورة.",
+  "idCardUploadFailedMessage": "فشل إرسال بطاقة الهوية.",
+  "completedMissionsCount": "{count, plural, one {مهمة واحدة منتهية} other {{count} مهمة منتهية}}"
 }

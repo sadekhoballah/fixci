@@ -195,5 +195,10 @@
   "requestRejectedMessage": "Your request was rejected, possibly due to incorrect information (unreadable photo, invalid document...). You can submit a new ID document.",
   "pendingVerificationTitle": "Awaiting verification",
   "pendingVerificationMessage": "Your ID document is being reviewed by our team.",
-  "resubmitIdCardButton": "Submit a new ID document"
+  "resubmitIdCardButton": "Submit a new ID document",
+  "clientDeleteAccountConfirmContent": "This action is irreversible. Your personal data (name, ID photo, location) will be deleted. Your job history and reviews remain visible to the craftsmen involved, without identifying you.\n\nYou must finish or cancel any ongoing job before continuing.",
+  "unableToLoadAccountMessage": "Unable to load your account.",
+  "unableToSelectImageMessage": "Unable to select the image.",
+  "idCardUploadFailedMessage": "Failed to upload the ID document.",
+  "completedMissionsCount": "{count, plural, one {{count} completed job} other {{count} completed jobs}}"
 }

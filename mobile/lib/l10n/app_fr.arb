@@ -330,5 +330,15 @@
   "requestRejectedMessage": "Votre demande a été rejetée, possiblement à cause d'informations incorrectes (photo illisible, document invalide...). Vous pouvez soumettre une nouvelle pièce d'identité.",
   "pendingVerificationTitle": "En attente de vérification",
   "pendingVerificationMessage": "Votre pièce d'identité est en cours d'examen par notre équipe.",
-  "resubmitIdCardButton": "Soumettre une nouvelle pièce d'identité"
+  "resubmitIdCardButton": "Soumettre une nouvelle pièce d'identité",
+  "clientDeleteAccountConfirmContent": "Cette action est irréversible. Vos données personnelles (nom, photo de pièce d'identité, localisation) seront supprimées. Votre historique de missions et vos avis restent visibles pour les artisans concernés, sans vous identifier.\n\nVous devez terminer ou annuler toute mission en cours avant de continuer.",
+  "unableToLoadAccountMessage": "Impossible de charger votre compte.",
+  "unableToSelectImageMessage": "Impossible de sélectionner l'image.",
+  "idCardUploadFailedMessage": "Échec de l'envoi de la pièce d'identité.",
+  "completedMissionsCount": "{count, plural, one {{count} mission terminée} other {{count} missions terminées}}",
+  "@completedMissionsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  }
 }
