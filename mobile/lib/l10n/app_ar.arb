@@ -164,5 +164,10 @@
   "locationEnabledMessage": "يمكن للعملاء القريبين إيجادك.",
   "locationDisabledMessage": "فعّل الموقع لاستقبال الطلبات.",
   "activateButton": "تفعيل",
-  "activeStatus": "مفعّل"
+  "activeStatus": "مفعّل",
+  "statsCompletedLabel": "منتهية",
+  "statsAssignedLabel": "معيّنة",
+  "statsResponseLabel": "الاستجابة",
+  "lessThanOneMinuteLabel": "أقل من دقيقة",
+  "minutesShortLabel": "{minutes} د"
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/app_localizations.dart';
 import '../craftsman_home_state.dart';
 
 // Compact chip row for today's numbers — a horizontally scrollable strip
@@ -9,30 +10,33 @@ class StatsChipRow extends StatelessWidget {
 
   final CraftsmanHomeStats? stats;
 
-  String get _responseLabel {
+  String _responseLabel(AppLocalizations l10n) {
     final seconds = stats?.avgResponseSeconds;
     if (seconds == null) return '—';
     final minutes = (seconds / 60).round();
-    return minutes < 1 ? '<1 min' : '$minutes min';
+    return minutes < 1
+        ? l10n.lessThanOneMinuteLabel
+        : l10n.minutesShortLabel(minutes);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final chips = [
       _StatChip(
         icon: Icons.task_alt_rounded,
-        label: 'Terminées',
+        label: l10n.statsCompletedLabel,
         value: '${stats?.jobsDoneToday ?? 0}',
       ),
       _StatChip(
         icon: Icons.assignment_turned_in_outlined,
-        label: 'Assignées',
+        label: l10n.statsAssignedLabel,
         value: '${stats?.jobsAssignedToday ?? 0}',
       ),
       _StatChip(
         icon: Icons.timer_outlined,
-        label: 'Réponse',
-        value: _responseLabel,
+        label: l10n.statsResponseLabel,
+        value: _responseLabel(l10n),
       ),
     ];
 

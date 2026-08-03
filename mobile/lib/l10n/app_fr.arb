@@ -267,5 +267,15 @@
   "locationEnabledMessage": "Les clients à proximité peuvent vous trouver.",
   "locationDisabledMessage": "Activez la localisation pour recevoir des demandes.",
   "activateButton": "Activer",
-  "activeStatus": "Active"
+  "activeStatus": "Active",
+  "statsCompletedLabel": "Terminées",
+  "statsAssignedLabel": "Assignées",
+  "statsResponseLabel": "Réponse",
+  "lessThanOneMinuteLabel": "<1 min",
+  "minutesShortLabel": "{minutes} min",
+  "@minutesShortLabel": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  }
 }

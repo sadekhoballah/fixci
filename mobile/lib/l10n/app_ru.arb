@@ -164,5 +164,10 @@
   "locationEnabledMessage": "Клиенты поблизости смогут вас найти.",
   "locationDisabledMessage": "Включите геолокацию, чтобы получать заявки.",
   "activateButton": "Включить",
-  "activeStatus": "Активна"
+  "activeStatus": "Активна",
+  "statsCompletedLabel": "Завершено",
+  "statsAssignedLabel": "Назначено",
+  "statsResponseLabel": "Отклик",
+  "lessThanOneMinuteLabel": "<1 мин",
+  "minutesShortLabel": "{minutes} мин"
 }
