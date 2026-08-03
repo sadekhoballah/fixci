@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 enum ServiceCategory {
   plumber,
@@ -103,5 +104,52 @@ enum ServiceCategory {
     ServiceCategory.blacksmith => Icons.hardware_rounded,
     ServiceCategory.housekeeping => Icons.local_laundry_service_rounded,
     ServiceCategory.homeTutoring => Icons.school_rounded,
+  };
+}
+
+// Localized counterparts to .label/.description above — kept as a separate
+// extension (rather than replacing those getters outright) since dozens of
+// call sites across the app aren't migrated to AppLocalizations yet; each
+// screen switches to these only as its own turn comes up. See registration
+// screen migration notes for why .label/.description themselves stay as
+// French literals in the meantime rather than becoming a half-measure.
+extension ServiceCategoryLocalization on ServiceCategory {
+  String localizedLabel(AppLocalizations l10n) => switch (this) {
+    ServiceCategory.plumber => l10n.categoryPlumberLabel,
+    ServiceCategory.electrician => l10n.categoryElectricianLabel,
+    ServiceCategory.acRepair => l10n.categoryAcRepairLabel,
+    ServiceCategory.cleaning => l10n.categoryCleaningLabel,
+    ServiceCategory.carpenter => l10n.categoryCarpenterLabel,
+    ServiceCategory.mechanic => l10n.categoryMechanicLabel,
+    ServiceCategory.painter => l10n.categoryPainterLabel,
+    ServiceCategory.aluminumWork => l10n.categoryAluminumWorkLabel,
+    ServiceCategory.cameraInstallation => l10n.categoryCameraInstallationLabel,
+    ServiceCategory.tvInstallation => l10n.categoryTvInstallationLabel,
+    ServiceCategory.satelliteInstallation =>
+      l10n.categorySatelliteInstallationLabel,
+    ServiceCategory.construction => l10n.categoryConstructionLabel,
+    ServiceCategory.blacksmith => l10n.categoryBlacksmithLabel,
+    ServiceCategory.housekeeping => l10n.categoryHousekeepingLabel,
+    ServiceCategory.homeTutoring => l10n.categoryHomeTutoringLabel,
+  };
+
+  String localizedDescription(AppLocalizations l10n) => switch (this) {
+    ServiceCategory.plumber => l10n.categoryPlumberDescription,
+    ServiceCategory.electrician => l10n.categoryElectricianDescription,
+    ServiceCategory.acRepair => l10n.categoryAcRepairDescription,
+    ServiceCategory.cleaning => l10n.categoryCleaningDescription,
+    ServiceCategory.carpenter => l10n.categoryCarpenterDescription,
+    ServiceCategory.mechanic => l10n.categoryMechanicDescription,
+    ServiceCategory.painter => l10n.categoryPainterDescription,
+    ServiceCategory.aluminumWork => l10n.categoryAluminumWorkDescription,
+    ServiceCategory.cameraInstallation =>
+      l10n.categoryCameraInstallationDescription,
+    ServiceCategory.tvInstallation => l10n.categoryTvInstallationDescription,
+    ServiceCategory.satelliteInstallation =>
+      l10n.categorySatelliteInstallationDescription,
+    ServiceCategory.construction => l10n.categoryConstructionDescription,
+    ServiceCategory.blacksmith => l10n.categoryBlacksmithDescription,
+    ServiceCategory.housekeeping => l10n.categoryHousekeepingDescription,
+    ServiceCategory.homeTutoring => l10n.categoryHomeTutoringDescription,
   };
 }

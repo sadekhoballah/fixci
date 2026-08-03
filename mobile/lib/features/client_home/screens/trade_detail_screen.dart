@@ -48,6 +48,7 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
       }
     });
     final requestState = ref.watch(serviceRequestControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
     final isBusy =
         requestState.status == ServiceRequestStatus.locating ||
         requestState.status == ServiceRequestStatus.submitting;
@@ -106,7 +107,7 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        category.label,
+                        category.localizedLabel(l10n),
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
@@ -116,7 +117,7 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    category.description,
+                    category.localizedDescription(l10n),
                     style: TextStyle(
                       fontSize: 15,
                       height: 1.5,
@@ -157,7 +158,7 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
                     ),
                   )
                 : Text(
-                    AppLocalizations.of(context)!.requestNowButton,
+                    l10n.requestNowButton,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,

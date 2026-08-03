@@ -180,7 +180,7 @@ class _CategoryCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        category.label,
+                        category.localizedLabel(AppLocalizations.of(context)!),
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
