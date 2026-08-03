@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -115,7 +118,7 @@ class _SearchingScreenState extends ConsumerState<SearchingScreen>
             _ => Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(),
+                const _SearchRadar(),
                 const SizedBox(height: 24),
                 Text(
                   'Recherche d\'un ${category.label.toLowerCase()} disponible…',
@@ -550,4 +553,154 @@ class _RatingCardState extends State<_RatingCard> {
       ],
     );
   }
+}
+
+// Purely decorative: a weather-radar-style sweep plus a countdown display.
+// The countdown is cosmetic only — it mirrors the backend's worst-case
+// matching duration (matching.constants.ts: 6 rounds x ACCEPT_TIMEOUT_MS
+// [18s] + WAKEUP_ACCEPT_TIMEOUT_MS [90s] = 198s) so it lands near zero right
+// as a real timeout would occur, but it never triggers navigation itself —
+// the screen still transitions purely from serviceRequestControllerProvider
+// state changes (see the `switch` in _SearchingScreenState.build), so a match
+// found before or after 00:00 behaves identically.
+class _SearchRadar extends StatefulWidget {
+  const _SearchRadar();
+
+  @override
+  State<_SearchRadar> createState() => _SearchRadarState();
+}
+
+class _SearchRadarState extends State<_SearchRadar>
+    with SingleTickerProviderStateMixin {
+  static const _worstCaseSearchDuration = Duration(seconds: 198);
+
+  late final AnimationController _sweepController;
+  final ValueNotifier<Duration> _remaining = ValueNotifier(
+    _worstCaseSearchDuration,
+  );
+  Timer? _countdownTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _sweepController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final next = _remaining.value - const Duration(seconds: 1);
+      _remaining.value = next.isNegative ? Duration.zero : next;
+      if (_remaining.value == Duration.zero) _countdownTimer?.cancel();
+    });
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    _sweepController.dispose();
+    _remaining.dispose();
+    super.dispose();
+  }
+
+  static String _format(Duration d) {
+    final minutes = d.inMinutes.toString().padLeft(2, '0');
+    final seconds = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 140,
+          height: 140,
+          child: AnimatedBuilder(
+            animation: _sweepController,
+            builder: (context, _) => CustomPaint(
+              painter: _RadarPainter(_sweepController.value * 2 * math.pi),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        ValueListenableBuilder<Duration>(
+          valueListenable: _remaining,
+          builder: (context, value, _) => Text(
+            _format(value),
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: Colors.green,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RadarPainter extends CustomPainter {
+  const _RadarPainter(this.angle);
+
+  // Current sweep angle in radians, measured clockwise from the top.
+  final double angle;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.width / 2;
+
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()..color = Colors.green.withValues(alpha: 0.06),
+    );
+
+    final ringPaint = Paint()
+      ..color = Colors.green.withValues(alpha: 0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    for (final fraction in [0.33, 0.66, 1.0]) {
+      canvas.drawCircle(center, radius * fraction, ringPaint);
+    }
+
+    final sweepPaint = Paint()
+      ..shader = SweepGradient(
+        colors: [
+          Colors.green.withValues(alpha: 0.0),
+          Colors.green.withValues(alpha: 0.5),
+        ],
+        transform: GradientRotation(angle - math.pi / 2),
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    canvas.drawCircle(center, radius, sweepPaint);
+
+    final lineEnd = Offset(
+      center.dx + radius * math.cos(angle - math.pi / 2),
+      center.dy + radius * math.sin(angle - math.pi / 2),
+    );
+    canvas.drawLine(
+      center,
+      lineEnd,
+      Paint()
+        ..color = Colors.green
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round,
+    );
+
+    canvas.drawCircle(center, 3, Paint()..color = Colors.green);
+    canvas.drawCircle(
+      center,
+      radius - 1,
+      Paint()
+        ..color = Colors.green
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _RadarPainter oldDelegate) =>
+      oldDelegate.angle != angle;
 }
