@@ -431,7 +431,13 @@ class _AssignedCard extends StatelessWidget {
                 label: const Text('Confirmer la fin de la mission'),
               ),
             )
-          else
+          // Once the craftsman has started the job, cancelByClient
+          // (matching.service.ts) intentionally rejects the client's cancel —
+          // the craftsman owns the job's transitions from here on, not the
+          // client — so showing this button just led to a silent no-op
+          // (backend 409, no error UI wired for it on this screen). Call/
+          // WhatsApp above are the actual way to reach the craftsman now.
+          else if (!inProgress)
             TextButton(
               onPressed: state.isCancelling
                   ? null
