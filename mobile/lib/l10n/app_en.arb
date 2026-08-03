@@ -153,5 +153,10 @@
   "acceptButton": "Accept",
   "statsTab": "Stats",
   "noNearbyRequestsMessage": "No nearby requests right now",
-  "goOnlineToReceiveRequestsMessage": "Go online to receive requests"
+  "goOnlineToReceiveRequestsMessage": "Go online to receive requests",
+  "defaultCraftsmanDisplayName": "Craftsman",
+  "onlineStatus": "Online",
+  "offlineStatus": "Offline",
+  "verifiedStatus": "Verified",
+  "notVerifiedStatus": "Not verified"
 }

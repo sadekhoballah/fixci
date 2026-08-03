@@ -153,5 +153,10 @@
   "acceptButton": "قبول",
   "statsTab": "إحصائيات",
   "noNearbyRequestsMessage": "لا توجد طلبات قريبة حالياً",
-  "goOnlineToReceiveRequestsMessage": "فعّل الخدمة لاستقبال الطلبات"
+  "goOnlineToReceiveRequestsMessage": "فعّل الخدمة لاستقبال الطلبات",
+  "defaultCraftsmanDisplayName": "حرفي",
+  "onlineStatus": "متصل",
+  "offlineStatus": "غير متصل",
+  "verifiedStatus": "موثّق",
+  "notVerifiedStatus": "غير موثّق"
 }

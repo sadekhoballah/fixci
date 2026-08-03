@@ -153,5 +153,10 @@
   "acceptButton": "Принять",
   "statsTab": "Статистика",
   "noNearbyRequestsMessage": "Пока нет заявок поблизости",
-  "goOnlineToReceiveRequestsMessage": "Выйдите на линию, чтобы получать заявки"
+  "goOnlineToReceiveRequestsMessage": "Выйдите на линию, чтобы получать заявки",
+  "defaultCraftsmanDisplayName": "Мастер",
+  "onlineStatus": "В сети",
+  "offlineStatus": "Не в сети",
+  "verifiedStatus": "Подтверждён",
+  "notVerifiedStatus": "Не подтверждён"
 }

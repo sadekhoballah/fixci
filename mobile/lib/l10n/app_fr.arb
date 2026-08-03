@@ -256,5 +256,10 @@
   "acceptButton": "Accepter",
   "statsTab": "Stats",
   "noNearbyRequestsMessage": "Aucune demande à proximité pour le moment",
-  "goOnlineToReceiveRequestsMessage": "Passez en service pour recevoir des demandes"
+  "goOnlineToReceiveRequestsMessage": "Passez en service pour recevoir des demandes",
+  "defaultCraftsmanDisplayName": "Artisan",
+  "onlineStatus": "En ligne",
+  "offlineStatus": "Hors ligne",
+  "verifiedStatus": "Vérifié",
+  "notVerifiedStatus": "Non vérifié"
 }

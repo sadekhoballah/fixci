@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/subscription_tier.dart';
+import '../../../l10n/app_localizations.dart';
 
 // The compact top-of-screen identity strip: photo, name, a tappable
 // online/offline pill (this doubles as the availability toggle — there's no
@@ -73,7 +74,7 @@ class CraftsmanHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                fullName ?? 'Artisan',
+                fullName ?? AppLocalizations.of(context)!.defaultCraftsmanDisplayName,
                 style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -160,7 +161,9 @@ class _AvailabilityPill extends StatelessWidget {
               ),
             const SizedBox(width: 6),
             Text(
-              isAvailable ? 'En ligne' : 'Hors ligne',
+              isAvailable
+                  ? AppLocalizations.of(context)!.onlineStatus
+                  : AppLocalizations.of(context)!.offlineStatus,
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -198,7 +201,9 @@ class _VerifiedPill extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            idVerified ? 'Vérifié' : 'Non vérifié',
+            idVerified
+                ? AppLocalizations.of(context)!.verifiedStatus
+                : AppLocalizations.of(context)!.notVerifiedStatus,
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color),
           ),
         ],
