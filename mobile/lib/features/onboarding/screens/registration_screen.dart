@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl_phone_field/countries.dart' show Country, countries;
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/media/id_card_picker.dart';
@@ -25,6 +26,12 @@ class RegistrationScreen extends ConsumerStatefulWidget {
 }
 
 const _experienceOptions = ['1-2 ans', '2-4 ans', 'Plus de 5 ans'];
+
+// Only markets currently launched — see IntlPhoneField below. Order fixes
+// the picker's display order (Côte d'Ivoire, then Liban, then Russie).
+final List<Country> _allowedCountries = ['CI', 'LB', 'RU']
+    .map((code) => countries.firstWhere((c) => c.code == code))
+    .toList();
 
 class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   final _firstNameController = TextEditingController();
@@ -113,6 +120,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               const SizedBox(height: 16),
               IntlPhoneField(
                 initialCountryCode: 'CI',
+                countries: _allowedCountries,
                 onChanged: (phoneNumber) =>
                     controller.setPhone(phoneNumber.completeNumber),
                 decoration: const InputDecoration(
