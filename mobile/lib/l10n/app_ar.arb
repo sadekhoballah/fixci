@@ -31,5 +31,13 @@
   "chooseFromGalleryLabel": "الاختيار من المعرض",
   "idCardUploading": "جارٍ الإرسال...",
   "idCardAdded": "تمت إضافة بطاقة الهوية",
-  "idCardAddPrompt": "أضف بطاقة هويتك"
+  "idCardAddPrompt": "أضف بطاقة هويتك",
+  "otpTitle": "التحقق من الرقم",
+  "otpInstructions": "أدخل الرمز المرسل إلى {phone}",
+  "retryButton": "إعادة المحاولة",
+  "otpCodeLabel": "رمز مكوّن من 6 أرقام",
+  "verifyingButton": "جارٍ التحقق...",
+  "verifyButton": "تحقق",
+  "resendCode": "إعادة إرسال الرمز",
+  "resendCodeCooldown": "إعادة إرسال الرمز ({seconds} ث)"
 }

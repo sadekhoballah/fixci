@@ -31,5 +31,13 @@
   "chooseFromGalleryLabel": "Выбрать из галереи",
   "idCardUploading": "Загрузка...",
   "idCardAdded": "Документ добавлен",
-  "idCardAddPrompt": "Добавьте документ, удостоверяющий личность"
+  "idCardAddPrompt": "Добавьте документ, удостоверяющий личность",
+  "otpTitle": "Подтверждение номера",
+  "otpInstructions": "Введите код, отправленный на {phone}",
+  "retryButton": "Повторить",
+  "otpCodeLabel": "6-значный код",
+  "verifyingButton": "Проверка...",
+  "verifyButton": "Подтвердить",
+  "resendCode": "Отправить код повторно",
+  "resendCodeCooldown": "Отправить код повторно ({seconds} с)"
 }

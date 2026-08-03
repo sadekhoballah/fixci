@@ -31,5 +31,13 @@
   "chooseFromGalleryLabel": "Choose from gallery",
   "idCardUploading": "Uploading...",
   "idCardAdded": "ID document added",
-  "idCardAddPrompt": "Add your ID document"
+  "idCardAddPrompt": "Add your ID document",
+  "otpTitle": "Phone verification",
+  "otpInstructions": "Enter the code sent to {phone}",
+  "retryButton": "Retry",
+  "otpCodeLabel": "6-digit code",
+  "verifyingButton": "Verifying...",
+  "verifyButton": "Verify",
+  "resendCode": "Resend code",
+  "resendCodeCooldown": "Resend code ({seconds}s)"
 }

@@ -67,5 +67,23 @@
   "chooseFromGalleryLabel": "Choisir depuis la galerie",
   "idCardUploading": "Envoi en cours...",
   "idCardAdded": "Pièce d'identité ajoutée",
-  "idCardAddPrompt": "Ajouter votre pièce d'identité"
+  "idCardAddPrompt": "Ajouter votre pièce d'identité",
+  "otpTitle": "Vérification du numéro",
+  "otpInstructions": "Entrez le code envoyé au {phone}",
+  "@otpInstructions": {
+    "placeholders": {
+      "phone": { "type": "String" }
+    }
+  },
+  "retryButton": "Réessayer",
+  "otpCodeLabel": "Code à 6 chiffres",
+  "verifyingButton": "Vérification...",
+  "verifyButton": "Vérifier",
+  "resendCode": "Renvoyer le code",
+  "resendCodeCooldown": "Renvoyer le code ({seconds}s)",
+  "@resendCodeCooldown": {
+    "placeholders": {
+      "seconds": { "type": "int" }
+    }
+  }
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/user_role.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../client_home/screens/client_shell_screen.dart';
 import '../../craftsman_home/screens/artisan_shell_screen.dart';
@@ -91,6 +92,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     final otpState = ref.watch(otpControllerProvider);
     final onboardingState = ref.watch(onboardingControllerProvider);
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     ref.listen(onboardingControllerProvider, (previous, next) {
       final justVerified =
@@ -99,7 +101,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Vérification du numéro')),
+      appBar: AppBar(title: Text(l10n.otpTitle)),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -107,7 +109,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Entrez le code envoyé au ${widget.phone}',
+                l10n.otpInstructions(widget.phone),
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 24),
@@ -120,7 +122,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                 ),
                 const SizedBox(height: 16),
                 PrimaryButton(
-                  label: 'Réessayer',
+                  label: l10n.retryButton,
                   onPressed: () =>
                       ref.read(otpControllerProvider.notifier).sendCode(widget.phone),
                 ),
@@ -130,8 +132,8 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                   keyboardType: TextInputType.number,
                   maxLength: 6,
                   onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
-                    labelText: 'Code à 6 chiffres',
+                  decoration: InputDecoration(
+                    labelText: l10n.otpCodeLabel,
                     counterText: '',
                   ),
                 ),
@@ -152,8 +154,8 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                 const SizedBox(height: 20),
                 PrimaryButton(
                   label: (otpState.isVerifyingCode || _completing)
-                      ? 'Vérification...'
-                      : 'Vérifier',
+                      ? l10n.verifyingButton
+                      : l10n.verifyButton,
                   onPressed:
                       (otpState.isVerifyingCode ||
                           _completing ||
@@ -171,8 +173,10 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                         : null,
                     child: Text(
                       otpState.canResend
-                          ? 'Renvoyer le code'
-                          : 'Renvoyer le code (${otpState.resendCooldownRemaining.inSeconds}s)',
+                          ? l10n.resendCode
+                          : l10n.resendCodeCooldown(
+                              otpState.resendCooldownRemaining.inSeconds,
+                            ),
                     ),
                   ),
                 ),
