@@ -16,17 +16,22 @@ class LanguagePicker extends ConsumerWidget {
     final current = ref.watch(localeControllerProvider);
     final controller = ref.read(localeControllerProvider.notifier);
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: AppLocalizations.supportedLocales.map((locale) {
-        final selected = locale.languageCode == current.languageCode;
-        return ChoiceChip(
-          label: Text(_nativeNames[locale.languageCode] ?? locale.languageCode),
-          selected: selected,
-          onSelected: (_) => controller.setLocale(locale),
-        );
-      }).toList(),
+    return Semantics(
+      label: AppLocalizations.of(context)!.selectLanguage,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: AppLocalizations.supportedLocales.map((locale) {
+          final selected = locale.languageCode == current.languageCode;
+          return ChoiceChip(
+            label: Text(
+              _nativeNames[locale.languageCode] ?? locale.languageCode,
+            ),
+            selected: selected,
+            onSelected: (_) => controller.setLocale(locale),
+          );
+        }).toList(),
+      ),
     );
   }
 }

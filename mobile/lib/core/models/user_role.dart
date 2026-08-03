@@ -2,16 +2,6 @@ enum UserRole {
   client,
   craftsman;
 
-  String get label => switch (this) {
-    UserRole.client => 'Client',
-    UserRole.craftsman => 'Artisan',
-  };
-
-  String get description => switch (this) {
-    UserRole.client => 'Je cherche un artisan',
-    UserRole.craftsman => 'Je propose mes services',
-  };
-
   // Matches the backend's user_role_enum string values.
   String get wireValue => switch (this) {
     UserRole.client => 'client',

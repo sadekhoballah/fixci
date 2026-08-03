@@ -7,5 +7,33 @@
   "selectLanguage": "Langue",
   "@selectLanguage": {
     "description": "Label/tooltip for the language picker shown on the first screen."
+  },
+  "roleSelectionTitle": "Qui êtes-vous ?",
+  "@roleSelectionTitle": {
+    "description": "Role selection screen's main heading."
+  },
+  "roleSelectionSubtitle": "Choisissez comment vous voulez utiliser FixCi",
+  "@roleSelectionSubtitle": {
+    "description": "Role selection screen's subheading."
+  },
+  "roleClientTitle": "Client",
+  "@roleClientTitle": {
+    "description": "Title of the 'client' role card."
+  },
+  "roleClientDescription": "Je cherche un artisan",
+  "@roleClientDescription": {
+    "description": "Subtitle of the 'client' role card."
+  },
+  "roleCraftsmanTitle": "Artisan",
+  "@roleCraftsmanTitle": {
+    "description": "Title of the 'craftsman' role card."
+  },
+  "roleCraftsmanDescription": "Je propose mes services",
+  "@roleCraftsmanDescription": {
+    "description": "Subtitle of the 'craftsman' role card."
+  },
+  "continueButton": "Continuer",
+  "@continueButton": {
+    "description": "Button label to proceed after picking a role."
   }
 }

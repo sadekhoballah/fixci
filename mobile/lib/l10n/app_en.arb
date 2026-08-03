@@ -1,5 +1,12 @@
 {
   "@@locale": "en",
   "appTitle": "Fix Pro",
-  "selectLanguage": "Language"
+  "selectLanguage": "Language",
+  "roleSelectionTitle": "Who are you?",
+  "roleSelectionSubtitle": "Choose how you want to use FixCi",
+  "roleClientTitle": "Client",
+  "roleClientDescription": "I'm looking for a craftsman",
+  "roleCraftsmanTitle": "Craftsman",
+  "roleCraftsmanDescription": "I offer my services",
+  "continueButton": "Continue"
 }

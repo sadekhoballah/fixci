@@ -1,5 +1,12 @@
 {
   "@@locale": "ar",
   "appTitle": "Fix Pro",
-  "selectLanguage": "اللغة"
+  "selectLanguage": "اللغة",
+  "roleSelectionTitle": "من أنت؟",
+  "roleSelectionSubtitle": "اختر كيف تريد استخدام FixCi",
+  "roleClientTitle": "عميل",
+  "roleClientDescription": "أبحث عن حرفي",
+  "roleCraftsmanTitle": "حرفي",
+  "roleCraftsmanDescription": "أقدّم خدماتي",
+  "continueButton": "متابعة"
 }
