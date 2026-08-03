@@ -37,7 +37,7 @@ class DevBypassPhoneVerificationService implements PhoneVerificationService {
     required String smsCode,
   }) async {
     if (smsCode != devBypassCode) {
-      throw PhoneVerificationException('Code incorrect. Veuillez réessayer.');
+      throw PhoneVerificationException(PhoneVerificationError.invalidCode);
     }
     // No real Firebase session exists on this platform, so there's no ID
     // token to mint — the backend will correctly persist phoneVerified:false

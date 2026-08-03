@@ -343,5 +343,40 @@
   },
   "statisticsTitle": "Statistiques",
   "todayLabel": "Aujourd'hui",
-  "performanceLabel": "Performance"
+  "performanceLabel": "Performance",
+  "networkConnectionErrorMessage": "Impossible de contacter le serveur. Vérifiez votre connexion.",
+  "genericErrorWithCode": "Une erreur est survenue ({code}).",
+  "@genericErrorWithCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+  "imageEmptyFileMessage": "Le fichier est vide.",
+  "imageTooLargeMessage": "L'image dépasse la taille maximale de 5 Mo.",
+  "imageUnsupportedFormatMessage": "Seules les images JPEG ou PNG sont acceptées.",
+  "imageCorruptedMessage": "Le fichier image est corrompu ou illisible.",
+  "imageLowResolutionMessage": "La résolution de l'image est trop faible pour être lisible.",
+  "imageWrongAspectRatioMessage": "Les proportions de l'image ne ressemblent pas à une pièce d'identité.",
+  "cameraUnavailableMessage": "La caméra n'est pas disponible sur cet appareil.",
+  "cameraPermissionDeniedMessage": "Autorisation caméra refusée. Activez-la dans les paramètres de l'appareil.",
+  "invalidPhoneNumberMessage": "Numéro de téléphone invalide.",
+  "tooManyAttemptsMessage": "Trop de tentatives. Réessayez plus tard.",
+  "invalidCodeMessage": "Code incorrect. Veuillez réessayer.",
+  "codeExpiredMessage": "Le code a expiré. Demandez un nouveau code.",
+  "verificationErrorMessage": "Une erreur est survenue lors de la vérification.",
+  "selectRoleBeforeContinuingMessage": "Veuillez choisir un rôle avant de continuer.",
+  "idCardSendFailedMessage": "Échec de l'envoi de l'image.",
+  "unexpectedErrorMessage": "Une erreur inattendue est survenue.",
+  "unableToLoadDashboardMessage": "Impossible de charger votre tableau de bord.",
+  "enableLocationToGoOnlineMessage": "Activez la localisation pour passer en service.",
+  "unableToUpdateAvailabilityMessage": "Impossible de mettre à jour votre disponibilité.",
+  "enableLocationToReceiveRequestsMessage": "Activez la localisation pour recevoir des demandes.",
+  "enableLocationRetryMessage": "Activez la localisation puis réessayez.",
+  "authorizeLocationRetryMessage": "Autorisez l'accès à la localisation puis réessayez.",
+  "locationDeniedMessage": "Localisation refusée.",
+  "unableToGetPositionMessage": "Impossible de récupérer votre position.",
+  "unableToCancelRequestMessage": "Impossible d'annuler la demande.",
+  "unableToConfirmCompletionMessage": "Impossible de confirmer la fin de la mission.",
+  "unableToSubmitRatingMessage": "Impossible d'envoyer votre évaluation.",
+  "clientCancelledJobMessage": "Le client a annulé cette demande."
 }

@@ -1,10 +1,32 @@
-class PhoneVerificationException implements Exception {
-  PhoneVerificationException(this.message);
+import '../../l10n/app_localizations.dart';
 
-  final String message;
+enum PhoneVerificationError {
+  invalidPhoneNumber,
+  tooManyAttempts,
+  networkError,
+  invalidCode,
+  codeExpired,
+  unknown,
+}
+
+extension PhoneVerificationErrorLocalization on PhoneVerificationError {
+  String localizedMessage(AppLocalizations l10n) => switch (this) {
+    PhoneVerificationError.invalidPhoneNumber => l10n.invalidPhoneNumberMessage,
+    PhoneVerificationError.tooManyAttempts => l10n.tooManyAttemptsMessage,
+    PhoneVerificationError.networkError => l10n.networkConnectionErrorMessage,
+    PhoneVerificationError.invalidCode => l10n.invalidCodeMessage,
+    PhoneVerificationError.codeExpired => l10n.codeExpiredMessage,
+    PhoneVerificationError.unknown => l10n.verificationErrorMessage,
+  };
+}
+
+class PhoneVerificationException implements Exception {
+  PhoneVerificationException(this.error);
+
+  final PhoneVerificationError error;
 
   @override
-  String toString() => message;
+  String toString() => error.name;
 }
 
 class CodeSentResult {

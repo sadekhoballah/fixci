@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_selector/file_selector.dart' as file_selector;
 import 'package:permission_handler/permission_handler.dart';
+import '../../l10n/app_localizations.dart';
 
 class PickedImage {
   PickedImage({
@@ -17,13 +18,23 @@ class PickedImage {
   final String mimeType;
 }
 
-class IdCardPickerException implements Exception {
-  IdCardPickerException(this.message);
+enum IdCardPickerError { cameraUnavailable, cameraPermissionDenied }
 
-  final String message;
+extension IdCardPickerErrorLocalization on IdCardPickerError {
+  String localizedMessage(AppLocalizations l10n) => switch (this) {
+    IdCardPickerError.cameraUnavailable => l10n.cameraUnavailableMessage,
+    IdCardPickerError.cameraPermissionDenied =>
+      l10n.cameraPermissionDeniedMessage,
+  };
+}
+
+class IdCardPickerException implements Exception {
+  IdCardPickerException(this.error);
+
+  final IdCardPickerError error;
 
   @override
-  String toString() => message;
+  String toString() => error.name;
 }
 
 // image_picker has no official Linux (or Windows) desktop implementation, so
@@ -73,16 +84,12 @@ class IdCardPicker {
 
   Future<PickedImage?> pickFromCamera() async {
     if (!idCardCameraSupported) {
-      throw IdCardPickerException(
-        "La caméra n'est pas disponible sur cet appareil.",
-      );
+      throw IdCardPickerException(IdCardPickerError.cameraUnavailable);
     }
 
     final status = await Permission.camera.request();
     if (!status.isGranted) {
-      throw IdCardPickerException(
-        "Autorisation caméra refusée. Activez-la dans les paramètres de l'appareil.",
-      );
+      throw IdCardPickerException(IdCardPickerError.cameraPermissionDenied);
     }
 
     final file = await ImagePicker().pickImage(source: ImageSource.camera);

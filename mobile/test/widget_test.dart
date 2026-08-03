@@ -6,10 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/app.dart';
 import 'package:mobile/core/auth/dev_bypass_phone_verification_service.dart';
 import 'package:mobile/core/auth/session_storage.dart';
+import 'package:mobile/core/localization/locale_storage.dart';
 import 'package:mobile/core/media/id_card_picker.dart';
 import 'package:mobile/core/models/subscription_tier.dart';
 import 'package:mobile/core/models/user_role.dart';
 import 'package:mobile/core/network/api_client.dart';
+import 'package:mobile/l10n/app_localizations.dart';
 
 // Running under `flutter test` on this Linux dev machine, isFirebaseSupportedPlatform
 // is false and kDebugMode is true, so phoneVerificationServiceProvider naturally
@@ -54,7 +56,12 @@ const _plausibleIdCardPngBase64 =
 // status codes, response shapes) is separately verified against the live
 // NestJS server, not re-asserted here.
 class _FakeApiClient extends ApiClient {
-  _FakeApiClient({this.failRegister = false, this.failUpload = false});
+  // All these tests assert against the app's default French copy (no
+  // locale override in buildApp), so the fake's own error strings above
+  // match that directly; this just satisfies ApiClient's now-required l10n
+  // constructor param for the fallback messages this fake never triggers.
+  _FakeApiClient({this.failRegister = false, this.failUpload = false})
+    : super(l10n: lookupAppLocalizations(const Locale('fr')));
 
   final bool failRegister;
   final bool failUpload;
@@ -162,6 +169,19 @@ class _FakeSessionStorage implements SessionStorage {
   }
 }
 
+// Avoids the real LocaleStorage's SharedPreferences.getInstance() call,
+// which needs a mocked platform channel this suite doesn't set up — same
+// rationale as _FakeSessionStorage above. Every test here relies on the
+// app's default French copy, so "never had a saved locale" (null) is
+// exactly the behavior these tests need.
+class _FakeLocaleStorage implements LocaleStorage {
+  @override
+  Future<String?> loadLocaleCode() async => null;
+
+  @override
+  Future<void> saveLocaleCode(String code) async {}
+}
+
 void main() {
   Widget buildApp({
     _FakeApiClient? apiClient,
@@ -179,6 +199,7 @@ void main() {
           _FakeIdCardPicker(tooSmall: tooSmallIdCard),
         ),
         sessionStorageProvider.overrideWithValue(_FakeSessionStorage()),
+        localeStorageProvider.overrideWithValue(_FakeLocaleStorage()),
       ],
       child: const FixCiApp(),
     );

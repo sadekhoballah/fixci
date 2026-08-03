@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/dev_bypass_session.dart';
 import '../../core/auth/session_storage.dart';
 import '../../core/auth/user_lookup_service.dart';
+import '../../core/localization/locale_controller.dart';
 import '../../core/media/id_card_picker.dart';
 import '../../core/media/image_validation.dart';
 import '../../core/models/district.dart';
@@ -84,15 +85,18 @@ class OnboardingController extends Notifier<OnboardingState> {
     Future<PickedImage?> Function() pick,
   ) async {
     state = state.copyWith(clearIdCardUploadError: true);
+    final l10n = ref.read(l10nProvider);
     final PickedImage? image;
     try {
       image = await pick();
     } on IdCardPickerException catch (e) {
-      state = state.copyWith(idCardUploadError: e.message);
+      state = state.copyWith(
+        idCardUploadError: e.error.localizedMessage(l10n),
+      );
       return;
     } catch (_) {
       state = state.copyWith(
-        idCardUploadError: "Impossible de sélectionner l'image.",
+        idCardUploadError: l10n.unableToSelectImageMessage,
       );
       return;
     }
@@ -101,7 +105,9 @@ class OnboardingController extends Notifier<OnboardingState> {
     try {
       await validateIdCardImage(image.bytes);
     } on ImageValidationException catch (e) {
-      state = state.copyWith(idCardUploadError: e.message);
+      state = state.copyWith(
+        idCardUploadError: e.error.localizedMessage(l10n),
+      );
       return;
     }
 
@@ -127,7 +133,7 @@ class OnboardingController extends Notifier<OnboardingState> {
     } catch (_) {
       state = state.copyWith(
         isUploadingIdCard: false,
-        idCardUploadError: "Échec de l'envoi de l'image.",
+        idCardUploadError: l10n.idCardSendFailedMessage,
       );
     }
   }
@@ -139,6 +145,7 @@ class OnboardingController extends Notifier<OnboardingState> {
   // fall through to submitRegistration() below.
   Future<bool> completeAfterVerification() async {
     state = state.copyWith(isSubmitting: true, clearSubmissionError: true);
+    final l10n = ref.read(l10nProvider);
     try {
       final existing = await ref
           .read(userLookupServiceProvider)
@@ -166,7 +173,7 @@ class OnboardingController extends Notifier<OnboardingState> {
     } catch (_) {
       state = state.copyWith(
         isSubmitting: false,
-        submissionError: 'Une erreur inattendue est survenue.',
+        submissionError: l10n.unexpectedErrorMessage,
       );
       return false;
     }
@@ -175,6 +182,7 @@ class OnboardingController extends Notifier<OnboardingState> {
 
   Future<bool> submitRegistration() async {
     state = state.copyWith(isSubmitting: true, clearSubmissionError: true);
+    final l10n = ref.read(l10nProvider);
     try {
       await ref.read(onboardingRepositoryProvider).registerUser(state);
       state = state.copyWith(isSubmitting: false, registrationSucceeded: true);
@@ -189,7 +197,7 @@ class OnboardingController extends Notifier<OnboardingState> {
     } catch (_) {
       state = state.copyWith(
         isSubmitting: false,
-        submissionError: 'Une erreur inattendue est survenue.',
+        submissionError: l10n.unexpectedErrorMessage,
       );
       return false;
     }

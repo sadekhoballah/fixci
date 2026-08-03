@@ -2,21 +2,21 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../platform/firebase_support.dart';
 import 'phone_verification_service.dart';
 
-String _messageForCode(String code) {
+PhoneVerificationError _errorForCode(String code) {
   switch (code) {
     case 'invalid-phone-number':
-      return 'Numéro de téléphone invalide.';
+      return PhoneVerificationError.invalidPhoneNumber;
     case 'too-many-requests':
     case 'quota-exceeded':
-      return 'Trop de tentatives. Réessayez plus tard.';
+      return PhoneVerificationError.tooManyAttempts;
     case 'network-request-failed':
-      return 'Impossible de contacter le serveur. Vérifiez votre connexion.';
+      return PhoneVerificationError.networkError;
     case 'invalid-verification-code':
-      return 'Code incorrect. Veuillez réessayer.';
+      return PhoneVerificationError.invalidCode;
     case 'session-expired':
-      return 'Le code a expiré. Demandez un nouveau code.';
+      return PhoneVerificationError.codeExpired;
     default:
-      return 'Une erreur est survenue lors de la vérification.';
+      return PhoneVerificationError.unknown;
   }
 }
 
@@ -40,16 +40,16 @@ class FirebasePhoneVerificationService implements PhoneVerificationService {
               .signInWithCredential(credential);
           final idToken = await userCredential.user?.getIdToken();
           if (idToken == null) {
-            onFailed(PhoneVerificationException(_messageForCode('')));
+            onFailed(PhoneVerificationException(_errorForCode('')));
             return;
           }
           onAutoVerified(idToken);
         } on FirebaseAuthException catch (e) {
-          onFailed(PhoneVerificationException(_messageForCode(e.code)));
+          onFailed(PhoneVerificationException(_errorForCode(e.code)));
         }
       },
       verificationFailed: (FirebaseAuthException e) {
-        onFailed(PhoneVerificationException(_messageForCode(e.code)));
+        onFailed(PhoneVerificationException(_errorForCode(e.code)));
       },
       codeSent: (String verificationId, int? resendToken) {
         onCodeSent(CodeSentResult(verificationId: verificationId));
@@ -77,11 +77,11 @@ class FirebasePhoneVerificationService implements PhoneVerificationService {
       );
       final idToken = await userCredential.user?.getIdToken();
       if (idToken == null) {
-        throw PhoneVerificationException(_messageForCode(''));
+        throw PhoneVerificationException(_errorForCode(''));
       }
       return idToken;
     } on FirebaseAuthException catch (e) {
-      throw PhoneVerificationException(_messageForCode(e.code));
+      throw PhoneVerificationException(_errorForCode(e.code));
     }
   }
 }

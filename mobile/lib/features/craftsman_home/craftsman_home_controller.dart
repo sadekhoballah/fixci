@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../core/localization/locale_controller.dart';
 import '../../core/location/location_service.dart' as location_service;
 import '../../core/media/id_card_picker.dart';
 import '../../core/media/image_validation.dart';
@@ -64,7 +65,7 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
     } catch (_) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Impossible de charger votre tableau de bord.',
+        errorMessage: ref.read(l10nProvider).unableToLoadDashboardMessage,
       );
     }
   }
@@ -129,7 +130,7 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
         if (position == null) {
           state = state.copyWith(
             isTogglingAvailability: false,
-            errorMessage: "Activez la localisation pour passer en service.",
+            errorMessage: ref.read(l10nProvider).enableLocationToGoOnlineMessage,
           );
           return;
         }
@@ -162,7 +163,7 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
     } catch (_) {
       state = state.copyWith(
         isTogglingAvailability: false,
-        errorMessage: 'Impossible de mettre à jour votre disponibilité.',
+        errorMessage: ref.read(l10nProvider).unableToUpdateAvailabilityMessage,
       );
     }
   }
@@ -178,7 +179,8 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
     if (position == null) {
       if (!state.isAvailable) {
         state = state.copyWith(
-          errorMessage: "Activez la localisation pour recevoir des demandes.",
+          errorMessage:
+              ref.read(l10nProvider).enableLocationToReceiveRequestsMessage,
         );
       }
       return;
@@ -268,14 +270,15 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
 
   Future<void> _resubmitIdCard(Future<PickedImage?> Function() pick) async {
     state = state.copyWith(clearError: true);
+    final l10n = ref.read(l10nProvider);
     final PickedImage? image;
     try {
       image = await pick();
     } on IdCardPickerException catch (e) {
-      state = state.copyWith(errorMessage: e.message);
+      state = state.copyWith(errorMessage: e.error.localizedMessage(l10n));
       return;
     } catch (_) {
-      state = state.copyWith(errorMessage: "Impossible de sélectionner l'image.");
+      state = state.copyWith(errorMessage: l10n.unableToSelectImageMessage);
       return;
     }
     if (image == null) return; // user cancelled the picker
@@ -283,7 +286,7 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
     try {
       await validateIdCardImage(image.bytes);
     } on ImageValidationException catch (e) {
-      state = state.copyWith(errorMessage: e.message);
+      state = state.copyWith(errorMessage: e.error.localizedMessage(l10n));
       return;
     }
 
@@ -298,7 +301,7 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
     } catch (_) {
       state = state.copyWith(
         isResubmittingIdCard: false,
-        errorMessage: "Échec de l'envoi de la pièce d'identité.",
+        errorMessage: l10n.idCardUploadFailedMessage,
       );
     }
   }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/localization/locale_controller.dart';
 import '../../core/models/service_category.dart';
 import '../../core/network/api_client.dart';
 import '../../core/realtime/matching_socket_service.dart';
@@ -163,7 +164,7 @@ class LiveRequestsController extends Notifier<LiveRequestsState> {
     } catch (_) {
       state = state.copyWith(
         isProcessingAction: false,
-        actionError: "Une erreur est survenue.",
+        actionError: ref.read(l10nProvider).genericErrorMessage,
       );
       return false;
     }
@@ -199,7 +200,7 @@ class LiveRequestsController extends Notifier<LiveRequestsState> {
     if (state.activeJob?.requestId != event.requestId) return;
     state = state.copyWith(
       clearActiveJob: true,
-      actionError: 'Le client a annulé cette demande.',
+      actionError: ref.read(l10nProvider).clientCancelledJobMessage,
     );
   }
 

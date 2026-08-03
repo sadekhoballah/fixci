@@ -1,13 +1,36 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import '../../l10n/app_localizations.dart';
+
+enum ImageValidationError {
+  emptyFile,
+  fileTooLarge,
+  unsupportedFormat,
+  corruptedFile,
+  lowResolution,
+  wrongAspectRatio,
+}
+
+extension ImageValidationErrorLocalization on ImageValidationError {
+  String localizedMessage(AppLocalizations l10n) => switch (this) {
+    ImageValidationError.emptyFile => l10n.imageEmptyFileMessage,
+    ImageValidationError.fileTooLarge => l10n.imageTooLargeMessage,
+    ImageValidationError.unsupportedFormat =>
+      l10n.imageUnsupportedFormatMessage,
+    ImageValidationError.corruptedFile => l10n.imageCorruptedMessage,
+    ImageValidationError.lowResolution => l10n.imageLowResolutionMessage,
+    ImageValidationError.wrongAspectRatio =>
+      l10n.imageWrongAspectRatioMessage,
+  };
+}
 
 class ImageValidationException implements Exception {
-  ImageValidationException(this.message);
+  ImageValidationException(this.error);
 
-  final String message;
+  final ImageValidationError error;
 
   @override
-  String toString() => message;
+  String toString() => error.name;
 }
 
 // Kept in sync with backend/src/uploads/uploads.constants.ts — the server
@@ -27,26 +50,20 @@ bool _looksLikeJpegOrPng(List<int> bytes) {
 
 Future<void> validateIdCardImage(List<int> bytes) async {
   if (bytes.isEmpty) {
-    throw ImageValidationException('Le fichier est vide.');
+    throw ImageValidationException(ImageValidationError.emptyFile);
   }
   if (bytes.length > maxIdCardSizeBytes) {
-    throw ImageValidationException(
-      "L'image dépasse la taille maximale de 5 Mo.",
-    );
+    throw ImageValidationException(ImageValidationError.fileTooLarge);
   }
   if (!_looksLikeJpegOrPng(bytes)) {
-    throw ImageValidationException(
-      'Seules les images JPEG ou PNG sont acceptées.',
-    );
+    throw ImageValidationException(ImageValidationError.unsupportedFormat);
   }
 
   final ui.Codec codec;
   try {
     codec = await ui.instantiateImageCodec(Uint8List.fromList(bytes));
   } catch (_) {
-    throw ImageValidationException(
-      'Le fichier image est corrompu ou illisible.',
-    );
+    throw ImageValidationException(ImageValidationError.corruptedFile);
   }
   final frame = await codec.getNextFrame();
   final width = frame.image.width;
@@ -57,13 +74,9 @@ Future<void> validateIdCardImage(List<int> bytes) async {
   final longer = width < height ? height : width;
 
   if (shorter < minIdCardDimension) {
-    throw ImageValidationException(
-      'La résolution de l\'image est trop faible pour être lisible.',
-    );
+    throw ImageValidationException(ImageValidationError.lowResolution);
   }
   if (longer / shorter > maxIdCardAspectRatio) {
-    throw ImageValidationException(
-      "Les proportions de l'image ne ressemblent pas à une pièce d'identité.",
-    );
+    throw ImageValidationException(ImageValidationError.wrongAspectRatio);
   }
 }

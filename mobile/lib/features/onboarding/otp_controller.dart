@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/phone_verification_provider.dart';
 import '../../core/auth/phone_verification_service.dart';
+import '../../core/localization/locale_controller.dart';
 import 'onboarding_controller.dart';
 import 'otp_state.dart';
 
@@ -12,6 +13,7 @@ class OtpController extends Notifier<OtpState> {
 
   Future<void> sendCode(String phoneNumber) async {
     state = state.copyWith(isSendingCode: true, clearCodeSendError: true);
+    final l10n = ref.read(l10nProvider);
     try {
       await ref
           .read(phoneVerificationServiceProvider)
@@ -33,16 +35,19 @@ class OtpController extends Notifier<OtpState> {
             onFailed: (error) {
               state = state.copyWith(
                 isSendingCode: false,
-                codeSendError: error.message,
+                codeSendError: error.error.localizedMessage(l10n),
               );
             },
           );
     } on PhoneVerificationException catch (e) {
-      state = state.copyWith(isSendingCode: false, codeSendError: e.message);
+      state = state.copyWith(
+        isSendingCode: false,
+        codeSendError: e.error.localizedMessage(l10n),
+      );
     } catch (_) {
       state = state.copyWith(
         isSendingCode: false,
-        codeSendError: 'Une erreur est survenue.',
+        codeSendError: l10n.genericErrorMessage,
       );
     }
   }
@@ -52,6 +57,7 @@ class OtpController extends Notifier<OtpState> {
     if (verificationId == null) return false;
 
     state = state.copyWith(isVerifyingCode: true, clearCodeVerifyError: true);
+    final l10n = ref.read(l10nProvider);
     try {
       final idToken = await ref
           .read(phoneVerificationServiceProvider)
@@ -64,13 +70,13 @@ class OtpController extends Notifier<OtpState> {
     } on PhoneVerificationException catch (e) {
       state = state.copyWith(
         isVerifyingCode: false,
-        codeVerifyError: e.message,
+        codeVerifyError: e.error.localizedMessage(l10n),
       );
       return false;
     } catch (_) {
       state = state.copyWith(
         isVerifyingCode: false,
-        codeVerifyError: 'Une erreur est survenue.',
+        codeVerifyError: l10n.genericErrorMessage,
       );
       return false;
     }

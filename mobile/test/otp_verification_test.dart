@@ -8,11 +8,13 @@ import 'package:mobile/app.dart';
 import 'package:mobile/core/auth/phone_verification_provider.dart';
 import 'package:mobile/core/auth/phone_verification_service.dart';
 import 'package:mobile/core/auth/session_storage.dart';
+import 'package:mobile/core/localization/locale_storage.dart';
 import 'package:mobile/core/media/id_card_picker.dart';
 import 'package:mobile/core/models/subscription_tier.dart';
 import 'package:mobile/core/models/user_role.dart';
 import 'package:mobile/core/network/api_client.dart';
 import 'package:mobile/features/onboarding/onboarding_controller.dart';
+import 'package:mobile/l10n/app_localizations.dart';
 
 // A real 400x300 PNG — plausible ID-card-ish dimensions, passes validation
 // (mirrors the constant in widget_test.dart).
@@ -42,7 +44,9 @@ class _FakePhoneVerificationService implements PhoneVerificationService {
   }) async {
     sendCodeCallCount++;
     if (failSend) {
-      onFailed(PhoneVerificationException('Numéro de téléphone invalide.'));
+      onFailed(
+        PhoneVerificationException(PhoneVerificationError.invalidPhoneNumber),
+      );
       return;
     }
     onCodeSent(CodeSentResult(verificationId: 'fake-verification-id'));
@@ -54,13 +58,18 @@ class _FakePhoneVerificationService implements PhoneVerificationService {
     required String smsCode,
   }) async {
     if (smsCode != _correctCode) {
-      throw PhoneVerificationException('Code incorrect. Veuillez réessayer.');
+      throw PhoneVerificationException(PhoneVerificationError.invalidCode);
     }
     return 'fake-id-token';
   }
 }
 
 class _FakeApiClient extends ApiClient {
+  // These tests assert against the app's default French copy (no locale
+  // override in buildApp) — just satisfies ApiClient's now-required l10n
+  // constructor param for the fallback messages this fake never triggers.
+  _FakeApiClient() : super(l10n: lookupAppLocalizations(const Locale('fr')));
+
   // completeAfterVerification() checks for an existing account before
   // registering — 404 here means "no account yet", the expected case for a
   // fresh registration test.
@@ -149,6 +158,19 @@ class _FakeSessionStorage implements SessionStorage {
   }
 }
 
+// Avoids the real LocaleStorage's SharedPreferences.getInstance() call,
+// which needs a mocked platform channel this suite doesn't set up — same
+// rationale as _FakeSessionStorage above. Every test here relies on the
+// app's default French copy, so "never had a saved locale" (null) is
+// exactly the behavior these tests need.
+class _FakeLocaleStorage implements LocaleStorage {
+  @override
+  Future<String?> loadLocaleCode() async => null;
+
+  @override
+  Future<void> saveLocaleCode(String code) async {}
+}
+
 void main() {
   Widget buildApp(PhoneVerificationService phoneService) {
     return ProviderScope(
@@ -157,6 +179,7 @@ void main() {
         phoneVerificationServiceProvider.overrideWithValue(phoneService),
         idCardPickerProvider.overrideWithValue(_FakeIdCardPicker()),
         sessionStorageProvider.overrideWithValue(_FakeSessionStorage()),
+        localeStorageProvider.overrideWithValue(_FakeLocaleStorage()),
       ],
       child: const FixCiApp(),
     );

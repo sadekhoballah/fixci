@@ -149,7 +149,13 @@ class _ClientAccountScreenState extends ConsumerState<ClientAccountScreen> {
     try {
       image = await pick();
     } on IdCardPickerException catch (e) {
-      if (mounted) setState(() => _resubmitError = e.message);
+      if (mounted) {
+        setState(
+          () => _resubmitError = e.error.localizedMessage(
+            AppLocalizations.of(context)!,
+          ),
+        );
+      }
       return;
     } catch (_) {
       if (mounted) {
@@ -165,7 +171,13 @@ class _ClientAccountScreenState extends ConsumerState<ClientAccountScreen> {
     try {
       await validateIdCardImage(image.bytes);
     } on ImageValidationException catch (e) {
-      if (mounted) setState(() => _resubmitError = e.message);
+      if (mounted) {
+        setState(
+          () => _resubmitError = e.error.localizedMessage(
+            AppLocalizations.of(context)!,
+          ),
+        );
+      }
       return;
     }
 

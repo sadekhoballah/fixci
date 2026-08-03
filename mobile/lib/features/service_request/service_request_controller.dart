@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../core/localization/locale_controller.dart';
 import '../../core/location/location_service.dart' as location_service;
 import '../../core/models/service_category.dart';
 import '../../core/network/api_client.dart';
@@ -58,11 +59,12 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
   // available. Returns null (with state already set to an actionable error)
   // if location still isn't available after this.
   Future<Position?> _resolvePosition() async {
+    final l10n = ref.read(l10nProvider);
     if (!await Geolocator.isLocationServiceEnabled()) {
       await Geolocator.openLocationSettings();
       state = state.copyWith(
         status: ServiceRequestStatus.error,
-        errorMessage: 'Activez la localisation puis réessayez.',
+        errorMessage: l10n.enableLocationRetryMessage,
       );
       return null;
     }
@@ -75,14 +77,14 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
       await Geolocator.openAppSettings();
       state = state.copyWith(
         status: ServiceRequestStatus.error,
-        errorMessage: "Autorisez l'accès à la localisation puis réessayez.",
+        errorMessage: l10n.authorizeLocationRetryMessage,
       );
       return null;
     }
     if (permission == LocationPermission.denied) {
       state = state.copyWith(
         status: ServiceRequestStatus.error,
-        errorMessage: 'Localisation refusée.',
+        errorMessage: l10n.locationDeniedMessage,
       );
       return null;
     }
@@ -91,7 +93,7 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
     if (position == null) {
       state = state.copyWith(
         status: ServiceRequestStatus.error,
-        errorMessage: 'Impossible de récupérer votre position.',
+        errorMessage: l10n.unableToGetPositionMessage,
       );
     }
     return position;
@@ -142,7 +144,7 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
     } catch (_) {
       state = state.copyWith(
         status: ServiceRequestStatus.error,
-        errorMessage: 'Une erreur est survenue.',
+        errorMessage: ref.read(l10nProvider).genericErrorMessage,
       );
     }
   }
@@ -223,7 +225,7 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
     } catch (_) {
       state = state.copyWith(
         isCancelling: false,
-        errorMessage: "Impossible d'annuler la demande.",
+        errorMessage: ref.read(l10nProvider).unableToCancelRequestMessage,
       );
     }
   }
@@ -301,7 +303,7 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
     } catch (_) {
       state = state.copyWith(
         isConfirming: false,
-        errorMessage: 'Impossible de confirmer la fin de la mission.',
+        errorMessage: ref.read(l10nProvider).unableToConfirmCompletionMessage,
       );
     }
   }
@@ -323,7 +325,7 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
     } catch (_) {
       state = state.copyWith(
         isSubmittingRating: false,
-        errorMessage: "Impossible d'envoyer votre évaluation.",
+        errorMessage: ref.read(l10nProvider).unableToSubmitRatingMessage,
       );
     }
   }

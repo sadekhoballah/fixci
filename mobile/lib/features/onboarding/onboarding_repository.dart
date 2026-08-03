@@ -1,15 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/localization/locale_controller.dart';
 import '../../core/network/api_client.dart';
 import '../../core/media/id_card_picker.dart';
 import '../../core/models/district.dart';
 import '../../core/models/subscription_tier.dart';
 import '../../core/models/user_role.dart';
+import '../../l10n/app_localizations.dart';
 import 'onboarding_state.dart';
 
 class OnboardingRepository {
-  OnboardingRepository(this._apiClient);
+  OnboardingRepository(this._apiClient, this._l10n);
 
   final ApiClient _apiClient;
+  final AppLocalizations _l10n;
 
   Future<List<District>> getDistricts() async {
     final response = await _apiClient.get('/districts');
@@ -32,7 +35,7 @@ class OnboardingRepository {
   Future<void> registerUser(OnboardingState state) async {
     final role = state.role;
     if (role == null) {
-      throw ApiException('Veuillez choisir un rôle avant de continuer.');
+      throw ApiException(_l10n.selectRoleBeforeContinuingMessage);
     }
 
     await _apiClient.post('/users/register', {
@@ -70,7 +73,10 @@ class OnboardingRepository {
 }
 
 final onboardingRepositoryProvider = Provider<OnboardingRepository>(
-  (ref) => OnboardingRepository(ref.watch(apiClientProvider)),
+  (ref) => OnboardingRepository(
+    ref.watch(apiClientProvider),
+    ref.watch(l10nProvider),
+  ),
 );
 
 // Fetched once per app session — the registration screen's district

@@ -3,8 +3,10 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import '../../l10n/app_localizations.dart';
 import '../auth/current_auth_token.dart';
 import '../auth/dev_bypass_session.dart';
+import '../localization/locale_controller.dart';
 import 'api_config.dart';
 
 class ApiException implements Exception {
@@ -18,9 +20,12 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
-  ApiClient({http.Client? client}) : _client = client ?? http.Client();
+  ApiClient({http.Client? client, required AppLocalizations l10n})
+    : _client = client ?? http.Client(),
+      _l10n = l10n;
 
   final http.Client _client;
+  final AppLocalizations _l10n;
 
   Future<Map<String, String>> _authHeaders([
     Map<String, String> extra = const {},
@@ -44,9 +49,7 @@ class ApiClient {
           )
           .timeout(const Duration(seconds: 15));
     } catch (_) {
-      throw ApiException(
-        'Impossible de contacter le serveur. Vérifiez votre connexion.',
-      );
+      throw ApiException(_l10n.networkConnectionErrorMessage);
     }
     return _handleResponse(response);
   }
@@ -64,15 +67,13 @@ class ApiClient {
           )
           .timeout(const Duration(seconds: 15));
     } catch (_) {
-      throw ApiException(
-        'Impossible de contacter le serveur. Vérifiez votre connexion.',
-      );
+      throw ApiException(_l10n.networkConnectionErrorMessage);
     }
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return response.bodyBytes;
     }
     throw ApiException(
-      'Une erreur est survenue (${response.statusCode}).',
+      _l10n.genericErrorWithCode(response.statusCode),
       statusCode: response.statusCode,
     );
   }
@@ -87,9 +88,7 @@ class ApiClient {
           )
           .timeout(const Duration(seconds: 15));
     } catch (_) {
-      throw ApiException(
-        'Impossible de contacter le serveur. Vérifiez votre connexion.',
-      );
+      throw ApiException(_l10n.networkConnectionErrorMessage);
     }
     return _handleResponse(response);
   }
@@ -110,9 +109,7 @@ class ApiClient {
           )
           .timeout(const Duration(seconds: 15));
     } catch (_) {
-      throw ApiException(
-        'Impossible de contacter le serveur. Vérifiez votre connexion.',
-      );
+      throw ApiException(_l10n.networkConnectionErrorMessage);
     }
     return _handleResponse(response);
   }
@@ -133,9 +130,7 @@ class ApiClient {
           )
           .timeout(const Duration(seconds: 15));
     } catch (_) {
-      throw ApiException(
-        'Impossible de contacter le serveur. Vérifiez votre connexion.',
-      );
+      throw ApiException(_l10n.networkConnectionErrorMessage);
     }
     return _handleResponse(response);
   }
@@ -166,9 +161,7 @@ class ApiClient {
         );
       streamed = await request.send().timeout(const Duration(seconds: 30));
     } catch (_) {
-      throw ApiException(
-        'Impossible de contacter le serveur. Vérifiez votre connexion.',
-      );
+      throw ApiException(_l10n.networkConnectionErrorMessage);
     }
     final response = await http.Response.fromStream(streamed);
     return _handleResponse(response);
@@ -193,10 +186,12 @@ class ApiClient {
           ? message
           : message is List && message.isNotEmpty
           ? message.first.toString()
-          : 'Une erreur est survenue (${response.statusCode}).',
+          : _l10n.genericErrorWithCode(response.statusCode),
       statusCode: response.statusCode,
     );
   }
 }
 
-final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+final apiClientProvider = Provider<ApiClient>(
+  (ref) => ApiClient(l10n: ref.watch(l10nProvider)),
+);

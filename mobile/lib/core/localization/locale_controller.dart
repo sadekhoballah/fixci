@@ -39,3 +39,12 @@ class LocaleController extends Notifier<Locale> {
 final localeControllerProvider = NotifierProvider<LocaleController, Locale>(
   LocaleController.new,
 );
+
+// Gives non-widget code (Notifiers, repositories, plain services — none of
+// which have a BuildContext) the same localized strings a screen would get
+// via `AppLocalizations.of(context)`, so error messages built outside the
+// widget tree still follow the client's chosen language. Rebuilds (and so
+// invalidates anything reading it) whenever localeControllerProvider changes.
+final l10nProvider = Provider<AppLocalizations>(
+  (ref) => lookupAppLocalizations(ref.watch(localeControllerProvider)),
+);
