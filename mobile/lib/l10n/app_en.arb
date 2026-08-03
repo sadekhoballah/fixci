@@ -49,5 +49,16 @@
   "tierSelectionNotice": "You can change plans at any time.",
   "loadingButton": "Loading...",
   "priceCfaPerMonth": "{price} CFA / month",
-  "freeLabel": "Free"
+  "freeLabel": "Free",
+  "wavePaymentTitle": "Wave Payment",
+  "tierPlanLabel": "{tierName} Plan",
+  "wavePaymentInstructions": "Open the Wave app and send the amount above. Your subscription will activate automatically once the payment is confirmed.",
+  "wavePaymentReference": "Reference: {reference}",
+  "paymentStartError": "Unable to start the payment.",
+  "paymentConfirmationDelayError": "Confirmation is taking longer than expected. Try again in a few minutes.",
+  "paymentFailedError": "The payment failed.",
+  "preparingPaymentStatus": "Preparing payment...",
+  "awaitingWaveConfirmationStatus": "Waiting for Wave confirmation...",
+  "paymentConfirmedStatus": "Payment confirmed, activating...",
+  "genericErrorMessage": "An error occurred."
 }

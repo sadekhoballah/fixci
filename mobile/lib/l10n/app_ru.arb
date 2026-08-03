@@ -49,5 +49,16 @@
   "tierSelectionNotice": "Вы сможете сменить тариф в любое время.",
   "loadingButton": "Загрузка...",
   "priceCfaPerMonth": "{price} CFA / месяц",
-  "freeLabel": "Бесплатно"
+  "freeLabel": "Бесплатно",
+  "wavePaymentTitle": "Оплата Wave",
+  "tierPlanLabel": "Тариф {tierName}",
+  "wavePaymentInstructions": "Откройте приложение Wave и отправьте указанную сумму. Ваша подписка будет активирована автоматически после подтверждения платежа.",
+  "wavePaymentReference": "Референс: {reference}",
+  "paymentStartError": "Не удалось начать оплату.",
+  "paymentConfirmationDelayError": "Подтверждение занимает больше времени, чем ожидалось. Повторите попытку через несколько минут.",
+  "paymentFailedError": "Платёж не удался.",
+  "preparingPaymentStatus": "Подготовка платежа...",
+  "awaitingWaveConfirmationStatus": "Ожидание подтверждения Wave...",
+  "paymentConfirmedStatus": "Платёж подтверждён, активация...",
+  "genericErrorMessage": "Произошла ошибка."
 }

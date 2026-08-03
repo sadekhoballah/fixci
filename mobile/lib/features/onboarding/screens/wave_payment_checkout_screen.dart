@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/subscription_tier.dart';
 import '../../../core/network/api_client.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../craftsman_home/craftsman_home_controller.dart';
 import '../../craftsman_home/screens/artisan_shell_screen.dart';
@@ -91,7 +92,7 @@ class _WavePaymentCheckoutScreenState
       if (!mounted) return;
       setState(() {
         _status = _CheckoutStatus.failed;
-        _errorMessage = "Impossible de démarrer le paiement.";
+        _errorMessage = AppLocalizations.of(context)!.paymentStartError;
       });
     }
   }
@@ -109,8 +110,7 @@ class _WavePaymentCheckoutScreenState
         setState(() {
           _status = _CheckoutStatus.failed;
           _errorMessage =
-              'La confirmation prend plus de temps que prévu. '
-              'Réessayez dans quelques minutes.';
+              AppLocalizations.of(context)!.paymentConfirmationDelayError;
         });
         return;
       }
@@ -160,7 +160,7 @@ class _WavePaymentCheckoutScreenState
       } else {
         setState(() {
           _status = _CheckoutStatus.failed;
-          _errorMessage = 'Le paiement a échoué.';
+          _errorMessage = AppLocalizations.of(context)!.paymentFailedError;
         });
       }
     } finally {
@@ -171,8 +171,10 @@ class _WavePaymentCheckoutScreenState
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final reference = _reference;
     return Scaffold(
-      appBar: AppBar(title: const Text('Paiement Wave')),
+      appBar: AppBar(title: Text(l10n.wavePaymentTitle)),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -180,7 +182,7 @@ class _WavePaymentCheckoutScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Formule ${widget.tier.label}',
+                l10n.tierPlanLabel(widget.tier.label),
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
@@ -188,7 +190,7 @@ class _WavePaymentCheckoutScreenState
               ),
               const SizedBox(height: 8),
               Text(
-                '${widget.tier.priceCfa} CFA / mois',
+                l10n.priceCfaPerMonth(widget.tier.priceCfa),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -203,17 +205,18 @@ class _WavePaymentCheckoutScreenState
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  "Ouvrez l'application Wave et envoyez le montant "
-                  'ci-dessus. Votre abonnement sera activé automatiquement '
-                  'dès que le paiement est confirmé.'
-                  '${_reference != null ? '\n\nRéférence : $_reference' : ''}',
+                  '${l10n.wavePaymentInstructions}'
+                  '${reference != null ? '\n\n${l10n.wavePaymentReference(reference)}' : ''}',
                 ),
               ),
               const Spacer(),
               _StatusPanel(status: _status, errorMessage: _errorMessage),
               const SizedBox(height: 16),
               if (_status == _CheckoutStatus.failed)
-                PrimaryButton(label: 'Réessayer', onPressed: _startPayment),
+                PrimaryButton(
+                  label: l10n.retryButton,
+                  onPressed: _startPayment,
+                ),
             ],
           ),
         ),
@@ -230,6 +233,7 @@ class _StatusPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     switch (status) {
       case _CheckoutStatus.requesting:
       case _CheckoutStatus.pending:
@@ -243,17 +247,17 @@ class _StatusPanel extends StatelessWidget {
             const SizedBox(width: 12),
             Text(
               status == _CheckoutStatus.requesting
-                  ? 'Préparation du paiement...'
-                  : 'En attente de confirmation Wave...',
+                  ? l10n.preparingPaymentStatus
+                  : l10n.awaitingWaveConfirmationStatus,
             ),
           ],
         );
       case _CheckoutStatus.success:
-        return const Row(
+        return Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.green),
-            SizedBox(width: 12),
-            Text('Paiement confirmé, activation en cours...'),
+            const Icon(Icons.check_circle, color: Colors.green),
+            const SizedBox(width: 12),
+            Text(l10n.paymentConfirmedStatus),
           ],
         );
       case _CheckoutStatus.failed:
@@ -262,7 +266,7 @@ class _StatusPanel extends StatelessWidget {
             const Icon(Icons.error_outline, color: Colors.red),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(errorMessage ?? 'Une erreur est survenue.'),
+              child: Text(errorMessage ?? l10n.genericErrorMessage),
             ),
           ],
         );

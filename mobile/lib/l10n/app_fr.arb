@@ -105,5 +105,26 @@
       "price": { "type": "int" }
     }
   },
-  "freeLabel": "Gratuit"
+  "freeLabel": "Gratuit",
+  "wavePaymentTitle": "Paiement Wave",
+  "tierPlanLabel": "Formule {tierName}",
+  "@tierPlanLabel": {
+    "placeholders": {
+      "tierName": { "type": "String" }
+    }
+  },
+  "wavePaymentInstructions": "Ouvrez l'application Wave et envoyez le montant ci-dessus. Votre abonnement sera activé automatiquement dès que le paiement est confirmé.",
+  "wavePaymentReference": "Référence : {reference}",
+  "@wavePaymentReference": {
+    "placeholders": {
+      "reference": { "type": "String" }
+    }
+  },
+  "paymentStartError": "Impossible de démarrer le paiement.",
+  "paymentConfirmationDelayError": "La confirmation prend plus de temps que prévu. Réessayez dans quelques minutes.",
+  "paymentFailedError": "Le paiement a échoué.",
+  "preparingPaymentStatus": "Préparation du paiement...",
+  "awaitingWaveConfirmationStatus": "En attente de confirmation Wave...",
+  "paymentConfirmedStatus": "Paiement confirmé, activation en cours...",
+  "genericErrorMessage": "Une erreur est survenue."
 }

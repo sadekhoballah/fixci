@@ -49,5 +49,16 @@
   "tierSelectionNotice": "يمكنك تغيير باقتك في أي وقت.",
   "loadingButton": "جارٍ التحميل...",
   "priceCfaPerMonth": "{price} CFA شهريًا",
-  "freeLabel": "مجاني"
+  "freeLabel": "مجاني",
+  "wavePaymentTitle": "الدفع عبر Wave",
+  "tierPlanLabel": "باقة {tierName}",
+  "wavePaymentInstructions": "افتح تطبيق Wave وأرسل المبلغ أعلاه. سيتم تفعيل اشتراكك تلقائياً بمجرد تأكيد الدفع.",
+  "wavePaymentReference": "المرجع: {reference}",
+  "paymentStartError": "تعذّر بدء عملية الدفع.",
+  "paymentConfirmationDelayError": "التأكيد يستغرق وقتاً أطول من المتوقع. أعد المحاولة خلال بضع دقائق.",
+  "paymentFailedError": "فشلت عملية الدفع.",
+  "preparingPaymentStatus": "جارٍ تجهيز الدفع...",
+  "awaitingWaveConfirmationStatus": "بانتظار تأكيد Wave...",
+  "paymentConfirmedStatus": "تم تأكيد الدفع، جارٍ التفعيل...",
+  "genericErrorMessage": "حدث خطأ ما."
 }
