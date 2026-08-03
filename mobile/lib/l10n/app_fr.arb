@@ -378,5 +378,6 @@
   "unableToCancelRequestMessage": "Impossible d'annuler la demande.",
   "unableToConfirmCompletionMessage": "Impossible de confirmer la fin de la mission.",
   "unableToSubmitRatingMessage": "Impossible d'envoyer votre évaluation.",
-  "clientCancelledJobMessage": "Le client a annulé cette demande."
+  "clientCancelledJobMessage": "Le client a annulé cette demande.",
+  "countryComingSoonMessage": "Ce pays n'est pas encore disponible. Nous y travaillons — revenez bientôt !"
 }

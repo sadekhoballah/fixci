@@ -14,6 +14,13 @@ export class District {
   @Column({ type: 'varchar', length: 120, unique: true })
   name: string;
 
+  // ISO 3166-1 alpha-2. Matches registration_screen.dart's phone country
+  // picker (_allowedCountries) — the client filters this list by whichever
+  // country the caller picked for their phone number, so a district here
+  // with no matching launched market just never shows up client-side.
+  @Column({ name: 'country_code', type: 'varchar', length: 2, default: 'CI' })
+  countryCode: string;
+
   // Gates whether a craftsman registered in this district can ever go
   // online (see PresenceService.setOnline) — registration itself is never
   // blocked, so this is what actually makes a closed district a waitlist

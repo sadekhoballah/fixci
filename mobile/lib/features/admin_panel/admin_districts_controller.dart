@@ -29,9 +29,11 @@ class AdminDistrictsController extends Notifier<AdminDistrictsState> {
     }
   }
 
-  Future<void> createDistrict(String name) async {
+  Future<void> createDistrict(String name, String countryCode) async {
     try {
-      await ref.read(adminDistrictsRepositoryProvider).createDistrict(name);
+      await ref
+          .read(adminDistrictsRepositoryProvider)
+          .createDistrict(name, countryCode);
       await refresh();
     } on AdminApiException catch (e) {
       await _handlePossibleAuthFailure(e);

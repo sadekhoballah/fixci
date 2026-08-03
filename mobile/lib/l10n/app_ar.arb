@@ -233,5 +233,6 @@
   "unableToCancelRequestMessage": "تعذّر إلغاء الطلب.",
   "unableToConfirmCompletionMessage": "تعذّر تأكيد إنهاء المهمة.",
   "unableToSubmitRatingMessage": "تعذّر إرسال تقييمك.",
-  "clientCancelledJobMessage": "ألغى العميل هذا الطلب."
+  "clientCancelledJobMessage": "ألغى العميل هذا الطلب.",
+  "countryComingSoonMessage": "هذا البلد غير متاح بعد. نعمل على ذلك — عد قريباً!"
 }

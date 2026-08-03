@@ -233,5 +233,6 @@
   "unableToCancelRequestMessage": "Unable to cancel the request.",
   "unableToConfirmCompletionMessage": "Unable to confirm job completion.",
   "unableToSubmitRatingMessage": "Unable to submit your rating.",
-  "clientCancelledJobMessage": "The client cancelled this request."
+  "clientCancelledJobMessage": "The client cancelled this request.",
+  "countryComingSoonMessage": "This country isn't available yet. We're working on it — check back soon!"
 }

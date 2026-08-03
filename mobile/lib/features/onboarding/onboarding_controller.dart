@@ -42,6 +42,15 @@ class OnboardingController extends Notifier<OnboardingState> {
     );
   }
 
+  // Fired from IntlPhoneField's onCountryChanged — a previously picked
+  // district almost certainly doesn't belong to the newly selected country
+  // (see District.countryCode/_DistrictPicker's filtering), so it's cleared
+  // rather than left silently pointing at the wrong market.
+  void setPhoneCountryCode(String isoCode) {
+    if (isoCode == state.phoneCountryCode) return;
+    state = state.copyWith(phoneCountryCode: isoCode, clearDistrict: true);
+  }
+
   void setVerifiedPhone({required String phone, required String? idToken}) {
     state = state.copyWith(
       verifiedPhone: phone,

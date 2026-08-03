@@ -2,6 +2,7 @@ class DistrictWithCounts {
   const DistrictWithCounts({
     required this.id,
     required this.name,
+    required this.countryCode,
     required this.isArtisanRegistrationActive,
     required this.isClientOrderingActive,
     required this.artisansCount,
@@ -10,6 +11,7 @@ class DistrictWithCounts {
 
   final String id;
   final String name;
+  final String countryCode;
   final bool isArtisanRegistrationActive;
   final bool isClientOrderingActive;
   final int artisansCount;
@@ -22,6 +24,7 @@ class DistrictWithCounts {
     return DistrictWithCounts(
       id: id,
       name: name,
+      countryCode: countryCode,
       isArtisanRegistrationActive:
           isArtisanRegistrationActive ?? this.isArtisanRegistrationActive,
       isClientOrderingActive:

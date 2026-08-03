@@ -14,6 +14,7 @@ class AdminDistrictsRepository {
       return DistrictWithCounts(
         id: json['id'] as String,
         name: json['name'] as String,
+        countryCode: json['countryCode'] as String,
         isArtisanRegistrationActive:
             json['isArtisanRegistrationActive'] as bool,
         isClientOrderingActive: json['isClientOrderingActive'] as bool,
@@ -23,8 +24,11 @@ class AdminDistrictsRepository {
     }).toList();
   }
 
-  Future<void> createDistrict(String name) =>
-      _apiClient.post('/admin/districts', {'name': name});
+  Future<void> createDistrict(String name, String countryCode) =>
+      _apiClient.post('/admin/districts', {
+        'name': name,
+        'countryCode': countryCode,
+      });
 
   Future<void> updateToggles(
     String id, {

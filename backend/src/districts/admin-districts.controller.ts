@@ -25,7 +25,7 @@ export class AdminDistrictsController {
 
   @Post()
   async create(@Body() dto: CreateDistrictDto) {
-    return this.districtsService.create(dto.name);
+    return this.districtsService.create(dto.name, dto.countryCode);
   }
 
   @Patch(':id')

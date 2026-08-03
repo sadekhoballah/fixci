@@ -82,6 +82,7 @@ class _FakeApiClient extends ApiClient {
           {
             'id': 'fake-district-id',
             'name': 'Cocody',
+            'countryCode': 'CI',
             'isArtisanRegistrationActive': true,
             'isClientOrderingActive': true,
           },

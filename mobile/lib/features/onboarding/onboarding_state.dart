@@ -10,6 +10,7 @@ class OnboardingState {
     this.firstName = '',
     this.lastName = '',
     this.phone = '',
+    this.phoneCountryCode = 'CI',
     this.district,
     this.serviceCategory,
     this.experienceDetails = '',
@@ -30,6 +31,12 @@ class OnboardingState {
   final String firstName;
   final String lastName;
   final String phone;
+  // ISO 3166-1 alpha-2 of whichever country is currently selected in the
+  // phone field's IntlPhoneField (registration_screen.dart) — matches its
+  // own `initialCountryCode: 'CI'`. Drives _DistrictPicker's filtering and
+  // the Russia "coming soon" gate; not itself sent to the backend (the
+  // phone number's own dial code already encodes it there).
+  final String phoneCountryCode;
   final District? district;
   final ServiceCategory? serviceCategory;
   final String experienceDetails;
@@ -66,7 +73,12 @@ class OnboardingState {
   // rather than as one freeform "full name" box.
   String get fullName => '$firstName $lastName'.trim();
 
+  // No districts are seeded for this market yet — see _DistrictPicker's
+  // "coming soon" notice, shown in place of the (always-empty) picker.
+  bool get isCountryLaunched => phoneCountryCode != 'RU';
+
   bool get isRegistrationComplete {
+    if (!isCountryLaunched) return false;
     if (firstName.trim().isEmpty) return false;
     if (lastName.trim().isEmpty) return false;
     if (phone.trim().isEmpty) return false;
@@ -83,7 +95,9 @@ class OnboardingState {
     String? firstName,
     String? lastName,
     String? phone,
+    String? phoneCountryCode,
     District? district,
+    bool clearDistrict = false,
     ServiceCategory? serviceCategory,
     String? experienceDetails,
     String? idCardStorageKey,
@@ -108,7 +122,8 @@ class OnboardingState {
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       phone: phone ?? this.phone,
-      district: district ?? this.district,
+      phoneCountryCode: phoneCountryCode ?? this.phoneCountryCode,
+      district: clearDistrict ? null : (district ?? this.district),
       serviceCategory: serviceCategory ?? this.serviceCategory,
       experienceDetails: experienceDetails ?? this.experienceDetails,
       idCardStorageKey: clearIdCard

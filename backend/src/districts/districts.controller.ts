@@ -14,6 +14,7 @@ export class DistrictsController {
       items: districts.map((d) => ({
         id: d.id,
         name: d.name,
+        countryCode: d.countryCode,
         isArtisanRegistrationActive: d.isArtisanRegistrationActive,
         isClientOrderingActive: d.isClientOrderingActive,
       })),

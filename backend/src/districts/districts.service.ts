@@ -10,6 +10,7 @@ import { UpdateDistrictTogglesDto } from './dto/update-district-toggles.dto';
 export interface DistrictWithCounts {
   id: string;
   name: string;
+  countryCode: string;
   isArtisanRegistrationActive: boolean;
   isClientOrderingActive: boolean;
   artisansCount: number;
@@ -60,6 +61,7 @@ export class DistrictsService {
         return {
           id: district.id,
           name: district.name,
+          countryCode: district.countryCode,
           isArtisanRegistrationActive: district.isArtisanRegistrationActive,
           isClientOrderingActive: district.isClientOrderingActive,
           artisansCount,
@@ -72,10 +74,11 @@ export class DistrictsService {
   // Defaults both toggles closed: unlike the seeded districts (presumed
   // already-operating markets), a district an admin adds later represents a
   // not-yet-launched expansion target — see the migration's own comment.
-  async create(name: string): Promise<District> {
+  async create(name: string, countryCode: string): Promise<District> {
     return this.districtRepository.save(
       this.districtRepository.create({
         name,
+        countryCode,
         isArtisanRegistrationActive: false,
         isClientOrderingActive: false,
       }),

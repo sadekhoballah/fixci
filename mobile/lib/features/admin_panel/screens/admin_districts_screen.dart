@@ -62,31 +62,58 @@ class AdminDistrictsScreen extends ConsumerWidget {
     AdminDistrictsController controller,
   ) async {
     final nameController = TextEditingController();
-    final name = await showDialog<String>(
+    var countryCode = 'CI';
+    final result = await showDialog<(String, String)>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Ajouter un district'),
-        content: TextField(
-          controller: nameController,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Nom (ex. Divo)'),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) => AlertDialog(
+          title: const Text('Ajouter un district'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: nameController,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: 'Nom (ex. Divo)'),
+              ),
+              const SizedBox(height: 16),
+              // Matches CreateDistrictDto's LAUNCHED_COUNTRY_CODES — Russie
+              // has no districts at all until it actually launches.
+              DropdownButtonFormField<String>(
+                initialValue: countryCode,
+                decoration: const InputDecoration(labelText: 'Pays'),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'CI',
+                    child: Text("Côte d'Ivoire"),
+                  ),
+                  DropdownMenuItem(value: 'LB', child: Text('Liban')),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => countryCode = value);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Annuler'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(
+                dialogContext,
+              ).pop((nameController.text.trim(), countryCode)),
+              child: const Text('Ajouter'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(nameController.text.trim()),
-            child: const Text('Ajouter'),
-          ),
-        ],
       ),
     );
     nameController.dispose();
-    if (name != null && name.isNotEmpty) {
-      await controller.createDistrict(name);
+    if (result != null && result.$1.isNotEmpty) {
+      await controller.createDistrict(result.$1, result.$2);
     }
   }
 }
@@ -124,9 +151,35 @@ class _DistrictCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            district.name,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  district.name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  district.countryCode,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           _ToggleRow(

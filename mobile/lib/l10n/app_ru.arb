@@ -233,5 +233,6 @@
   "unableToCancelRequestMessage": "Не удалось отменить заявку.",
   "unableToConfirmCompletionMessage": "Не удалось подтвердить завершение заказа.",
   "unableToSubmitRatingMessage": "Не удалось отправить вашу оценку.",
-  "clientCancelledJobMessage": "Клиент отменил эту заявку."
+  "clientCancelledJobMessage": "Клиент отменил эту заявку.",
+  "countryComingSoonMessage": "Эта страна пока недоступна. Мы работаем над этим — загляните позже!"
 }

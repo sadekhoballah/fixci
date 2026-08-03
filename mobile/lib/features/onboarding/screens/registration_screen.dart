@@ -133,6 +133,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 countries: _allowedCountries,
                 onChanged: (phoneNumber) =>
                     controller.setPhone(phoneNumber.completeNumber),
+                onCountryChanged: (country) =>
+                    controller.setPhoneCountryCode(country.code),
                 decoration: InputDecoration(labelText: l10n.phoneNumberLabel),
               ),
               const SizedBox(height: 16),
@@ -234,9 +236,24 @@ class _DistrictPicker extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+
+    // No districts are seeded for this market yet (see the migration that
+    // added country_code to districts) — show why the form can't proceed
+    // instead of an empty/broken-looking dropdown.
+    if (!state.isCountryLaunched) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(l10n.countryComingSoonMessage),
+      );
+    }
+
     final districtsAsync = ref.watch(districtsProvider);
     final isCraftsman = state.role == UserRole.craftsman;
-    final l10n = AppLocalizations.of(context)!;
 
     return districtsAsync.when(
       loading: () => const LinearProgressIndicator(),
@@ -244,28 +261,35 @@ class _DistrictPicker extends ConsumerWidget {
         l10n.districtLoadError,
         style: TextStyle(color: Theme.of(context).colorScheme.error),
       ),
-      data: (districts) => DropdownButtonFormField<District>(
-        initialValue: state.district,
-        isExpanded: true,
-        decoration: InputDecoration(labelText: l10n.districtLabel),
-        items: districts
-            .map(
-              (d) => DropdownMenuItem(
-                value: d,
-                child: Text(
-                  (isCraftsman
-                          ? d.isArtisanRegistrationActive
-                          : d.isClientOrderingActive)
-                      ? d.name
-                      : l10n.districtWaitlistSuffix(d.name),
+      data: (districts) {
+        final countryDistricts = districts
+            .where((d) => d.countryCode == state.phoneCountryCode)
+            .toList();
+        return DropdownButtonFormField<District>(
+          initialValue: countryDistricts.contains(state.district)
+              ? state.district
+              : null,
+          isExpanded: true,
+          decoration: InputDecoration(labelText: l10n.districtLabel),
+          items: countryDistricts
+              .map(
+                (d) => DropdownMenuItem(
+                  value: d,
+                  child: Text(
+                    (isCraftsman
+                            ? d.isArtisanRegistrationActive
+                            : d.isClientOrderingActive)
+                        ? d.name
+                        : l10n.districtWaitlistSuffix(d.name),
+                  ),
                 ),
-              ),
-            )
-            .toList(),
-        onChanged: (value) {
-          if (value != null) controller.setDistrict(value);
-        },
-      ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value != null) controller.setDistrict(value);
+          },
+        );
+      },
     );
   }
 }
