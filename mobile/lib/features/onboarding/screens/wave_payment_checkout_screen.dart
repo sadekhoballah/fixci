@@ -182,7 +182,7 @@ class _WavePaymentCheckoutScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                l10n.tierPlanLabel(widget.tier.label),
+                l10n.tierPlanLabel(widget.tier.localizedLabel(l10n)),
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,

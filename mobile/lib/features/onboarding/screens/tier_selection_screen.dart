@@ -157,7 +157,7 @@ class _TierOption extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    tier.label,
+                    tier.localizedLabel(l10n),
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
