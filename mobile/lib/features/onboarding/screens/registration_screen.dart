@@ -7,6 +7,7 @@ import '../../../core/media/id_card_picker.dart';
 import '../../../core/models/district.dart';
 import '../../../core/models/service_category.dart';
 import '../../../core/models/user_role.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../client_home/screens/client_shell_screen.dart';
 import '../../craftsman_home/screens/artisan_shell_screen.dart';
@@ -25,7 +26,12 @@ class RegistrationScreen extends ConsumerStatefulWidget {
       _RegistrationScreenState();
 }
 
-const _experienceOptions = ['1-2 ans', '2-4 ans', 'Plus de 5 ans'];
+// The actual wire value sent to the backend (craftsman_profiles.experience_details
+// is a free-text column, register-user.dto.ts's experienceDetails) — kept
+// stable across locales so admin.service.ts's display and existing stored
+// rows don't end up a mix of languages depending on which locale a craftsman
+// registered under. Display text is looked up separately per locale below.
+const _experienceValues = ['1-2 ans', '2-4 ans', 'Plus de 5 ans'];
 
 // Only markets currently launched — see IntlPhoneField below. Order fixes
 // the picker's display order (Côte d'Ivoire, then Liban, then Russie).
@@ -85,9 +91,15 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     final state = ref.watch(onboardingControllerProvider);
     final controller = ref.read(onboardingControllerProvider.notifier);
     final isCraftsman = state.role == UserRole.craftsman;
+    final l10n = AppLocalizations.of(context)!;
+    final experienceLabels = {
+      '1-2 ans': l10n.experience1To2Years,
+      '2-4 ans': l10n.experience2To4Years,
+      'Plus de 5 ans': l10n.experienceMoreThan5Years,
+    };
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Inscription')),
+      appBar: AppBar(title: Text(l10n.registrationTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -95,7 +107,9 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                isCraftsman ? 'Votre profil artisan' : 'Vos informations',
+                isCraftsman
+                    ? l10n.registrationCraftsmanHeading
+                    : l10n.registrationClientHeading,
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
@@ -105,17 +119,13 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               TextField(
                 controller: _firstNameController,
                 onChanged: controller.setFirstName,
-                decoration: const InputDecoration(
-                  labelText: 'Prénom (comme sur votre pièce d\'identité)',
-                ),
+                decoration: InputDecoration(labelText: l10n.firstNameLabel),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _lastNameController,
                 onChanged: controller.setLastName,
-                decoration: const InputDecoration(
-                  labelText: 'Nom de famille (comme sur votre pièce d\'identité)',
-                ),
+                decoration: InputDecoration(labelText: l10n.lastNameLabel),
               ),
               const SizedBox(height: 16),
               IntlPhoneField(
@@ -123,9 +133,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 countries: _allowedCountries,
                 onChanged: (phoneNumber) =>
                     controller.setPhone(phoneNumber.completeNumber),
-                decoration: const InputDecoration(
-                  labelText: 'Numéro de téléphone',
-                ),
+                decoration: InputDecoration(labelText: l10n.phoneNumberLabel),
               ),
               const SizedBox(height: 16),
               _DistrictPicker(state: state, controller: controller),
@@ -133,8 +141,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 const SizedBox(height: 16),
                 DropdownButtonFormField<ServiceCategory>(
                   initialValue: state.serviceCategory,
-                  decoration: const InputDecoration(
-                    labelText: 'Catégorie de service',
+                  decoration: InputDecoration(
+                    labelText: l10n.serviceCategoryLabel,
                   ),
                   items: ServiceCategory.values
                       .map(
@@ -151,9 +159,14 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   initialValue: state.experienceDetails.isEmpty
                       ? null
                       : state.experienceDetails,
-                  decoration: const InputDecoration(labelText: 'Expérience'),
-                  items: _experienceOptions
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  decoration: InputDecoration(labelText: l10n.experienceLabel),
+                  items: _experienceValues
+                      .map(
+                        (e) => DropdownMenuItem(
+                          value: e,
+                          child: Text(experienceLabels[e]!),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) {
                     if (value != null) controller.setExperienceDetails(value);
@@ -179,10 +192,10 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   },
                   child: Text.rich(
                     TextSpan(
-                      text: 'En vous inscrivant, vous acceptez notre ',
+                      text: l10n.registrationPrivacyPrefix,
                       children: [
                         TextSpan(
-                          text: 'politique de confidentialité',
+                          text: l10n.privacyPolicyLinkText,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.primary,
                             decoration: TextDecoration.underline,
@@ -196,7 +209,9 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 ),
               ),
               PrimaryButton(
-                label: state.isSubmitting ? 'Inscription...' : "S'inscrire",
+                label: state.isSubmitting
+                    ? l10n.submittingButton
+                    : l10n.submitButton,
                 onPressed:
                     state.isRegistrationComplete && !state.isSubmitting
                     ? () => _submit(context, state, controller)
@@ -221,17 +236,18 @@ class _DistrictPicker extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final districtsAsync = ref.watch(districtsProvider);
     final isCraftsman = state.role == UserRole.craftsman;
+    final l10n = AppLocalizations.of(context)!;
 
     return districtsAsync.when(
       loading: () => const LinearProgressIndicator(),
       error: (_, _) => Text(
-        'Impossible de charger la liste des zones.',
+        l10n.districtLoadError,
         style: TextStyle(color: Theme.of(context).colorScheme.error),
       ),
       data: (districts) => DropdownButtonFormField<District>(
         initialValue: state.district,
         isExpanded: true,
-        decoration: const InputDecoration(labelText: 'Votre zone / commune'),
+        decoration: InputDecoration(labelText: l10n.districtLabel),
         items: districts
             .map(
               (d) => DropdownMenuItem(
@@ -241,7 +257,7 @@ class _DistrictPicker extends ConsumerWidget {
                           ? d.isArtisanRegistrationActive
                           : d.isClientOrderingActive)
                       ? d.name
-                      : '${d.name} (liste d\'attente)',
+                      : l10n.districtWaitlistSuffix(d.name),
                 ),
               ),
             )
@@ -261,6 +277,7 @@ class _IdCardPicker extends StatelessWidget {
   final OnboardingController controller;
 
   Future<void> _showSourceSheet(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     await showModalBottomSheet<void>(
       context: context,
       builder: (sheetContext) => SafeArea(
@@ -270,7 +287,7 @@ class _IdCardPicker extends StatelessWidget {
             if (idCardCameraSupported)
               ListTile(
                 leading: const Icon(Icons.photo_camera_outlined),
-                title: const Text('Prendre une photo'),
+                title: Text(l10n.takePhotoLabel),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   controller.pickIdCardFromCamera();
@@ -278,7 +295,7 @@ class _IdCardPicker extends StatelessWidget {
               ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choisir depuis la galerie'),
+              title: Text(l10n.chooseFromGalleryLabel),
               onTap: () {
                 Navigator.of(sheetContext).pop();
                 controller.pickIdCardFromGallery();
@@ -295,6 +312,7 @@ class _IdCardPicker extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final attached = state.idCardAttached;
     final uploading = state.isUploadingIdCard;
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,10 +353,10 @@ class _IdCardPicker extends StatelessWidget {
                 Expanded(
                   child: Text(
                     uploading
-                        ? 'Envoi en cours...'
+                        ? l10n.idCardUploading
                         : attached
-                        ? "Pièce d'identité ajoutée"
-                        : "Ajouter votre pièce d'identité",
+                        ? l10n.idCardAdded
+                        : l10n.idCardAddPrompt,
                   ),
                 ),
                 if (attached && !uploading)

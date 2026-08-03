@@ -35,5 +35,37 @@
   "continueButton": "Continuer",
   "@continueButton": {
     "description": "Button label to proceed after picking a role."
-  }
+  },
+  "registrationTitle": "Inscription",
+  "registrationClientHeading": "Vos informations",
+  "registrationCraftsmanHeading": "Votre profil artisan",
+  "firstNameLabel": "Prénom (comme sur votre pièce d'identité)",
+  "lastNameLabel": "Nom de famille (comme sur votre pièce d'identité)",
+  "phoneNumberLabel": "Numéro de téléphone",
+  "serviceCategoryLabel": "Catégorie de service",
+  "experienceLabel": "Expérience",
+  "experience1To2Years": "1-2 ans",
+  "experience2To4Years": "2-4 ans",
+  "experienceMoreThan5Years": "Plus de 5 ans",
+  "districtLabel": "Votre zone / commune",
+  "districtLoadError": "Impossible de charger la liste des zones.",
+  "districtWaitlistSuffix": "{name} (liste d'attente)",
+  "@districtWaitlistSuffix": {
+    "description": "District name with a suffix marking it as not yet launched.",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "registrationPrivacyPrefix": "En vous inscrivant, vous acceptez notre ",
+  "@registrationPrivacyPrefix": {
+    "description": "Leads directly into privacyPolicyLinkText, followed by a period — kept as separate keys so the link styling stays in code."
+  },
+  "privacyPolicyLinkText": "politique de confidentialité",
+  "submitButton": "S'inscrire",
+  "submittingButton": "Inscription...",
+  "takePhotoLabel": "Prendre une photo",
+  "chooseFromGalleryLabel": "Choisir depuis la galerie",
+  "idCardUploading": "Envoi en cours...",
+  "idCardAdded": "Pièce d'identité ajoutée",
+  "idCardAddPrompt": "Ajouter votre pièce d'identité"
 }
