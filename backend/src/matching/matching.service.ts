@@ -237,10 +237,12 @@ export class MatchingService {
   // still searching (pending, nobody assigned yet) or waiting on the
   // craftsman they matched with (assigned). Once work has started
   // (in_progress) it's the craftsman's transitions that own the job, not
-  // the client's. If the request is still 'pending', the in-memory
-  // runMatchingLoop for it just keeps running harmlessly: every write it
-  // makes is itself guarded by a status check, so it'll find 0 rows and
-  // no-op until it naturally winds down.
+  // the client's. If the request is still 'pending', this alone doesn't stop
+  // the in-memory runMatchingLoop for it — every write it makes is itself
+  // guarded by a status check, so it'd find 0 rows and no-op — but the
+  // caller (MatchingController) also calls MatchingGateway.abortMatchingLoop
+  // right after this succeeds, which does actively stop it rather than
+  // letting it run out its ~4 minute worst case.
   async cancelByClient(
     requestId: string,
     clientId: string,

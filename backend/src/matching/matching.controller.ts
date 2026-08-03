@@ -154,6 +154,7 @@ export class MatchingController {
           'This request cannot be cancelled (already resolved)',
         );
       }
+      this.matchingGateway.abortMatchingLoop(id);
       if (result.craftsmanId) {
         this.matchingGateway.notifyCraftsman(
           result.craftsmanId,

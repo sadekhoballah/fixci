@@ -135,6 +135,13 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
   // single-process caveat as acceptResolvers above.
   private readonly activeAssignments = new Map<string, string>();
 
+  // Requests abortMatchingLoop has flagged — checked at the top of every
+  // round in runMatchingLoop so a cancelled request stops pushing to
+  // candidates immediately instead of quietly running out its ~4 minute
+  // worst case (see abortMatchingLoop below for why the DB status flip
+  // alone doesn't stop the in-flight loop).
+  private readonly cancelledRequestIds = new Set<string>();
+
   constructor(
     private readonly matchingService: MatchingService,
     private readonly presenceService: PresenceService,
@@ -282,6 +289,27 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     resolve?.(user.id);
   }
 
+  // Called by MatchingController right after a cancel (client or craftsman
+  // side) succeeds, so runMatchingLoop notices and stops on its own instead
+  // of continuing to push request:new/notifications to candidates for a
+  // request nobody's waiting on anymore. Wakes an in-flight waitForAccept
+  // immediately (an empty craftsmanId resolves it the same way a timeout
+  // would — falsy, so the caller treats it as "nobody accepted") rather than
+  // leaving it to time out on its own; the flag itself covers the loop
+  // between rounds, where no waitForAccept is currently pending. Self-clears
+  // after the loop's own worst-case duration in case cancellation lands
+  // after the loop already returned (e.g. cancelling a request that was
+  // already 'assigned') and so never reaches the check that would delete it.
+  abortMatchingLoop(requestId: string): void {
+    this.cancelledRequestIds.add(requestId);
+    setTimeout(
+      () => this.cancelledRequestIds.delete(requestId),
+      buildRadiusSequence().length * ACCEPT_TIMEOUT_MS +
+        WAKEUP_ACCEPT_TIMEOUT_MS,
+    );
+    this.acceptResolvers.get(requestId)?.('');
+  }
+
   private requireUser(client: Socket): SocketUser {
     const user = (client.data as { user?: SocketUser }).user;
     if (!user) {
@@ -344,6 +372,8 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     const triedCraftsmanIds = new Set<string>();
 
     for (const radius of buildRadiusSequence()) {
+      if (this.cancelledRequestIds.delete(request.id)) return;
+
       await this.matchingService.updateSearchRadius(request.id, radius);
 
       const candidates = await this.presenceService.findNearest(
@@ -416,6 +446,8 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     // request:new for this still-pending request with zero new code on that
     // path. Their subsequent request:accept resolves this very waitForAccept
     // call via the same requestId — no new accept mechanism needed.
+    if (this.cancelledRequestIds.delete(request.id)) return;
+
     const wakeupCandidates =
       await this.matchingService.findNearestByLastKnownLocation(
         request.serviceCategory,
