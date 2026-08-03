@@ -19,16 +19,21 @@ class LanguagePicker extends ConsumerWidget {
     return Semantics(
       label: AppLocalizations.of(context)!.selectLanguage,
       child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
+        spacing: 4,
+        runSpacing: 4,
         children: AppLocalizations.supportedLocales.map((locale) {
           final selected = locale.languageCode == current.languageCode;
           return ChoiceChip(
             label: Text(
               _nativeNames[locale.languageCode] ?? locale.languageCode,
+              style: const TextStyle(fontSize: 11),
             ),
             selected: selected,
             onSelected: (_) => controller.setLocale(locale),
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            labelPadding: const EdgeInsets.symmetric(horizontal: 4),
           );
         }).toList(),
       ),
