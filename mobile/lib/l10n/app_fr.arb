@@ -244,5 +244,14 @@
   "directionsButton": "Itinéraire",
   "awaitingClientConfirmationMessage": "En attente de confirmation du client…",
   "completeJobButton": "Terminer la mission",
-  "startJobButton": "Démarrer la mission"
+  "startJobButton": "Démarrer la mission",
+  "incomingRequestDistanceEta": "{km} km · ~{minutes} min",
+  "@incomingRequestDistanceEta": {
+    "placeholders": {
+      "km": { "type": "String" },
+      "minutes": { "type": "int" }
+    }
+  },
+  "declineButton": "Ignorer",
+  "acceptButton": "Accepter"
 }

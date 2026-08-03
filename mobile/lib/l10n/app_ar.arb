@@ -147,5 +147,8 @@
   "directionsButton": "المسار",
   "awaitingClientConfirmationMessage": "بانتظار تأكيد العميل…",
   "completeJobButton": "إنهاء المهمة",
-  "startJobButton": "بدء المهمة"
+  "startJobButton": "بدء المهمة",
+  "incomingRequestDistanceEta": "{km} كم · ~{minutes} دقيقة",
+  "declineButton": "تجاهل",
+  "acceptButton": "قبول"
 }

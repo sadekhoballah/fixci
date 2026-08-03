@@ -147,5 +147,8 @@
   "directionsButton": "Directions",
   "awaitingClientConfirmationMessage": "Waiting for the client's confirmation…",
   "completeJobButton": "Finish the job",
-  "startJobButton": "Start the job"
+  "startJobButton": "Start the job",
+  "incomingRequestDistanceEta": "{km} km · ~{minutes} min",
+  "declineButton": "Decline",
+  "acceptButton": "Accept"
 }

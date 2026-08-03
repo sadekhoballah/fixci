@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../core/models/service_category.dart';
+import '../../../l10n/app_localizations.dart';
 import '../live_requests_controller.dart' show acceptTimeout;
 import '../live_requests_state.dart';
 
@@ -51,6 +53,7 @@ class _IncomingRequestCardState extends State<IncomingRequestCard> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final event = widget.request.event;
     final progress =
         _remaining.inMilliseconds / acceptTimeout.inMilliseconds;
@@ -92,7 +95,7 @@ class _IncomingRequestCardState extends State<IncomingRequestCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      event.serviceCategory.label,
+                      event.serviceCategory.localizedLabel(l10n),
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
@@ -100,8 +103,10 @@ class _IncomingRequestCardState extends State<IncomingRequestCard> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${(event.distanceMeters / 1000).toStringAsFixed(1)} km · '
-                      '~${event.estimatedArrivalMinutes} min',
+                      l10n.incomingRequestDistanceEta(
+                        (event.distanceMeters / 1000).toStringAsFixed(1),
+                        event.estimatedArrivalMinutes,
+                      ),
                       style: TextStyle(
                         fontSize: 12,
                         color: colorScheme.onSurfaceVariant,
@@ -125,7 +130,7 @@ class _IncomingRequestCardState extends State<IncomingRequestCard> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('Ignorer'),
+                  child: Text(l10n.declineButton),
                 ),
               ),
               const SizedBox(width: 12),
@@ -139,9 +144,9 @@ class _IncomingRequestCardState extends State<IncomingRequestCard> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Accepter',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                  child: Text(
+                    l10n.acceptButton,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
               ),

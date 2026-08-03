@@ -147,5 +147,8 @@
   "directionsButton": "Маршрут",
   "awaitingClientConfirmationMessage": "Ожидание подтверждения клиента…",
   "completeJobButton": "Завершить заказ",
-  "startJobButton": "Начать заказ"
+  "startJobButton": "Начать заказ",
+  "incomingRequestDistanceEta": "{km} км · ~{minutes} мин",
+  "declineButton": "Отклонить",
+  "acceptButton": "Принять"
 }
