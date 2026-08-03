@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/service_category.dart';
+import '../../../l10n/app_localizations.dart';
 import '../service_request_controller.dart';
 import '../service_request_repository.dart' show ActiveRequest;
 import '../service_request_state.dart';
@@ -79,9 +80,11 @@ class _SearchingScreenState extends ConsumerState<SearchingScreen>
     });
     final state = ref.watch(serviceRequestControllerProvider);
     final notifier = ref.read(serviceRequestControllerProvider.notifier);
+    final l10n = AppLocalizations.of(context)!;
+    final categoryLabel = category.localizedLabel(l10n);
 
     return Scaffold(
-      appBar: AppBar(title: Text(category.label)),
+      appBar: AppBar(title: Text(categoryLabel)),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -95,7 +98,7 @@ class _SearchingScreenState extends ConsumerState<SearchingScreen>
               onConfirmCompletion: notifier.confirmCompletion,
             ),
             ServiceRequestStatus.completed => _RatingCard(
-              craftsmanName: state.craftsmanFullName ?? category.label,
+              craftsmanName: state.craftsmanFullName ?? categoryLabel,
               isSubmitting: state.isSubmittingRating,
               onSubmit: (stars, comment) =>
                   notifier.submitRating(stars: stars, comment: comment),
@@ -104,14 +107,13 @@ class _SearchingScreenState extends ConsumerState<SearchingScreen>
             ServiceRequestStatus.noCraftsmanAvailable => _Outcome(
               icon: Icons.search_off_rounded,
               iconColor: Colors.grey,
-              title: 'Aucun professionnel disponible',
-              message:
-                  "Nous n'avons trouvé aucun ${category.label.toLowerCase()} disponible pour le moment. Réessayez dans quelques minutes.",
-              primaryLabel: 'Réessayer',
+              title: l10n.noCraftsmanTitle,
+              message: l10n.noCraftsmanMessage(categoryLabel.toLowerCase()),
+              primaryLabel: l10n.retryButton,
               onPrimary: () => ref
                   .read(serviceRequestControllerProvider.notifier)
                   .retry(category),
-              secondaryLabel: "Retour à l'accueil",
+              secondaryLabel: l10n.backToHomeButton,
               onSecondary: () =>
                   Navigator.of(context).popUntil((route) => route.isFirst),
             ),
@@ -121,7 +123,7 @@ class _SearchingScreenState extends ConsumerState<SearchingScreen>
                 const _SearchRadar(),
                 const SizedBox(height: 24),
                 Text(
-                  'Recherche d\'un ${category.label.toLowerCase()} disponible…',
+                  l10n.searchingForMessage(categoryLabel.toLowerCase()),
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
@@ -138,7 +140,7 @@ class _SearchingScreenState extends ConsumerState<SearchingScreen>
                             height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Annuler la recherche'),
+                        : Text(l10n.cancelSearchButton),
                   ),
                 ],
               ],
@@ -154,21 +156,20 @@ Future<void> _confirmCancel(
   BuildContext context,
   Future<void> Function() onConfirm,
 ) async {
+  final l10n = AppLocalizations.of(context)!;
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('Annuler la demande ?'),
-      content: const Text(
-        'Le professionnel assigné (le cas échéant) en sera informé.',
-      ),
+      title: Text(l10n.cancelRequestDialogTitle),
+      content: Text(l10n.cancelRequestDialogContent),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text('Retour'),
+          child: Text(l10n.backButton),
         ),
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: const Text('Annuler la demande'),
+          child: Text(l10n.cancelRequestButton),
         ),
       ],
     ),
@@ -246,12 +247,12 @@ class _Outcome extends StatelessWidget {
 // Mirrors the backend's estimateArrivalMinutes heuristic (matching.gateway.ts)
 // so the client sees a comparable ETA computed locally from the craftsman's
 // live position — no extra server round-trip needed.
-String _distanceLabel(ServiceRequestState state) {
+String _distanceLabel(ServiceRequestState state, AppLocalizations l10n) {
   if (state.craftsmanLatitude == null ||
       state.craftsmanLongitude == null ||
       state.myLatitude == null ||
       state.myLongitude == null) {
-    return 'En route vers vous…';
+    return l10n.enRouteMessage;
   }
   final meters = Geolocator.distanceBetween(
     state.myLatitude!,
@@ -261,7 +262,7 @@ String _distanceLabel(ServiceRequestState state) {
   );
   final minutes = (meters / 500).round().clamp(1, 999);
   final km = (meters / 1000).toStringAsFixed(meters >= 1000 ? 1 : 2);
-  return '$km km — environ $minutes min';
+  return l10n.distanceEta(km, minutes);
 }
 
 class _AssignedCard extends StatelessWidget {
@@ -301,21 +302,24 @@ class _AssignedCard extends StatelessWidget {
   }
 
   Future<void> _confirmCancelJob(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Annuler cette demande ?'),
+        title: Text(l10n.cancelJobDialogTitle),
         content: Text(
-          '${state.craftsmanFullName ?? "Le professionnel"} sera informé que vous annulez.',
+          l10n.cancelJobDialogContent(
+            state.craftsmanFullName ?? l10n.defaultCraftsmanName,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Retour'),
+            child: Text(l10n.backButton),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Annuler la demande'),
+            child: Text(l10n.cancelRequestButton),
           ),
         ],
       ),
@@ -325,6 +329,7 @@ class _AssignedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final hasLocation =
         state.craftsmanLatitude != null && state.craftsmanLongitude != null;
     final hasPhone = state.craftsmanPhone != null;
@@ -351,17 +356,19 @@ class _AssignedCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            '${state.craftsmanFullName ?? category.label} a accepté votre demande',
+            l10n.craftsmanAcceptedMessage(
+              state.craftsmanFullName ?? category.localizedLabel(l10n),
+            ),
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
           Text(
             switch (state.status) {
-              ServiceRequestStatus.inProgress => 'La mission est en cours.',
+              ServiceRequestStatus.inProgress => l10n.jobInProgressDetail,
               ServiceRequestStatus.awaitingClientConfirmation =>
-                'Le professionnel indique avoir terminé.',
-              _ => 'Il est en route vers vous.',
+                l10n.craftsmanMarkedDoneMessage,
+              _ => l10n.craftsmanEnRouteMessage,
             },
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 14, color: Colors.black54),
@@ -369,7 +376,7 @@ class _AssignedCard extends StatelessWidget {
           if (!inProgress && !awaitingConfirmation) ...[
             const SizedBox(height: 8),
             Text(
-              _distanceLabel(state),
+              _distanceLabel(state, l10n),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
@@ -385,7 +392,7 @@ class _AssignedCard extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: hasPhone ? _call : null,
                   icon: const Icon(Icons.call_rounded, size: 18),
-                  label: const Text('Appeler'),
+                  label: Text(l10n.callButton),
                 ),
               ),
               const SizedBox(width: 10),
@@ -405,7 +412,7 @@ class _AssignedCard extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: hasLocation ? _openMap : null,
                 icon: const Icon(Icons.map_rounded, size: 18),
-                label: const Text('Voir sur la carte'),
+                label: Text(l10n.viewOnMapButton),
               ),
             ),
           ],
@@ -428,7 +435,7 @@ class _AssignedCard extends StatelessWidget {
                         ),
                       )
                     : const Icon(Icons.check_rounded),
-                label: const Text('Confirmer la fin de la mission'),
+                label: Text(l10n.confirmJobCompletionButton),
               ),
             )
           // Once the craftsman has started the job, cancelByClient
@@ -449,7 +456,7 @@ class _AssignedCard extends StatelessWidget {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Annuler'),
+                  : Text(l10n.cancelButton),
             ),
         ],
       ),
@@ -486,19 +493,20 @@ class _RatingCardState extends State<_RatingCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(Icons.emoji_events_rounded, color: Colors.amber, size: 56),
         const SizedBox(height: 16),
         Text(
-          'Mission terminée !',
+          l10n.jobCompletedTitle,
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 6),
         Text(
-          'Comment évaluez-vous ${widget.craftsmanName} ?',
+          l10n.rateCraftsmanQuestion(widget.craftsmanName),
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
         ),
@@ -511,9 +519,9 @@ class _RatingCardState extends State<_RatingCard> {
         TextField(
           controller: _commentController,
           maxLines: 3,
-          decoration: const InputDecoration(
-            hintText: 'Un commentaire (facultatif)',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            hintText: l10n.commentHint,
+            border: const OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: 20),
@@ -545,16 +553,19 @@ class _RatingCardState extends State<_RatingCard> {
                       color: Colors.white,
                     ),
                   )
-                : const Text(
-                    'Envoyer',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                : Text(
+                    l10n.sendButton,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
           ),
         ),
         const SizedBox(height: 8),
         TextButton(
           onPressed: widget.isSubmitting ? null : widget.onSkip,
-          child: const Text('Passer'),
+          child: Text(l10n.skipButton),
         ),
       ],
     );

@@ -166,5 +166,63 @@
   "categoryHousekeepingLabel": "Femme de ménage",
   "categoryHousekeepingDescription": "Ménage à domicile, repassage et entretien courant du foyer.",
   "categoryHomeTutoringLabel": "Cours à domicile",
-  "categoryHomeTutoringDescription": "Cours particuliers à domicile pour tous niveaux et matières."
+  "categoryHomeTutoringDescription": "Cours particuliers à domicile pour tous niveaux et matières.",
+  "noCraftsmanTitle": "Aucun professionnel disponible",
+  "noCraftsmanMessage": "Nous n'avons trouvé aucun {category} disponible pour le moment. Réessayez dans quelques minutes.",
+  "@noCraftsmanMessage": {
+    "placeholders": {
+      "category": { "type": "String" }
+    }
+  },
+  "backToHomeButton": "Retour à l'accueil",
+  "searchingForMessage": "Recherche d'un {category} disponible…",
+  "@searchingForMessage": {
+    "placeholders": {
+      "category": { "type": "String" }
+    }
+  },
+  "cancelSearchButton": "Annuler la recherche",
+  "cancelRequestDialogTitle": "Annuler la demande ?",
+  "cancelRequestDialogContent": "Le professionnel assigné (le cas échéant) en sera informé.",
+  "backButton": "Retour",
+  "cancelRequestButton": "Annuler la demande",
+  "enRouteMessage": "En route vers vous…",
+  "distanceEta": "{km} km — environ {minutes} min",
+  "@distanceEta": {
+    "placeholders": {
+      "km": { "type": "String" },
+      "minutes": { "type": "int" }
+    }
+  },
+  "craftsmanAcceptedMessage": "{name} a accepté votre demande",
+  "@craftsmanAcceptedMessage": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "jobInProgressDetail": "La mission est en cours.",
+  "craftsmanMarkedDoneMessage": "Le professionnel indique avoir terminé.",
+  "craftsmanEnRouteMessage": "Il est en route vers vous.",
+  "callButton": "Appeler",
+  "viewOnMapButton": "Voir sur la carte",
+  "confirmJobCompletionButton": "Confirmer la fin de la mission",
+  "cancelJobDialogTitle": "Annuler cette demande ?",
+  "cancelJobDialogContent": "{name} sera informé que vous annulez.",
+  "@cancelJobDialogContent": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "defaultCraftsmanName": "Le professionnel",
+  "cancelButton": "Annuler",
+  "jobCompletedTitle": "Mission terminée !",
+  "rateCraftsmanQuestion": "Comment évaluez-vous {name} ?",
+  "@rateCraftsmanQuestion": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "commentHint": "Un commentaire (facultatif)",
+  "sendButton": "Envoyer",
+  "skipButton": "Passer"
 }
