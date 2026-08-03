@@ -52,6 +52,13 @@ dependencies:
   shared_preferences: ^2.5.5
   flutter_secure_storage: ^10.3.1
   url_launcher: ^6.3.2
+  flutter_localizations:
+    sdk: flutter
+  # Pinned to exactly what this Flutter SDK's flutter_localizations itself
+  # depends on (packages/flutter_localizations/pubspec.yaml) — intl doesn't
+  # follow semver across minor versions, so anything looser risks a solver
+  # conflict on the next `flutter upgrade`.
+  intl: 0.20.2
 
 dev_dependencies:
   flutter_test:
@@ -84,6 +91,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Generates lib/l10n/app_localizations.dart from lib/l10n/*.arb (see
+  # l10n.yaml) on every `flutter pub get`/build.
+  generate: true
 
   # To add assets to your application, add an assets section, like this:
   # assets:

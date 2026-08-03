@@ -1,0 +1,11 @@
+{
+  "@@locale": "fr",
+  "appTitle": "Fix Pro",
+  "@appTitle": {
+    "description": "The application's name, shown as the OS task/window title. Not translated per-locale in practice (it's a brand name) but kept as a key for consistency."
+  },
+  "selectLanguage": "Langue",
+  "@selectLanguage": {
+    "description": "Label/tooltip for the language picker shown on the first screen."
+  }
+}

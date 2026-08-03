@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/user_role.dart';
+import '../../../shared/widgets/language_picker.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/role_card.dart';
 import '../onboarding_controller.dart';
@@ -21,7 +22,12 @@ class RoleSelectionScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
+              const Align(
+                alignment: Alignment.centerRight,
+                child: LanguagePicker(),
+              ),
+              const SizedBox(height: 16),
               const Text(
                 'Qui êtes-vous ?',
                 style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
