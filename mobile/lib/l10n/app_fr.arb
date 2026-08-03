@@ -277,5 +277,17 @@
     "placeholders": {
       "minutes": { "type": "int" }
     }
-  }
+  },
+  "tierFreeLabel": "Débutant",
+  "tierBronzeLabel": "Bronze",
+  "tierSilverLabel": "Silver",
+  "tierGoldLabel": "Gold",
+  "daysRemainingLabel": "{days} jours restants",
+  "@daysRemainingLabel": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "activeSubscriptionLabel": "Abonnement actif",
+  "upgradeForVisibilityMessage": "Passez à une formule payante pour plus de visibilité"
 }

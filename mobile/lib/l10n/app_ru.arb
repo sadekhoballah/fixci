@@ -169,5 +169,12 @@
   "statsAssignedLabel": "Назначено",
   "statsResponseLabel": "Отклик",
   "lessThanOneMinuteLabel": "<1 мин",
-  "minutesShortLabel": "{minutes} мин"
+  "minutesShortLabel": "{minutes} мин",
+  "tierFreeLabel": "Начальный",
+  "tierBronzeLabel": "Bronze",
+  "tierSilverLabel": "Silver",
+  "tierGoldLabel": "Gold",
+  "daysRemainingLabel": "{days} дн. осталось",
+  "activeSubscriptionLabel": "Подписка активна",
+  "upgradeForVisibilityMessage": "Перейдите на платный тариф для большей видимости"
 }

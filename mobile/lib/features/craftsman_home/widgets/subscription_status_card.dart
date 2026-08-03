@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/subscription_tier.dart';
+import '../../../l10n/app_localizations.dart';
 
 class SubscriptionStatusCard extends StatelessWidget {
   const SubscriptionStatusCard({
@@ -27,6 +28,7 @@ class SubscriptionStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (badgeColor, iconColor) = _colorsFor(tier);
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -51,7 +53,7 @@ class SubscriptionStatusCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Formule ${tier.label}',
+                  l10n.tierPlanLabel(tier.localizedLabel(l10n)),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -61,9 +63,9 @@ class SubscriptionStatusCard extends StatelessWidget {
                 Text(
                   tier.isPaid
                       ? (daysRemaining != null
-                            ? '$daysRemaining jours restants'
-                            : 'Abonnement actif')
-                      : 'Passez à une formule payante pour plus de visibilité',
+                            ? l10n.daysRemainingLabel(daysRemaining!)
+                            : l10n.activeSubscriptionLabel)
+                      : l10n.upgradeForVisibilityMessage,
                   style: TextStyle(
                     fontSize: 13,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,

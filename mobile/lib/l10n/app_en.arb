@@ -169,5 +169,12 @@
   "statsAssignedLabel": "Assigned",
   "statsResponseLabel": "Response",
   "lessThanOneMinuteLabel": "<1 min",
-  "minutesShortLabel": "{minutes} min"
+  "minutesShortLabel": "{minutes} min",
+  "tierFreeLabel": "Beginner",
+  "tierBronzeLabel": "Bronze",
+  "tierSilverLabel": "Silver",
+  "tierGoldLabel": "Gold",
+  "daysRemainingLabel": "{days} days remaining",
+  "activeSubscriptionLabel": "Active subscription",
+  "upgradeForVisibilityMessage": "Upgrade to a paid plan for more visibility"
 }

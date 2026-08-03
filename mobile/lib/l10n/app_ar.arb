@@ -169,5 +169,12 @@
   "statsAssignedLabel": "معيّنة",
   "statsResponseLabel": "الاستجابة",
   "lessThanOneMinuteLabel": "أقل من دقيقة",
-  "minutesShortLabel": "{minutes} د"
+  "minutesShortLabel": "{minutes} د",
+  "tierFreeLabel": "مبتدئ",
+  "tierBronzeLabel": "Bronze",
+  "tierSilverLabel": "Silver",
+  "tierGoldLabel": "Gold",
+  "daysRemainingLabel": "{days} يوم متبقي",
+  "activeSubscriptionLabel": "اشتراك فعّال",
+  "upgradeForVisibilityMessage": "قم بالترقية لباقة مدفوعة لمزيد من الظهور"
 }
