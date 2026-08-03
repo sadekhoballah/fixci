@@ -176,5 +176,8 @@
   "tierGoldLabel": "Gold",
   "daysRemainingLabel": "{days} дн. осталось",
   "activeSubscriptionLabel": "Подписка активна",
-  "upgradeForVisibilityMessage": "Перейдите на платный тариф для большей видимости"
+  "upgradeForVisibilityMessage": "Перейдите на платный тариф для большей видимости",
+  "ratingsCountLabel": "({count} отзывов)",
+  "avgResponseLabel": "Ср. время ответа: {response}",
+  "noDataYetLabel": "Пока нет данных"
 }

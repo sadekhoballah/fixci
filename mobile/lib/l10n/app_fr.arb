@@ -289,5 +289,18 @@
     }
   },
   "activeSubscriptionLabel": "Abonnement actif",
-  "upgradeForVisibilityMessage": "Passez à une formule payante pour plus de visibilité"
+  "upgradeForVisibilityMessage": "Passez à une formule payante pour plus de visibilité",
+  "ratingsCountLabel": "({count} avis)",
+  "@ratingsCountLabel": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "avgResponseLabel": "Réponse avg : {response}",
+  "@avgResponseLabel": {
+    "placeholders": {
+      "response": { "type": "String" }
+    }
+  },
+  "noDataYetLabel": "Pas encore de données"
 }

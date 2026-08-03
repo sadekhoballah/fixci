@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/app_localizations.dart';
 
 class RatingPerformanceCard extends StatelessWidget {
   const RatingPerformanceCard({
@@ -12,15 +13,18 @@ class RatingPerformanceCard extends StatelessWidget {
   final int ratingsCount;
   final int? avgResponseSeconds;
 
-  String get _responseLabel {
+  String _responseLabel(AppLocalizations l10n) {
     final seconds = avgResponseSeconds;
-    if (seconds == null) return 'Pas encore de données';
+    if (seconds == null) return l10n.noDataYetLabel;
     final minutes = (seconds / 60).round();
-    return minutes < 1 ? '< 1 min' : '$minutes min';
+    return minutes < 1
+        ? l10n.lessThanOneMinuteLabel
+        : l10n.minutesShortLabel(minutes);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final rating = averageRating ?? 0;
     return Container(
       padding: const EdgeInsets.all(18),
@@ -48,7 +52,7 @@ class RatingPerformanceCard extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                '($ratingsCount avis)',
+                l10n.ratingsCountLabel(ratingsCount),
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -66,7 +70,7 @@ class RatingPerformanceCard extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Text(
-                'Réponse avg : $_responseLabel',
+                l10n.avgResponseLabel(_responseLabel(l10n)),
                 style: TextStyle(
                   fontSize: 13,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,

@@ -176,5 +176,8 @@
   "tierGoldLabel": "Gold",
   "daysRemainingLabel": "{days} days remaining",
   "activeSubscriptionLabel": "Active subscription",
-  "upgradeForVisibilityMessage": "Upgrade to a paid plan for more visibility"
+  "upgradeForVisibilityMessage": "Upgrade to a paid plan for more visibility",
+  "ratingsCountLabel": "({count} reviews)",
+  "avgResponseLabel": "Avg response: {response}",
+  "noDataYetLabel": "No data yet"
 }

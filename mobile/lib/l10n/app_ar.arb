@@ -176,5 +176,8 @@
   "tierGoldLabel": "Gold",
   "daysRemainingLabel": "{days} يوم متبقي",
   "activeSubscriptionLabel": "اشتراك فعّال",
-  "upgradeForVisibilityMessage": "قم بالترقية لباقة مدفوعة لمزيد من الظهور"
+  "upgradeForVisibilityMessage": "قم بالترقية لباقة مدفوعة لمزيد من الظهور",
+  "ratingsCountLabel": "({count} تقييم)",
+  "avgResponseLabel": "متوسط الاستجابة: {response}",
+  "noDataYetLabel": "لا توجد بيانات بعد"
 }
