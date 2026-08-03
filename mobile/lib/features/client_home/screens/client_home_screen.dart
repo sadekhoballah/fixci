@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/service_category.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../service_request/screens/searching_screen.dart';
 import '../../service_request/service_request_repository.dart';
 import '../../service_request/service_request_state.dart';
@@ -14,7 +15,9 @@ class ClientHomeScreen extends ConsumerWidget {
     final activeRequest = ref.watch(clientActiveRequestNoticeProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('De quoi avez-vous besoin ?')),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.clientHomeTitle),
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -61,6 +64,7 @@ class _ActiveRequestBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final needsConfirmation =
         active.status == ServiceRequestStatus.awaitingClientConfirmation;
     final bg = needsConfirmation
@@ -71,10 +75,10 @@ class _ActiveRequestBanner extends ConsumerWidget {
         : const Color(0xFF7A5B00);
     final message = switch (active.status) {
       ServiceRequestStatus.awaitingClientConfirmation =>
-        "L'artisan a terminé — confirmez la fin de la mission pour la clôturer.",
-      ServiceRequestStatus.inProgress => 'Votre mission est en cours.',
-      ServiceRequestStatus.assigned => 'Un artisan est en route vers vous.',
-      _ => 'Recherche d\'un artisan disponible pour votre demande…',
+        l10n.jobAwaitingConfirmationMessage,
+      ServiceRequestStatus.inProgress => l10n.jobInProgressMessage,
+      ServiceRequestStatus.assigned => l10n.jobAssignedMessage,
+      _ => l10n.jobSearchingMessage,
     };
 
     return Padding(
@@ -110,7 +114,7 @@ class _ActiveRequestBanner extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Mission en cours',
+                        l10n.activeJobBannerTitle,
                         style: TextStyle(fontWeight: FontWeight.w800, color: fg),
                       ),
                       const SizedBox(height: 2),

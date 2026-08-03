@@ -60,5 +60,14 @@
   "preparingPaymentStatus": "جارٍ تجهيز الدفع...",
   "awaitingWaveConfirmationStatus": "بانتظار تأكيد Wave...",
   "paymentConfirmedStatus": "تم تأكيد الدفع، جارٍ التفعيل...",
-  "genericErrorMessage": "حدث خطأ ما."
+  "genericErrorMessage": "حدث خطأ ما.",
+  "homeTab": "الرئيسية",
+  "historyTab": "السجل",
+  "accountTab": "الحساب",
+  "clientHomeTitle": "ما الذي تحتاجه؟",
+  "activeJobBannerTitle": "مهمة جارية",
+  "jobAwaitingConfirmationMessage": "أنهى الحرفي العمل — أكّد إنهاء المهمة لإغلاقها.",
+  "jobInProgressMessage": "مهمتك قيد التنفيذ.",
+  "jobAssignedMessage": "أحد الحرفيين في طريقه إليك.",
+  "jobSearchingMessage": "جارٍ البحث عن حرفي متاح لطلبك…"
 }

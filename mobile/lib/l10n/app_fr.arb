@@ -126,5 +126,14 @@
   "preparingPaymentStatus": "Préparation du paiement...",
   "awaitingWaveConfirmationStatus": "En attente de confirmation Wave...",
   "paymentConfirmedStatus": "Paiement confirmé, activation en cours...",
-  "genericErrorMessage": "Une erreur est survenue."
+  "genericErrorMessage": "Une erreur est survenue.",
+  "homeTab": "Accueil",
+  "historyTab": "Historique",
+  "accountTab": "Compte",
+  "clientHomeTitle": "De quoi avez-vous besoin ?",
+  "activeJobBannerTitle": "Mission en cours",
+  "jobAwaitingConfirmationMessage": "L'artisan a terminé — confirmez la fin de la mission pour la clôturer.",
+  "jobInProgressMessage": "Votre mission est en cours.",
+  "jobAssignedMessage": "Un artisan est en route vers vous.",
+  "jobSearchingMessage": "Recherche d'un artisan disponible pour votre demande…"
 }

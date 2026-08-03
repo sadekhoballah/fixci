@@ -60,5 +60,14 @@
   "preparingPaymentStatus": "Preparing payment...",
   "awaitingWaveConfirmationStatus": "Waiting for Wave confirmation...",
   "paymentConfirmedStatus": "Payment confirmed, activating...",
-  "genericErrorMessage": "An error occurred."
+  "genericErrorMessage": "An error occurred.",
+  "homeTab": "Home",
+  "historyTab": "History",
+  "accountTab": "Account",
+  "clientHomeTitle": "What do you need?",
+  "activeJobBannerTitle": "Job in progress",
+  "jobAwaitingConfirmationMessage": "The craftsman has finished — confirm completion to close the job.",
+  "jobInProgressMessage": "Your job is in progress.",
+  "jobAssignedMessage": "A craftsman is on the way to you.",
+  "jobSearchingMessage": "Looking for an available craftsman for your request…"
 }

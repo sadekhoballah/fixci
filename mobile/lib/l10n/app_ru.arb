@@ -60,5 +60,14 @@
   "preparingPaymentStatus": "Подготовка платежа...",
   "awaitingWaveConfirmationStatus": "Ожидание подтверждения Wave...",
   "paymentConfirmedStatus": "Платёж подтверждён, активация...",
-  "genericErrorMessage": "Произошла ошибка."
+  "genericErrorMessage": "Произошла ошибка.",
+  "homeTab": "Главная",
+  "historyTab": "История",
+  "accountTab": "Аккаунт",
+  "clientHomeTitle": "Что вам нужно?",
+  "activeJobBannerTitle": "Активная заявка",
+  "jobAwaitingConfirmationMessage": "Мастер завершил работу — подтвердите завершение, чтобы закрыть заявку.",
+  "jobInProgressMessage": "Ваша заявка выполняется.",
+  "jobAssignedMessage": "Мастер уже в пути к вам.",
+  "jobSearchingMessage": "Ищем доступного мастера для вашей заявки…"
 }
