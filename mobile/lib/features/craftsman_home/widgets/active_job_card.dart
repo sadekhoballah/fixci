@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/models/service_category.dart';
+import '../../../l10n/app_localizations.dart';
 import '../live_requests_state.dart';
 
 // Shown instead of the incoming-request feed once a job is assigned — a
@@ -41,21 +43,20 @@ class ActiveJobCard extends StatelessWidget {
   }
 
   Future<void> _confirmCancel(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Annuler cette mission ?'),
-        content: const Text(
-          'Le client sera informé que vous ne pouvez plus intervenir.',
-        ),
+        title: Text(l10n.cancelJobConfirmTitle),
+        content: Text(l10n.cancelJobConfirmContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Retour'),
+            child: Text(l10n.backButton),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Annuler la mission'),
+            child: Text(l10n.cancelJobButton),
           ),
         ],
       ),
@@ -66,6 +67,7 @@ class ActiveJobCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final inProgress = job.status == ActiveJobStatus.inProgress;
     final awaitingConfirmation =
         job.status == ActiveJobStatus.awaitingClientConfirmation;
@@ -93,10 +95,10 @@ class ActiveJobCard extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 awaitingConfirmation
-                    ? 'En attente de confirmation'
+                    ? l10n.awaitingConfirmationStatus
                     : inProgress
-                    ? 'Mission en cours'
-                    : 'Mission acceptée',
+                    ? l10n.jobInProgressStatus
+                    : l10n.jobAcceptedStatus,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -107,14 +109,14 @@ class ActiveJobCard extends StatelessWidget {
               Icon(job.serviceCategory.icon, size: 20, color: colorScheme.onSurfaceVariant),
               const SizedBox(width: 4),
               Text(
-                job.serviceCategory.label,
+                job.serviceCategory.localizedLabel(l10n),
                 style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
-            job.clientFullName ?? 'Client',
+            job.clientFullName ?? l10n.defaultClientName,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 12),
@@ -124,7 +126,7 @@ class ActiveJobCard extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: _call,
                   icon: const Icon(Icons.call, size: 18),
-                  label: const Text('Appeler'),
+                  label: Text(l10n.callButton),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(
@@ -155,7 +157,7 @@ class ActiveJobCard extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: _navigate,
               icon: const Icon(Icons.directions_rounded, size: 18),
-              label: const Text('Itinéraire'),
+              label: Text(l10n.directionsButton),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(
@@ -173,10 +175,10 @@ class ActiveJobCard extends StatelessWidget {
                 color: colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
-                'En attente de confirmation du client…',
+              child: Text(
+                l10n.awaitingClientConfirmationMessage,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.w600),
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             )
           else
@@ -186,7 +188,7 @@ class ActiveJobCard extends StatelessWidget {
                   child: TextButton(
                     onPressed: isProcessing ? null : () => _confirmCancel(context),
                     style: TextButton.styleFrom(foregroundColor: Colors.red),
-                    child: const Text('Annuler'),
+                    child: Text(l10n.cancelButton),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -201,7 +203,7 @@ class ActiveJobCard extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      inProgress ? 'Terminer la mission' : 'Démarrer la mission',
+                      inProgress ? l10n.completeJobButton : l10n.startJobButton,
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),

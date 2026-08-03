@@ -136,5 +136,16 @@
   "statusCancelled": "Отменена",
   "statusExpired": "Истекла",
   "noRequestsYetMessage": "Пока нет заявок.",
-  "noJobsYetMessage": "Пока нет заданий."
+  "noJobsYetMessage": "Пока нет заданий.",
+  "cancelJobConfirmTitle": "Отменить эту заявку?",
+  "cancelJobConfirmContent": "Клиент будет уведомлён, что вы больше не можете выполнить заказ.",
+  "cancelJobButton": "Отменить заказ",
+  "jobAcceptedStatus": "Заказ принят",
+  "jobInProgressStatus": "Заказ выполняется",
+  "awaitingConfirmationStatus": "Ожидание подтверждения",
+  "defaultClientName": "Клиент",
+  "directionsButton": "Маршрут",
+  "awaitingClientConfirmationMessage": "Ожидание подтверждения клиента…",
+  "completeJobButton": "Завершить заказ",
+  "startJobButton": "Начать заказ"
 }

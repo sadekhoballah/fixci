@@ -136,5 +136,16 @@
   "statusCancelled": "Cancelled",
   "statusExpired": "Expired",
   "noRequestsYetMessage": "No requests yet.",
-  "noJobsYetMessage": "No jobs yet."
+  "noJobsYetMessage": "No jobs yet.",
+  "cancelJobConfirmTitle": "Cancel this job?",
+  "cancelJobConfirmContent": "The client will be notified that you can no longer take this job.",
+  "cancelJobButton": "Cancel the job",
+  "jobAcceptedStatus": "Job accepted",
+  "jobInProgressStatus": "Job in progress",
+  "awaitingConfirmationStatus": "Awaiting confirmation",
+  "defaultClientName": "Client",
+  "directionsButton": "Directions",
+  "awaitingClientConfirmationMessage": "Waiting for the client's confirmation…",
+  "completeJobButton": "Finish the job",
+  "startJobButton": "Start the job"
 }

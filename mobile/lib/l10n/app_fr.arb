@@ -233,5 +233,16 @@
   "statusCancelled": "Annulée",
   "statusExpired": "Expirée",
   "noRequestsYetMessage": "Aucune demande pour le moment.",
-  "noJobsYetMessage": "Aucune mission pour le moment."
+  "noJobsYetMessage": "Aucune mission pour le moment.",
+  "cancelJobConfirmTitle": "Annuler cette mission ?",
+  "cancelJobConfirmContent": "Le client sera informé que vous ne pouvez plus intervenir.",
+  "cancelJobButton": "Annuler la mission",
+  "jobAcceptedStatus": "Mission acceptée",
+  "jobInProgressStatus": "Mission en cours",
+  "awaitingConfirmationStatus": "En attente de confirmation",
+  "defaultClientName": "Client",
+  "directionsButton": "Itinéraire",
+  "awaitingClientConfirmationMessage": "En attente de confirmation du client…",
+  "completeJobButton": "Terminer la mission",
+  "startJobButton": "Démarrer la mission"
 }

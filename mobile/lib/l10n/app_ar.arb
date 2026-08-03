@@ -136,5 +136,16 @@
   "statusCancelled": "ملغاة",
   "statusExpired": "منتهية الصلاحية",
   "noRequestsYetMessage": "لا توجد طلبات حتى الآن.",
-  "noJobsYetMessage": "لا توجد مهام حتى الآن."
+  "noJobsYetMessage": "لا توجد مهام حتى الآن.",
+  "cancelJobConfirmTitle": "إلغاء هذه المهمة؟",
+  "cancelJobConfirmContent": "سيتم إعلام العميل بأنك لم تعد قادراً على تنفيذ المهمة.",
+  "cancelJobButton": "إلغاء المهمة",
+  "jobAcceptedStatus": "تم قبول المهمة",
+  "jobInProgressStatus": "المهمة جارية",
+  "awaitingConfirmationStatus": "بانتظار التأكيد",
+  "defaultClientName": "عميل",
+  "directionsButton": "المسار",
+  "awaitingClientConfirmationMessage": "بانتظار تأكيد العميل…",
+  "completeJobButton": "إنهاء المهمة",
+  "startJobButton": "بدء المهمة"
 }
