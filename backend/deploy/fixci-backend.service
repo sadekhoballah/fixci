@@ -8,7 +8,7 @@ Type=simple
 User=samoce
 WorkingDirectory=/home/samoce/fixci/backend
 EnvironmentFile=/home/samoce/fixci/backend/.env
-ExecStart=/home/samoce/.nvm/versions/node/v24.18.0/bin/node dist/main.js
+ExecStart=/home/samoce/.nvm/versions/node/v24.18.1/bin/node dist/main.js
 Restart=on-failure
 RestartSec=5
 
