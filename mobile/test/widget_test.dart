@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator_platform_interface/geolocator_platform_interface.dart';
 
 import 'package:mobile/app.dart';
 import 'package:mobile/core/auth/dev_bypass_phone_verification_service.dart';
@@ -75,6 +76,44 @@ class _FakeApiClient extends ApiClient {
     if (path == '/users/lookup') {
       throw ApiException('No account with this phone number', statusCode: 404);
     }
+    if (path == '/districts') {
+      return {
+        'items': [
+          {
+            'id': 'fake-district-id',
+            'name': 'Cocody',
+            'isArtisanRegistrationActive': true,
+            'isClientOrderingActive': true,
+          },
+        ],
+      };
+    }
+    // The craftsman registration test lands on ArtisanShellScreen, whose
+    // Home tab (CraftsmanHomeController._load/refreshStats) and Stats tab
+    // hit these on first build.
+    if (path == '/craftsmen/me') {
+      return {
+        'fullName': 'Aya Kone',
+        'subscriptionTier': 'free',
+        'daysRemaining': null,
+        'isAvailable': false,
+        'averageRating': null,
+        'ratingsCount': 0,
+        'serviceCategory': 'electrician',
+        'idVerified': true,
+        'isActive': true,
+      };
+    }
+    if (path == '/craftsmen/me/stats') {
+      return {
+        'jobsDoneToday': 0,
+        'jobsAssignedToday': 0,
+        'avgResponseSeconds': null,
+      };
+    }
+    if (path == '/craftsmen/me/active-job') {
+      return {};
+    }
     throw UnimplementedError('Unexpected path in fake client: $path');
   }
 
@@ -135,6 +174,46 @@ class _FakeIdCardPicker implements IdCardPicker {
   Future<PickedImage?> pickFromCamera() => pickFromGallery();
 }
 
+// Location services/permission are unmocked in `flutter test` (no platform
+// channel), so CraftsmanHomeController.refreshLocationStatus() would
+// otherwise throw MissingPluginException and never resolve — leaving
+// isLoading stuck true (the Home tab spinner spins forever). Swapping
+// GeolocatorPlatform.instance is geolocator's own documented way to fake
+// this in tests, no channel mocking needed. Only the methods this app's
+// code path actually calls are overridden; anything else inherits
+// GeolocatorPlatform's default (an UnimplementedError), which is fine as
+// long as these tests never reach it.
+class _FakeGeolocatorPlatform extends GeolocatorPlatform {
+  @override
+  Future<bool> isLocationServiceEnabled() async => true;
+
+  @override
+  Future<LocationPermission> checkPermission() async =>
+      LocationPermission.always;
+
+  @override
+  Future<LocationPermission> requestPermission() async =>
+      LocationPermission.always;
+
+  @override
+  Future<Position> getCurrentPosition({
+    LocationSettings? locationSettings,
+  }) async {
+    return Position(
+      latitude: 5.34,
+      longitude: -4.02,
+      timestamp: DateTime(2024),
+      accuracy: 5,
+      altitude: 0,
+      altitudeAccuracy: 0,
+      heading: 0,
+      headingAccuracy: 0,
+      speed: 0,
+      speedAccuracy: 0,
+    );
+  }
+}
+
 // A no-op stand-in for the real shared_preferences-backed SessionStorage —
 // avoids touching the plugin's method channel, which isn't mocked in
 // `flutter test`.
@@ -183,6 +262,8 @@ class _FakeLocaleStorage implements LocaleStorage {
 }
 
 void main() {
+  GeolocatorPlatform.instance = _FakeGeolocatorPlatform();
+
   Widget buildApp({
     _FakeApiClient? apiClient,
     bool failRegister = false,
@@ -222,6 +303,15 @@ void main() {
       phone,
     );
     await tester.pump();
+
+    // districtsProvider resolves asynchronously (GET /districts) — wait for
+    // it before the dropdown has anything to select. District is mandatory
+    // (OnboardingState.isRegistrationComplete) for both roles.
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Votre zone / commune'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cocody').last);
+    await tester.pumpAndSettle();
   }
 
   Future<void> attachIdCard(WidgetTester tester) async {
@@ -357,9 +447,23 @@ void main() {
       await tester.tap(find.text('Débutant'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Continuer'));
-      await tester.pumpAndSettle();
+      // Not pumpAndSettle(): ArtisanShellScreen's CraftsmanHomeController
+      // starts a Timer.periodic (stats auto-refresh) that reschedules a
+      // frame on every tick, so an unbounded settle() never actually
+      // settles. A few bounded pumps are enough for the one-shot loads
+      // (getMe/getStats/active-job) to resolve and the shell to render.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('En attente de demandes'), findsOneWidget);
+      // Stale assertion text updated to match the current app copy — a
+      // freshly registered craftsman starts offline (isAvailable: false in
+      // the fake /craftsmen/me response above) until they toggle available,
+      // so the shell's Home tab shows the offline prompt, not a "waiting for
+      // requests" state that no longer exists in the app.
+      expect(
+        find.text('Passez en service pour recevoir des demandes'),
+        findsOneWidget,
+      );
     },
   );
 

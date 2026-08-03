@@ -78,6 +78,18 @@ class _FakeApiClient extends ApiClient {
     if (path == '/users/lookup') {
       throw ApiException('No account with this phone number', statusCode: 404);
     }
+    if (path == '/districts') {
+      return {
+        'items': [
+          {
+            'id': 'fake-district-id',
+            'name': 'Cocody',
+            'isArtisanRegistrationActive': true,
+            'isClientOrderingActive': true,
+          },
+        ],
+      };
+    }
     throw UnimplementedError('Unexpected path in fake client: $path');
   }
 
@@ -218,6 +230,16 @@ void main() {
       phone,
     );
     await tester.pump();
+
+    // districtsProvider resolves asynchronously (GET /districts) — wait for
+    // it before the dropdown has anything to select. District is mandatory
+    // (OnboardingState.isRegistrationComplete).
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Votre zone / commune'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cocody').last);
+    await tester.pumpAndSettle();
+
     await attachIdCard(tester);
 
     await tester.ensureVisible(find.text("S'inscrire"));
@@ -303,6 +325,11 @@ void main() {
       '+2250700000098',
     );
     await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Votre zone / commune'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cocody').last);
+    await tester.pumpAndSettle();
     await attachIdCard(tester);
 
     await tester.ensureVisible(find.text("S'inscrire"));

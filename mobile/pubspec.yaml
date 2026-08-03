@@ -65,6 +65,11 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
+  # Only used to fake GeolocatorPlatform.instance in widget_test.dart — the
+  # real geolocator plugin's platform channel isn't mocked under `flutter
+  # test`. Otherwise a transitive dependency of geolocator already; this
+  # just makes the direct import explicit.
+  geolocator_platform_interface: ^4.2.8
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
