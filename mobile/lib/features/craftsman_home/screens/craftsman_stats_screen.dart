@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../l10n/app_localizations.dart';
 import '../craftsman_home_controller.dart';
 import '../widgets/rating_performance_card.dart';
 import '../widgets/stats_chip_row.dart';
@@ -14,9 +15,10 @@ class CraftsmanStatsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(craftsmanHomeControllerProvider);
     final controller = ref.read(craftsmanHomeControllerProvider.notifier);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Statistiques')),
+      appBar: AppBar(title: Text(l10n.statisticsTitle)),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: controller.refresh,
@@ -24,7 +26,7 @@ class CraftsmanStatsScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(20),
             children: [
               Text(
-                "Aujourd'hui",
+                l10n.todayLabel,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -35,7 +37,7 @@ class CraftsmanStatsScreen extends ConsumerWidget {
               StatsChipRow(stats: state.stats),
               const SizedBox(height: 24),
               Text(
-                'Performance',
+                l10n.performanceLabel,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,

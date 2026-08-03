@@ -200,5 +200,8 @@
   "unableToLoadAccountMessage": "Unable to load your account.",
   "unableToSelectImageMessage": "Unable to select the image.",
   "idCardUploadFailedMessage": "Failed to upload the ID document.",
-  "completedMissionsCount": "{count, plural, one {{count} completed job} other {{count} completed jobs}}"
+  "completedMissionsCount": "{count, plural, one {{count} completed job} other {{count} completed jobs}}",
+  "statisticsTitle": "Statistics",
+  "todayLabel": "Today",
+  "performanceLabel": "Performance"
 }

@@ -200,5 +200,8 @@
   "unableToLoadAccountMessage": "تعذّر تحميل حسابك.",
   "unableToSelectImageMessage": "تعذّر اختيار الصورة.",
   "idCardUploadFailedMessage": "فشل إرسال بطاقة الهوية.",
-  "completedMissionsCount": "{count, plural, one {مهمة واحدة منتهية} other {{count} مهمة منتهية}}"
+  "completedMissionsCount": "{count, plural, one {مهمة واحدة منتهية} other {{count} مهمة منتهية}}",
+  "statisticsTitle": "الإحصائيات",
+  "todayLabel": "اليوم",
+  "performanceLabel": "الأداء"
 }

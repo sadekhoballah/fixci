@@ -200,5 +200,8 @@
   "unableToLoadAccountMessage": "Не удалось загрузить ваш аккаунт.",
   "unableToSelectImageMessage": "Не удалось выбрать изображение.",
   "idCardUploadFailedMessage": "Не удалось загрузить документ.",
-  "completedMissionsCount": "{count, plural, one {{count} завершённая заявка} few {{count} завершённые заявки} many {{count} завершённых заявок} other {{count} завершённых заявок}}"
+  "completedMissionsCount": "{count, plural, one {{count} завершённая заявка} few {{count} завершённые заявки} many {{count} завершённых заявок} other {{count} завершённых заявок}}",
+  "statisticsTitle": "Статистика",
+  "todayLabel": "Сегодня",
+  "performanceLabel": "Показатели"
 }
