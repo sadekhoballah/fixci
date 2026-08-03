@@ -22,6 +22,7 @@ class LiveRequestsController extends Notifier<LiveRequestsState> {
   StreamSubscription<RequestAssignedEvent>? _assignedSub;
   StreamSubscription<RequestOutcomeEvent>? _unavailableSub;
   StreamSubscription<RequestOutcomeEvent>? _completedSub;
+  StreamSubscription<RequestOutcomeEvent>? _cancelledSub;
   StreamSubscription<SocketConnectionStatus>? _statusSub;
   Timer? _countdownTicker;
   bool _shouldBeListening = false;
@@ -38,6 +39,11 @@ class LiveRequestsController extends Notifier<LiveRequestsState> {
     _completedSub = socket.onRequestCompleted.listen((_) {
       unawaited(loadActiveJob());
     });
+    // The client backed out of a job still assigned to us (matching.gateway.ts
+    // notifyCraftsman('request:cancelled')) — without this, activeJob just sat
+    // there showing "Mission acceptée" with live action buttons until the next
+    // app resume or pull-to-refresh happened to call loadActiveJob() on its own.
+    _cancelledSub = socket.onRequestCancelled.listen(_onRequestCancelled);
     _statusSub = socket.connectionStatus.listen((status) {
       state = state.copyWith(connectionStatus: status);
     });
@@ -50,6 +56,7 @@ class LiveRequestsController extends Notifier<LiveRequestsState> {
       _assignedSub?.cancel();
       _unavailableSub?.cancel();
       _completedSub?.cancel();
+      _cancelledSub?.cancel();
       _statusSub?.cancel();
       _countdownTicker?.cancel();
     });
@@ -186,6 +193,14 @@ class LiveRequestsController extends Notifier<LiveRequestsState> {
 
   void _onRequestUnavailable(RequestOutcomeEvent event) {
     _removeIncomingRequest(event.requestId);
+  }
+
+  void _onRequestCancelled(RequestOutcomeEvent event) {
+    if (state.activeJob?.requestId != event.requestId) return;
+    state = state.copyWith(
+      clearActiveJob: true,
+      actionError: 'Le client a annulé cette demande.',
+    );
   }
 
   void _removeIncomingRequest(String requestId) {

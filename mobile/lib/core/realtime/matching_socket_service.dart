@@ -117,6 +117,8 @@ class MatchingSocketService {
       StreamController<RequestOutcomeEvent>.broadcast();
   final _requestCompletedController =
       StreamController<RequestOutcomeEvent>.broadcast();
+  final _requestCancelledController =
+      StreamController<RequestOutcomeEvent>.broadcast();
   final _connectionStatusController =
       StreamController<SocketConnectionStatus>.broadcast();
 
@@ -139,6 +141,11 @@ class MatchingSocketService {
   // Craftsman-side: the client just confirmed completion (request:completed).
   Stream<RequestOutcomeEvent> get onRequestCompleted =>
       _requestCompletedController.stream;
+  // Craftsman-side: the client cancelled a request that was assigned to this
+  // craftsman (matching.controller.ts's cancelByClient path) — the job was
+  // still en route/pending confirmation, not yet in_progress.
+  Stream<RequestOutcomeEvent> get onRequestCancelled =>
+      _requestCancelledController.stream;
   Stream<SocketConnectionStatus> get connectionStatus =>
       _connectionStatusController.stream;
 
@@ -237,6 +244,11 @@ class MatchingSocketService {
         RequestOutcomeEvent.fromJson(data as Map<String, dynamic>),
       );
     });
+    socket.on('request:cancelled', (data) {
+      _requestCancelledController.add(
+        RequestOutcomeEvent.fromJson(data as Map<String, dynamic>),
+      );
+    });
 
     socket.connect();
   }
@@ -301,6 +313,7 @@ class MatchingSocketService {
     _requestStartedController.close();
     _requestAwaitingConfirmationController.close();
     _requestCompletedController.close();
+    _requestCancelledController.close();
     _connectionStatusController.close();
   }
 }
