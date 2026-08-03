@@ -224,5 +224,13 @@
   },
   "commentHint": "Un commentaire (facultatif)",
   "sendButton": "Envoyer",
-  "skipButton": "Passer"
+  "skipButton": "Passer",
+  "statusPending": "Recherche…",
+  "statusAssigned": "Acceptée",
+  "statusInProgress": "En cours",
+  "statusAwaitingConfirmation": "À confirmer",
+  "statusCompleted": "Terminée",
+  "statusCancelled": "Annulée",
+  "statusExpired": "Expirée",
+  "noRequestsYetMessage": "Aucune demande pour le moment."
 }

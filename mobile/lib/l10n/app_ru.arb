@@ -127,5 +127,13 @@
   "rateCraftsmanQuestion": "Как вы оцениваете {name}?",
   "commentHint": "Комментарий (необязательно)",
   "sendButton": "Отправить",
-  "skipButton": "Пропустить"
+  "skipButton": "Пропустить",
+  "statusPending": "Поиск…",
+  "statusAssigned": "Принята",
+  "statusInProgress": "В процессе",
+  "statusAwaitingConfirmation": "Ожидает подтверждения",
+  "statusCompleted": "Завершена",
+  "statusCancelled": "Отменена",
+  "statusExpired": "Истекла",
+  "noRequestsYetMessage": "Пока нет заявок."
 }

@@ -127,5 +127,13 @@
   "rateCraftsmanQuestion": "كيف تقيّم {name}؟",
   "commentHint": "تعليق (اختياري)",
   "sendButton": "إرسال",
-  "skipButton": "تخطي"
+  "skipButton": "تخطي",
+  "statusPending": "قيد البحث…",
+  "statusAssigned": "تم القبول",
+  "statusInProgress": "جارية",
+  "statusAwaitingConfirmation": "بانتظار التأكيد",
+  "statusCompleted": "منتهية",
+  "statusCancelled": "ملغاة",
+  "statusExpired": "منتهية الصلاحية",
+  "noRequestsYetMessage": "لا توجد طلبات حتى الآن."
 }

@@ -127,5 +127,13 @@
   "rateCraftsmanQuestion": "How do you rate {name}?",
   "commentHint": "A comment (optional)",
   "sendButton": "Send",
-  "skipButton": "Skip"
+  "skipButton": "Skip",
+  "statusPending": "Searching…",
+  "statusAssigned": "Accepted",
+  "statusInProgress": "In progress",
+  "statusAwaitingConfirmation": "To confirm",
+  "statusCompleted": "Completed",
+  "statusCancelled": "Cancelled",
+  "statusExpired": "Expired",
+  "noRequestsYetMessage": "No requests yet."
 }

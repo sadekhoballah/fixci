@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/models/service_category.dart';
+import '../../../l10n/app_localizations.dart';
 import '../client_jobs_controller.dart';
 import '../client_jobs_state.dart';
 
@@ -9,41 +11,44 @@ String _formatDate(DateTime dt) {
   return '${two(local.day)}/${two(local.month)} ${two(local.hour)}:${two(local.minute)}';
 }
 
-(Color, Color, String) _statusStyle(RequestHistoryStatus status) => switch (status) {
+(Color, Color, String) _statusStyle(
+  RequestHistoryStatus status,
+  AppLocalizations l10n,
+) => switch (status) {
   RequestHistoryStatus.pending => (
     const Color(0xFFF0F0F0),
     const Color(0xFF757575),
-    'Recherche…',
+    l10n.statusPending,
   ),
   RequestHistoryStatus.assigned => (
     const Color(0xFFE3F2FD),
     const Color(0xFF1565C0),
-    'Acceptée',
+    l10n.statusAssigned,
   ),
   RequestHistoryStatus.inProgress => (
     const Color(0xFFFFF3CD),
     const Color(0xFF7A5B00),
-    'En cours',
+    l10n.statusInProgress,
   ),
   RequestHistoryStatus.awaitingConfirmation => (
     const Color(0xFFFFF3CD),
     const Color(0xFF7A5B00),
-    'À confirmer',
+    l10n.statusAwaitingConfirmation,
   ),
   RequestHistoryStatus.completed => (
     const Color(0xFFE0F2E9),
     const Color(0xFF1B8A3B),
-    'Terminée',
+    l10n.statusCompleted,
   ),
   RequestHistoryStatus.cancelled => (
     const Color(0xFFFDE8E8),
     const Color(0xFFC62828),
-    'Annulée',
+    l10n.statusCancelled,
   ),
   RequestHistoryStatus.expired => (
     const Color(0xFFF0F0F0),
     const Color(0xFF757575),
-    'Expirée',
+    l10n.statusExpired,
   ),
 };
 
@@ -78,16 +83,17 @@ class _ClientJobsScreenState extends ConsumerState<ClientJobsScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(clientJobsControllerProvider);
     final controller = ref.read(clientJobsControllerProvider.notifier);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Historique')),
+      appBar: AppBar(title: Text(l10n.historyTab)),
       body: SafeArea(
         child: state.isLoading
             ? const Center(child: CircularProgressIndicator())
             : state.entries.isEmpty
             ? Center(
                 child: Text(
-                  state.errorMessage ?? 'Aucune demande pour le moment.',
+                  state.errorMessage ?? l10n.noRequestsYetMessage,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -123,7 +129,8 @@ class _RequestHistoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final (chipBg, chipFg, chipLabel) = _statusStyle(entry.status);
+    final l10n = AppLocalizations.of(context)!;
+    final (chipBg, chipFg, chipLabel) = _statusStyle(entry.status, l10n);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -160,7 +167,8 @@ class _RequestHistoryTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  entry.craftsmanFullName ?? entry.serviceCategory.label,
+                  entry.craftsmanFullName ??
+                      entry.serviceCategory.localizedLabel(l10n),
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 2),
