@@ -135,5 +135,6 @@
   "statusCompleted": "منتهية",
   "statusCancelled": "ملغاة",
   "statusExpired": "منتهية الصلاحية",
-  "noRequestsYetMessage": "لا توجد طلبات حتى الآن."
+  "noRequestsYetMessage": "لا توجد طلبات حتى الآن.",
+  "noJobsYetMessage": "لا توجد مهام حتى الآن."
 }

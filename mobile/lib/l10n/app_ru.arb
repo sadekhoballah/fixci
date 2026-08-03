@@ -135,5 +135,6 @@
   "statusCompleted": "Завершена",
   "statusCancelled": "Отменена",
   "statusExpired": "Истекла",
-  "noRequestsYetMessage": "Пока нет заявок."
+  "noRequestsYetMessage": "Пока нет заявок.",
+  "noJobsYetMessage": "Пока нет заданий."
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/models/service_category.dart';
+import '../../../l10n/app_localizations.dart';
 import '../craftsman_jobs_controller.dart';
 import '../craftsman_jobs_state.dart';
 
@@ -9,31 +11,34 @@ String _formatDate(DateTime dt) {
   return '${two(local.day)}/${two(local.month)} ${two(local.hour)}:${two(local.minute)}';
 }
 
-(Color, Color, String) _statusStyle(JobHistoryStatus status) => switch (status) {
+(Color, Color, String) _statusStyle(
+  JobHistoryStatus status,
+  AppLocalizations l10n,
+) => switch (status) {
   JobHistoryStatus.assigned => (
     const Color(0xFFE3F2FD),
     const Color(0xFF1565C0),
-    'Acceptée',
+    l10n.statusAssigned,
   ),
   JobHistoryStatus.inProgress => (
     const Color(0xFFFFF3CD),
     const Color(0xFF7A5B00),
-    'En cours',
+    l10n.statusInProgress,
   ),
   JobHistoryStatus.completed => (
     const Color(0xFFE0F2E9),
     const Color(0xFF1B8A3B),
-    'Terminée',
+    l10n.statusCompleted,
   ),
   JobHistoryStatus.cancelled => (
     const Color(0xFFFDE8E8),
     const Color(0xFFC62828),
-    'Annulée',
+    l10n.statusCancelled,
   ),
   JobHistoryStatus.expired => (
     const Color(0xFFF0F0F0),
     const Color(0xFF757575),
-    'Expirée',
+    l10n.statusExpired,
   ),
 };
 
@@ -69,16 +74,17 @@ class _CraftsmanJobsScreenState extends ConsumerState<CraftsmanJobsScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(craftsmanJobsControllerProvider);
     final controller = ref.read(craftsmanJobsControllerProvider.notifier);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Historique')),
+      appBar: AppBar(title: Text(l10n.historyTab)),
       body: SafeArea(
         child: state.isLoading
             ? const Center(child: CircularProgressIndicator())
             : state.entries.isEmpty
             ? Center(
                 child: Text(
-                  state.errorMessage ?? 'Aucune mission pour le moment.',
+                  state.errorMessage ?? l10n.noJobsYetMessage,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -114,7 +120,8 @@ class _JobHistoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final (chipBg, chipFg, chipLabel) = _statusStyle(entry.status);
+    final l10n = AppLocalizations.of(context)!;
+    final (chipBg, chipFg, chipLabel) = _statusStyle(entry.status, l10n);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -151,7 +158,8 @@ class _JobHistoryTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  entry.clientFullName ?? entry.serviceCategory.label,
+                  entry.clientFullName ??
+                      entry.serviceCategory.localizedLabel(l10n),
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 2),

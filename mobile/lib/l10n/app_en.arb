@@ -135,5 +135,6 @@
   "statusCompleted": "Completed",
   "statusCancelled": "Cancelled",
   "statusExpired": "Expired",
-  "noRequestsYetMessage": "No requests yet."
+  "noRequestsYetMessage": "No requests yet.",
+  "noJobsYetMessage": "No jobs yet."
 }

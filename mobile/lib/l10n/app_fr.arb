@@ -232,5 +232,6 @@
   "statusCompleted": "Terminée",
   "statusCancelled": "Annulée",
   "statusExpired": "Expirée",
-  "noRequestsYetMessage": "Aucune demande pour le moment."
+  "noRequestsYetMessage": "Aucune demande pour le moment.",
+  "noJobsYetMessage": "Aucune mission pour le moment."
 }
