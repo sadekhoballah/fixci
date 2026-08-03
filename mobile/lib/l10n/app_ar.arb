@@ -179,5 +179,21 @@
   "upgradeForVisibilityMessage": "قم بالترقية لباقة مدفوعة لمزيد من الظهور",
   "ratingsCountLabel": "({count} تقييم)",
   "avgResponseLabel": "متوسط الاستجابة: {response}",
-  "noDataYetLabel": "لا توجد بيانات بعد"
+  "noDataYetLabel": "لا توجد بيانات بعد",
+  "deleteAccountConfirmTitle": "حذف حسابك؟",
+  "deleteAccountConfirmContent": "هذا الإجراء لا رجعة فيه. سيتم حذف بياناتك الشخصية (الاسم، صورة بطاقة الهوية، الموقع). يبقى سجل مهامك وتقييماتك مرئياً للعملاء المعنيين، دون التعريف بك.\n\nيجب عليك إنهاء أو إلغاء أي مهمة جارية قبل المتابعة.",
+  "deletePermanentlyButton": "حذف نهائياً",
+  "deleteAccountFailedMessage": "فشل حذف الحساب.",
+  "tierWithDaysRemaining": "{tier} · {days} يوم متبقي",
+  "noRatingYetLabel": "لا يوجد تقييم بعد",
+  "ratingOutOfFive": "{rating} / 5 ({count} تقييم)",
+  "privacyPolicyButton": "سياسة الخصوصية",
+  "deleteMyAccountButton": "حذف حسابي",
+  "identityVerifiedTitle": "الهوية موثّقة",
+  "identityVerifiedMessage": "تم التحقق من بطاقة هويتك.",
+  "requestRejectedTitle": "تم رفض الطلب",
+  "requestRejectedMessage": "تم رفض طلبك، ربما بسبب معلومات غير صحيحة (صورة غير واضحة، مستند غير صالح...). يمكنك إرسال بطاقة هوية جديدة.",
+  "pendingVerificationTitle": "بانتظار التحقق",
+  "pendingVerificationMessage": "بطاقة هويتك قيد المراجعة من قبل فريقنا.",
+  "resubmitIdCardButton": "إرسال بطاقة هوية جديدة"
 }

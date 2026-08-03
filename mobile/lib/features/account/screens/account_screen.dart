@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/auth/session_storage.dart';
 import '../../../core/media/id_card_picker.dart';
+import '../../../core/models/service_category.dart';
+import '../../../core/models/subscription_tier.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/platform/firebase_support.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../craftsman_home/craftsman_home_controller.dart';
 import '../../onboarding/screens/role_selection_screen.dart';
 import '../../onboarding/screens/tier_selection_screen.dart';
@@ -35,27 +38,21 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 
   Future<void> _confirmAndDeleteAccount() async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Supprimer votre compte ?'),
-        content: const Text(
-          'Cette action est irréversible. Vos données personnelles '
-          '(nom, photo de pièce d\'identité, localisation) seront '
-          'supprimées. Votre historique de missions et vos avis restent '
-          'visibles pour les clients concernés, sans vous identifier.\n\n'
-          'Vous devez terminer ou annuler toute mission en cours avant de '
-          'continuer.',
-        ),
+        title: Text(l10n.deleteAccountConfirmTitle),
+        content: Text(l10n.deleteAccountConfirmContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Annuler'),
+            child: Text(l10n.cancelButton),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Supprimer définitivement'),
+            child: Text(l10n.deletePermanentlyButton),
           ),
         ],
       ),
@@ -85,7 +82,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       if (mounted) {
         setState(() => _isDeletingAccount = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Échec de la suppression du compte.')),
+          SnackBar(content: Text(l10n.deleteAccountFailedMessage)),
         );
       }
     }
@@ -94,6 +91,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     // Reuses the same craftsman-home state the Home tab already loaded (the
     // shell keeps both tabs alive in an IndexedStack) instead of firing a
     // second /craftsmen/me request just to populate this screen.
@@ -101,7 +99,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final controller = ref.read(craftsmanHomeControllerProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Compte')),
+      appBar: AppBar(title: Text(l10n.accountTab)),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(
@@ -109,7 +107,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           ),
         ),
         icon: const Icon(Icons.workspace_premium_rounded),
-        label: const Text('Changer de forfait'),
+        label: Text(l10n.changePlanTitle),
       ),
       body: SafeArea(
         child: ListView(
@@ -140,22 +138,28 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     const SizedBox(height: 12),
                     _InfoRow(
                       icon: home.serviceCategory!.icon,
-                      label: home.serviceCategory!.label,
+                      label: home.serviceCategory!.localizedLabel(l10n),
                     ),
                   ],
                   const SizedBox(height: 12),
                   _InfoRow(
                     icon: Icons.workspace_premium_rounded,
                     label: home.daysRemaining == null
-                        ? home.tier.label
-                        : '${home.tier.label} · ${home.daysRemaining} jours restants',
+                        ? home.tier.localizedLabel(l10n)
+                        : l10n.tierWithDaysRemaining(
+                            home.tier.localizedLabel(l10n),
+                            home.daysRemaining!,
+                          ),
                   ),
                   const SizedBox(height: 12),
                   _InfoRow(
                     icon: Icons.star_rounded,
                     label: home.averageRating == null
-                        ? 'Pas encore de note'
-                        : '${home.averageRating!.toStringAsFixed(1)} / 5 (${home.ratingsCount} avis)',
+                        ? l10n.noRatingYetLabel
+                        : l10n.ratingOutOfFive(
+                            home.averageRating!.toStringAsFixed(1),
+                            home.ratingsCount,
+                          ),
                   ),
                 ],
               ),
@@ -173,7 +177,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
             Center(
               child: TextButton(
                 onPressed: _openPrivacyPolicy,
-                child: const Text('Politique de confidentialité'),
+                child: Text(l10n.privacyPolicyButton),
               ),
             ),
             TextButton.icon(
@@ -185,7 +189,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.delete_outline_rounded, size: 18),
-              label: const Text('Supprimer mon compte'),
+              label: Text(l10n.deleteMyAccountButton),
               style: TextButton.styleFrom(foregroundColor: Colors.red),
             ),
           ],
@@ -213,6 +217,7 @@ class _VerificationStatusCard extends StatelessWidget {
   final Future<void> Function() onResubmitFromCamera;
 
   Future<void> _showSourceSheet(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     await showModalBottomSheet<void>(
       context: context,
       builder: (sheetContext) => SafeArea(
@@ -222,7 +227,7 @@ class _VerificationStatusCard extends StatelessWidget {
             if (idCardCameraSupported)
               ListTile(
                 leading: const Icon(Icons.photo_camera_outlined),
-                title: const Text('Prendre une photo'),
+                title: Text(l10n.takePhotoLabel),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   onResubmitFromCamera();
@@ -230,7 +235,7 @@ class _VerificationStatusCard extends StatelessWidget {
               ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choisir depuis la galerie'),
+              title: Text(l10n.chooseFromGalleryLabel),
               onTap: () {
                 Navigator.of(sheetContext).pop();
                 onResubmitFromGallery();
@@ -244,6 +249,7 @@ class _VerificationStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Rejected takes priority over "verified" being stale from before a
     // resubmission — isActive: false is the one state that needs the user
     // to actually do something.
@@ -254,24 +260,22 @@ class _VerificationStatusCard extends StatelessWidget {
         const Color(0xFFE0F2E9),
         const Color(0xFF1B8A3B),
         Icons.verified_rounded,
-        'Identité vérifiée',
-        'Votre pièce d\'identité a été validée.',
+        l10n.identityVerifiedTitle,
+        l10n.identityVerifiedMessage,
       ),
       _ when rejected => (
         const Color(0xFFFDE8E8),
         const Color(0xFFC62828),
         Icons.cancel_rounded,
-        'Demande rejetée',
-        'Votre demande a été rejetée, possiblement à cause d\'informations '
-            'incorrectes (photo illisible, document invalide...). Vous '
-            'pouvez soumettre une nouvelle pièce d\'identité.',
+        l10n.requestRejectedTitle,
+        l10n.requestRejectedMessage,
       ),
       _ => (
         const Color(0xFFFFF3CD),
         const Color(0xFF7A5B00),
         Icons.pending_rounded,
-        'En attente de vérification',
-        'Votre pièce d\'identité est en cours d\'examen par notre équipe.',
+        l10n.pendingVerificationTitle,
+        l10n.pendingVerificationMessage,
       ),
     };
 
@@ -308,7 +312,7 @@ class _VerificationStatusCard extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.upload_rounded, size: 18),
-                label: const Text('Soumettre une nouvelle pièce d\'identité'),
+                label: Text(l10n.resubmitIdCardButton),
                 style: OutlinedButton.styleFrom(foregroundColor: fg),
               ),
             ),

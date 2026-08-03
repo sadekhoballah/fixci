@@ -179,5 +179,21 @@
   "upgradeForVisibilityMessage": "Upgrade to a paid plan for more visibility",
   "ratingsCountLabel": "({count} reviews)",
   "avgResponseLabel": "Avg response: {response}",
-  "noDataYetLabel": "No data yet"
+  "noDataYetLabel": "No data yet",
+  "deleteAccountConfirmTitle": "Delete your account?",
+  "deleteAccountConfirmContent": "This action is irreversible. Your personal data (name, ID photo, location) will be deleted. Your job history and reviews remain visible to the clients involved, without identifying you.\n\nYou must finish or cancel any ongoing job before continuing.",
+  "deletePermanentlyButton": "Delete permanently",
+  "deleteAccountFailedMessage": "Failed to delete the account.",
+  "tierWithDaysRemaining": "{tier} · {days} days remaining",
+  "noRatingYetLabel": "No rating yet",
+  "ratingOutOfFive": "{rating} / 5 ({count} reviews)",
+  "privacyPolicyButton": "Privacy Policy",
+  "deleteMyAccountButton": "Delete my account",
+  "identityVerifiedTitle": "Identity verified",
+  "identityVerifiedMessage": "Your ID document has been validated.",
+  "requestRejectedTitle": "Request rejected",
+  "requestRejectedMessage": "Your request was rejected, possibly due to incorrect information (unreadable photo, invalid document...). You can submit a new ID document.",
+  "pendingVerificationTitle": "Awaiting verification",
+  "pendingVerificationMessage": "Your ID document is being reviewed by our team.",
+  "resubmitIdCardButton": "Submit a new ID document"
 }

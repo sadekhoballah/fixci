@@ -179,5 +179,21 @@
   "upgradeForVisibilityMessage": "Перейдите на платный тариф для большей видимости",
   "ratingsCountLabel": "({count} отзывов)",
   "avgResponseLabel": "Ср. время ответа: {response}",
-  "noDataYetLabel": "Пока нет данных"
+  "noDataYetLabel": "Пока нет данных",
+  "deleteAccountConfirmTitle": "Удалить ваш аккаунт?",
+  "deleteAccountConfirmContent": "Это действие необратимо. Ваши личные данные (имя, фото документа, местоположение) будут удалены. История ваших заказов и отзывы останутся видимыми для соответствующих клиентов, без указания вашей личности.\n\nПрежде чем продолжить, вы должны завершить или отменить все текущие заказы.",
+  "deletePermanentlyButton": "Удалить навсегда",
+  "deleteAccountFailedMessage": "Не удалось удалить аккаунт.",
+  "tierWithDaysRemaining": "{tier} · {days} дн. осталось",
+  "noRatingYetLabel": "Пока нет оценки",
+  "ratingOutOfFive": "{rating} / 5 ({count} отзывов)",
+  "privacyPolicyButton": "Политика конфиденциальности",
+  "deleteMyAccountButton": "Удалить мой аккаунт",
+  "identityVerifiedTitle": "Личность подтверждена",
+  "identityVerifiedMessage": "Ваш документ был проверен.",
+  "requestRejectedTitle": "Заявка отклонена",
+  "requestRejectedMessage": "Ваша заявка была отклонена, возможно, из-за неверной информации (нечитаемое фото, недействительный документ...). Вы можете отправить новый документ.",
+  "pendingVerificationTitle": "Ожидает проверки",
+  "pendingVerificationMessage": "Ваш документ проверяется нашей командой.",
+  "resubmitIdCardButton": "Отправить новый документ"
 }

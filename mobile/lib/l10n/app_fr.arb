@@ -302,5 +302,33 @@
       "response": { "type": "String" }
     }
   },
-  "noDataYetLabel": "Pas encore de données"
+  "noDataYetLabel": "Pas encore de données",
+  "deleteAccountConfirmTitle": "Supprimer votre compte ?",
+  "deleteAccountConfirmContent": "Cette action est irréversible. Vos données personnelles (nom, photo de pièce d'identité, localisation) seront supprimées. Votre historique de missions et vos avis restent visibles pour les clients concernés, sans vous identifier.\n\nVous devez terminer ou annuler toute mission en cours avant de continuer.",
+  "deletePermanentlyButton": "Supprimer définitivement",
+  "deleteAccountFailedMessage": "Échec de la suppression du compte.",
+  "tierWithDaysRemaining": "{tier} · {days} jours restants",
+  "@tierWithDaysRemaining": {
+    "placeholders": {
+      "tier": { "type": "String" },
+      "days": { "type": "int" }
+    }
+  },
+  "noRatingYetLabel": "Pas encore de note",
+  "ratingOutOfFive": "{rating} / 5 ({count} avis)",
+  "@ratingOutOfFive": {
+    "placeholders": {
+      "rating": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "privacyPolicyButton": "Politique de confidentialité",
+  "deleteMyAccountButton": "Supprimer mon compte",
+  "identityVerifiedTitle": "Identité vérifiée",
+  "identityVerifiedMessage": "Votre pièce d'identité a été validée.",
+  "requestRejectedTitle": "Demande rejetée",
+  "requestRejectedMessage": "Votre demande a été rejetée, possiblement à cause d'informations incorrectes (photo illisible, document invalide...). Vous pouvez soumettre une nouvelle pièce d'identité.",
+  "pendingVerificationTitle": "En attente de vérification",
+  "pendingVerificationMessage": "Votre pièce d'identité est en cours d'examen par notre équipe.",
+  "resubmitIdCardButton": "Soumettre une nouvelle pièce d'identité"
 }
