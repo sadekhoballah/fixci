@@ -59,7 +59,6 @@ dependencies:
   # follow semver across minor versions, so anything looser risks a solver
   # conflict on the next `flutter upgrade`.
   intl: 0.20.2
-  sentry_flutter: ^8.14.2
 
 dev_dependencies:
   flutter_test:
