@@ -70,8 +70,8 @@ export class BroadcastService {
           const response = await messaging.sendEachForMulticast({
             tokens: batch,
             notification: { title: dto.title, body: dto.body },
-            android: { priority: 'high' },
-            apns: { payload: { aps: { sound: 'default' } } },
+            android: { priority: 'high', notification: { channelId: 'job_updates_v2' } },
+            apns: { payload: { aps: { sound: 'job_notification.caf' } } },
           });
           successCount += response.successCount;
           failureCount += response.failureCount;

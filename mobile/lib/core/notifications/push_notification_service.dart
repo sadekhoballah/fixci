@@ -17,11 +17,17 @@ import '../../features/craftsman_home/screens/artisan_shell_screen.dart';
 // Matches AndroidManifest.xml's default_notification_channel_id — must stay
 // in sync, since a mismatch means Android silently drops the channel
 // customization (falls back to a generic "Miscellaneous" one).
+//
+// Channel id carries a _v2 suffix because Android notification channels are
+// immutable once created — bumping the sound on the old fixci_default_channel
+// would silently no-op for anyone who already has the app installed. Bump
+// the suffix again any time the sound changes.
 const _androidChannel = AndroidNotificationChannel(
-  'fixci_default_channel',
+  'job_updates_v2',
   'Notifications FixCi',
   description: 'Suivi de vos demandes et missions',
   importance: Importance.high,
+  sound: RawResourceAndroidNotificationSound('job_notification'),
 );
 
 // The fallback delivery path for matching events (request:new,
@@ -124,7 +130,10 @@ class PushNotificationService {
           importance: Importance.high,
           priority: Priority.high,
         ),
-        iOS: const DarwinNotificationDetails(),
+        iOS: const DarwinNotificationDetails(
+          sound: 'job_notification.caf',
+          presentSound: true,
+        ),
       ),
       payload: jsonEncode(message.data),
     );
