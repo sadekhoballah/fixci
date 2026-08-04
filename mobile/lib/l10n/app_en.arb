@@ -51,6 +51,8 @@
   "priceCfaPerMonth": "{price} CFA / month",
   "priceUsdPerMonth": "{price} $ / month",
   "freeLabel": "Free",
+  "amountToDeductLabel": "Amount to be charged",
+  "paymentPhoneNumberLabel": "From number: {phone}",
   "wavePaymentTitle": "Wave Payment",
   "whishPaymentTitle": "Whish Payment",
   "tierPlanLabel": "{tierName} Plan",

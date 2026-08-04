@@ -112,6 +112,13 @@
     }
   },
   "freeLabel": "Gratuit",
+  "amountToDeductLabel": "Montant à débiter",
+  "paymentPhoneNumberLabel": "Depuis le numéro : {phone}",
+  "@paymentPhoneNumberLabel": {
+    "placeholders": {
+      "phone": { "type": "String" }
+    }
+  },
   "wavePaymentTitle": "Paiement Wave",
   "whishPaymentTitle": "Paiement Whish",
   "tierPlanLabel": "Formule {tierName}",

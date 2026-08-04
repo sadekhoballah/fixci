@@ -71,4 +71,9 @@ enum PaymentProvider {
 
   static PaymentProvider forCountry(String countryCode) =>
       countryCode == 'LB' ? PaymentProvider.whish : PaymentProvider.wave;
+
+  String get logoAssetPath => switch (this) {
+    PaymentProvider.wave => 'assets/payment_providers/wave_logo.jpg',
+    PaymentProvider.whish => 'assets/payment_providers/whish_logo.jpg',
+  };
 }

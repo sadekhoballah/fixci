@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/auth/session_storage.dart';
 import '../../../core/models/subscription_tier.dart';
 import '../../../core/network/api_client.dart';
 import '../../../l10n/app_localizations.dart';
@@ -52,6 +53,7 @@ class _PaymentCheckoutScreenState
   _CheckoutStatus _status = _CheckoutStatus.requesting;
   String? _reference;
   String? _errorMessage;
+  String? _phone;
   Timer? _pollTimer;
   int _pollAttempts = 0;
   bool _isChecking = false;
@@ -63,6 +65,13 @@ class _PaymentCheckoutScreenState
   void initState() {
     super.initState();
     _startPayment();
+    // Saved by OnboardingController.submitRegistration/completeAfterVerification
+    // (onboarding flow) or already present from a previous session (change-plan
+    // flow) — either way it's in SessionStorage by the time this screen can
+    // ever be reached, so a plain load (no fallback) is enough here.
+    ref.read(sessionStorageProvider).loadPhone().then((phone) {
+      if (mounted) setState(() => _phone = phone);
+    });
   }
 
   @override
@@ -203,23 +212,69 @@ class _PaymentCheckoutScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                l10n.tierPlanLabel(widget.tier.localizedLabel(l10n)),
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
+              Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.asset(
+                      _provider.logoAssetPath,
+                      width: 48,
+                      height: 48,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      l10n.tierPlanLabel(widget.tier.localizedLabel(l10n)),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.amountToDeductLabel,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.tier.priceLabel(l10n, widget.countryCode),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                    if (_phone != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.paymentPhoneNumberLabel(_phone!),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                widget.tier.priceLabel(l10n, widget.countryCode),
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.primary,
-                ),
-              ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(

@@ -51,6 +51,8 @@
   "priceCfaPerMonth": "{price} CFA / месяц",
   "priceUsdPerMonth": "{price} $ / месяц",
   "freeLabel": "Бесплатно",
+  "amountToDeductLabel": "Сумма к списанию",
+  "paymentPhoneNumberLabel": "С номера: {phone}",
   "wavePaymentTitle": "Оплата Wave",
   "whishPaymentTitle": "Оплата Whish",
   "tierPlanLabel": "Тариф {tierName}",

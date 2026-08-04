@@ -51,6 +51,8 @@
   "priceCfaPerMonth": "{price} CFA شهريًا",
   "priceUsdPerMonth": "{price} $ شهريًا",
   "freeLabel": "مجاني",
+  "amountToDeductLabel": "المبلغ الذي سيتم خصمه",
+  "paymentPhoneNumberLabel": "من الرقم: {phone}",
   "wavePaymentTitle": "الدفع عبر Wave",
   "whishPaymentTitle": "الدفع عبر Whish",
   "tierPlanLabel": "باقة {tierName}",
