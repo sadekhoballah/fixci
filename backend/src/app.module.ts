@@ -3,7 +3,6 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { SentryModule } from '@sentry/nestjs/setup';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { appDataSourceOptions } from './config/data-source';
@@ -26,9 +25,6 @@ import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
-    // Must be the first module registered — it installs the interceptor
-    // that ties Nest's request context into Sentry's error/trace capture.
-    SentryModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRoot(appDataSourceOptions),
     ThrottlerModule.forRoot({
