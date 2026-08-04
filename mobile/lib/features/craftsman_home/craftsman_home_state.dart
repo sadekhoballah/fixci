@@ -32,6 +32,7 @@ class CraftsmanHomeState {
     this.idVerified = false,
     this.isActive = true,
     this.isResubmittingIdCard = false,
+    this.countryCode = 'CI',
   });
 
   final bool isLoading;
@@ -51,6 +52,9 @@ class CraftsmanHomeState {
   // False only ever means an admin rejected this account.
   final bool isActive;
   final bool isResubmittingIdCard;
+  // Drives which subscription currency/provider TierSelectionScreen shows
+  // when changing plans from the Account tab (see PaymentProvider.forCountry).
+  final String countryCode;
 
   bool get hasLocationAccess =>
       locationServiceEnabled &&
@@ -75,6 +79,7 @@ class CraftsmanHomeState {
     bool? idVerified,
     bool? isActive,
     bool? isResubmittingIdCard,
+    String? countryCode,
   }) {
     return CraftsmanHomeState(
       isLoading: isLoading ?? this.isLoading,
@@ -96,6 +101,7 @@ class CraftsmanHomeState {
       isActive: isActive ?? this.isActive,
       isResubmittingIdCard:
           isResubmittingIdCard ?? this.isResubmittingIdCard,
+      countryCode: countryCode ?? this.countryCode,
     );
   }
 }

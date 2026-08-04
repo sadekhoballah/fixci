@@ -53,6 +53,7 @@ class CraftsmanHomeController extends Notifier<CraftsmanHomeState> {
         serviceCategory: me.serviceCategory,
         idVerified: me.idVerified,
         isActive: me.isActive,
+        countryCode: me.countryCode,
       );
       // Being reachable for new jobs shouldn't require a separate manual
       // step on top of granting location — attempt to go online from GPS

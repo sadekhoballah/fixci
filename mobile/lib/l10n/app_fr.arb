@@ -105,8 +105,15 @@
       "price": { "type": "int" }
     }
   },
+  "priceUsdPerMonth": "{price} $ / mois",
+  "@priceUsdPerMonth": {
+    "placeholders": {
+      "price": { "type": "int" }
+    }
+  },
   "freeLabel": "Gratuit",
   "wavePaymentTitle": "Paiement Wave",
+  "whishPaymentTitle": "Paiement Whish",
   "tierPlanLabel": "Formule {tierName}",
   "@tierPlanLabel": {
     "placeholders": {
@@ -114,8 +121,15 @@
     }
   },
   "wavePaymentInstructions": "Ouvrez l'application Wave et envoyez le montant ci-dessus. Votre abonnement sera activé automatiquement dès que le paiement est confirmé.",
+  "whishPaymentInstructions": "Ouvrez l'application Whish et envoyez le montant ci-dessus. Votre abonnement sera activé automatiquement dès que le paiement est confirmé.",
   "wavePaymentReference": "Référence : {reference}",
   "@wavePaymentReference": {
+    "placeholders": {
+      "reference": { "type": "String" }
+    }
+  },
+  "whishPaymentReference": "Référence : {reference}",
+  "@whishPaymentReference": {
     "placeholders": {
       "reference": { "type": "String" }
     }
@@ -125,6 +139,7 @@
   "paymentFailedError": "Le paiement a échoué.",
   "preparingPaymentStatus": "Préparation du paiement...",
   "awaitingWaveConfirmationStatus": "En attente de confirmation Wave...",
+  "awaitingWhishConfirmationStatus": "En attente de confirmation Whish...",
   "paymentConfirmedStatus": "Paiement confirmé, activation en cours...",
   "genericErrorMessage": "Une erreur est survenue.",
   "homeTab": "Accueil",

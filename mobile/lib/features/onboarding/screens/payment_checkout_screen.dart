@@ -13,19 +13,24 @@ import '../onboarding_repository.dart';
 
 enum _CheckoutStatus { requesting, pending, success, failed }
 
-// The artisan pays via the Wave app outside FixCi (no card entry, no receipt
-// upload), and this screen only finds out it's done by polling the backend,
-// which itself only knows once Wave's webhook confirms it — so there's
-// nothing here for the user to lie to. Until real Wave API access exists,
-// the backend's StubWaveClient simulates that webhook after a short delay.
-class WavePaymentCheckoutScreen extends ConsumerStatefulWidget {
-  const WavePaymentCheckoutScreen({
+// The artisan pays via the Wave/Whish app outside FixCi (no card entry, no
+// receipt upload), and this screen only finds out it's done by polling the
+// backend, which itself only knows once the provider's webhook confirms it —
+// so there's nothing here for the user to lie to. Until real provider API
+// access exists, the backend's stub clients simulate that webhook after a
+// short delay.
+class PaymentCheckoutScreen extends ConsumerStatefulWidget {
+  const PaymentCheckoutScreen({
     super.key,
     required this.tier,
+    required this.countryCode,
     this.isChangingPlan = false,
   });
 
   final SubscriptionTier tier;
+  // Picks both the provider (Wave vs Whish) and the price/currency shown —
+  // see PaymentProvider.forCountry and SubscriptionTier.priceLabel.
+  final String countryCode;
   // True when this checkout was reached from the Account tab to change an
   // already-active plan — on success this pops back to the shell (refreshing
   // the craftsman's profile) instead of resetting the nav stack to it, since
@@ -33,23 +38,26 @@ class WavePaymentCheckoutScreen extends ConsumerStatefulWidget {
   final bool isChangingPlan;
 
   @override
-  ConsumerState<WavePaymentCheckoutScreen> createState() =>
-      _WavePaymentCheckoutScreenState();
+  ConsumerState<PaymentCheckoutScreen> createState() =>
+      _PaymentCheckoutScreenState();
 }
 
 // Polling stops (with an error shown) after this many ticks so a lost
-// payment record or a Wave charge that's abandoned mid-flow doesn't leave
-// the user staring at "waiting for confirmation" forever.
+// payment record or a charge that's abandoned mid-flow doesn't leave the
+// user staring at "waiting for confirmation" forever.
 const _maxPollAttempts = 30; // ~60s at the 2s poll interval below
 
-class _WavePaymentCheckoutScreenState
-    extends ConsumerState<WavePaymentCheckoutScreen> {
+class _PaymentCheckoutScreenState
+    extends ConsumerState<PaymentCheckoutScreen> {
   _CheckoutStatus _status = _CheckoutStatus.requesting;
   String? _reference;
   String? _errorMessage;
   Timer? _pollTimer;
   int _pollAttempts = 0;
   bool _isChecking = false;
+
+  PaymentProvider get _provider =>
+      PaymentProvider.forCountry(widget.countryCode);
 
   @override
   void initState() {
@@ -173,8 +181,22 @@ class _WavePaymentCheckoutScreenState
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final reference = _reference;
+    final title = switch (_provider) {
+      PaymentProvider.wave => l10n.wavePaymentTitle,
+      PaymentProvider.whish => l10n.whishPaymentTitle,
+    };
+    final instructions = switch (_provider) {
+      PaymentProvider.wave => l10n.wavePaymentInstructions,
+      PaymentProvider.whish => l10n.whishPaymentInstructions,
+    };
+    final referenceLine = reference == null
+        ? null
+        : switch (_provider) {
+            PaymentProvider.wave => l10n.wavePaymentReference(reference),
+            PaymentProvider.whish => l10n.whishPaymentReference(reference),
+          };
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.wavePaymentTitle)),
+      appBar: AppBar(title: Text(title)),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -190,7 +212,7 @@ class _WavePaymentCheckoutScreenState
               ),
               const SizedBox(height: 8),
               Text(
-                l10n.priceCfaPerMonth(widget.tier.priceCfa),
+                widget.tier.priceLabel(l10n, widget.countryCode),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -205,12 +227,16 @@ class _WavePaymentCheckoutScreenState
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${l10n.wavePaymentInstructions}'
-                  '${reference != null ? '\n\n${l10n.wavePaymentReference(reference)}' : ''}',
+                  '$instructions'
+                  '${referenceLine != null ? '\n\n$referenceLine' : ''}',
                 ),
               ),
               const Spacer(),
-              _StatusPanel(status: _status, errorMessage: _errorMessage),
+              _StatusPanel(
+                status: _status,
+                errorMessage: _errorMessage,
+                provider: _provider,
+              ),
               const SizedBox(height: 16),
               if (_status == _CheckoutStatus.failed)
                 PrimaryButton(
@@ -226,10 +252,15 @@ class _WavePaymentCheckoutScreenState
 }
 
 class _StatusPanel extends StatelessWidget {
-  const _StatusPanel({required this.status, required this.errorMessage});
+  const _StatusPanel({
+    required this.status,
+    required this.errorMessage,
+    required this.provider,
+  });
 
   final _CheckoutStatus status;
   final String? errorMessage;
+  final PaymentProvider provider;
 
   @override
   Widget build(BuildContext context) {
@@ -237,6 +268,10 @@ class _StatusPanel extends StatelessWidget {
     switch (status) {
       case _CheckoutStatus.requesting:
       case _CheckoutStatus.pending:
+        final awaitingConfirmationStatus = switch (provider) {
+          PaymentProvider.wave => l10n.awaitingWaveConfirmationStatus,
+          PaymentProvider.whish => l10n.awaitingWhishConfirmationStatus,
+        };
         return Row(
           children: [
             const SizedBox(
@@ -248,7 +283,7 @@ class _StatusPanel extends StatelessWidget {
             Text(
               status == _CheckoutStatus.requesting
                   ? l10n.preparingPaymentStatus
-                  : l10n.awaitingWaveConfirmationStatus,
+                  : awaitingConfirmationStatus,
             ),
           ],
         );

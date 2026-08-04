@@ -103,6 +103,7 @@ class _FakeApiClient extends ApiClient {
         'serviceCategory': 'electrician',
         'idVerified': true,
         'isActive': true,
+        'countryCode': 'CI',
       };
     }
     if (path == '/craftsmen/me/stats') {

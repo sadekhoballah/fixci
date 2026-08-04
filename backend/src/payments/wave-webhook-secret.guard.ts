@@ -8,7 +8,7 @@ import {
 import { Request } from 'express';
 
 // Wave's real webhook signature scheme isn't known yet (no Developers tab
-// access on the business account — see wave-webhook.dto.ts), so this is a
+// access on the business account — see payment-webhook.dto.ts), so this is a
 // stand-in: a shared secret both this server and StubWaveClient's simulated
 // callback know. Swap this guard's check for real signature verification
 // once Wave's actual webhook contract is available — nothing else about the

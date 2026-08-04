@@ -17,6 +17,7 @@ class CraftsmanMe {
     required this.serviceCategory,
     required this.idVerified,
     required this.isActive,
+    required this.countryCode,
   });
 
   final String? fullName;
@@ -28,6 +29,7 @@ class CraftsmanMe {
   final ServiceCategory serviceCategory;
   final bool idVerified;
   final bool isActive;
+  final String countryCode;
 }
 
 class CraftsmanHomeRepository {
@@ -47,6 +49,7 @@ class CraftsmanHomeRepository {
       serviceCategory: _parseCategory(response['serviceCategory'] as String),
       idVerified: response['idVerified'] as bool,
       isActive: response['isActive'] as bool,
+      countryCode: response['countryCode'] as String,
     );
   }
 

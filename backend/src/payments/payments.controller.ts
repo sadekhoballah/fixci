@@ -3,11 +3,12 @@ import { Throttle } from '@nestjs/throttler';
 import { PaymentsService } from './payments.service';
 import { SubscribeDto } from './dto/subscribe.dto';
 import { GetPaymentStatusDto } from './dto/get-payment-status.dto';
-import { WaveWebhookDto } from './dto/wave-webhook.dto';
+import { PaymentWebhookDto } from './dto/payment-webhook.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth-request';
 import { WaveWebhookSecretGuard } from './wave-webhook-secret.guard';
+import { WhishWebhookSecretGuard } from './whish-webhook-secret.guard';
 
 @Controller('payments')
 export class PaymentsController {
@@ -36,7 +37,16 @@ export class PaymentsController {
   @Post('wave/webhook')
   @UseGuards(WaveWebhookSecretGuard)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
-  handleWaveWebhook(@Body() dto: WaveWebhookDto) {
-    return this.paymentsService.handleWaveWebhook(dto);
+  handleWaveWebhook(@Body() dto: PaymentWebhookDto) {
+    return this.paymentsService.handlePaymentWebhook(dto);
+  }
+
+  // Same idea as wave/webhook above, for Lebanon's provider — see
+  // StubWhishClient's log line for the equivalent curl command.
+  @Post('whish/webhook')
+  @UseGuards(WhishWebhookSecretGuard)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  handleWhishWebhook(@Body() dto: PaymentWebhookDto) {
+    return this.paymentsService.handlePaymentWebhook(dto);
   }
 }

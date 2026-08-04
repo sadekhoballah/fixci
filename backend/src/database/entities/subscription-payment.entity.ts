@@ -8,7 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from './user.entity';
-import { SubscriptionTier } from '../enums/subscription-tier.enum';
+import { Currency, SubscriptionTier } from '../enums/subscription-tier.enum';
 import { PaymentStatus } from '../enums/payment-status.enum';
 
 // One row per subscription-purchase attempt, independent of whether the
@@ -34,8 +34,11 @@ export class SubscriptionPayment {
   })
   tier: SubscriptionTier;
 
-  @Column({ name: 'amount_cfa', type: 'integer' })
-  amountCfa: number;
+  @Column({ type: 'integer' })
+  amount: number;
+
+  @Column({ type: 'varchar', length: 3, default: Currency.CFA })
+  currency: Currency;
 
   // Snapshotted at request time rather than joined from the user, so a
   // payment record still reflects what was actually charged even if the

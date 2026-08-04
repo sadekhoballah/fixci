@@ -55,7 +55,7 @@ class OnboardingState {
   final bool registrationSucceeded;
   // Set once the artisan picks a plan on TierSelectionScreen; persisted via
   // OnboardingController.confirmActiveTier() once it's actually active (free
-  // tiers immediately, paid tiers after WavePaymentCheckoutScreen).
+  // tiers immediately, paid tiers after PaymentCheckoutScreen).
   final SubscriptionTier? selectedTier;
   // True when the phone entered during "registration" turned out to already
   // have an account (GET /users/lookup found it) — the app logged the user

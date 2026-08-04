@@ -12,14 +12,17 @@ import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity'
 import { SubscriptionPayment } from '../database/entities/subscription-payment.entity';
 import { UserRole } from '../database/enums/user-role.enum';
 import {
-  SUBSCRIPTION_TIER_PRICE_CFA,
+  Currency,
+  getSubscriptionPrice,
   SubscriptionTier,
 } from '../database/enums/subscription-tier.enum';
 import { PaymentStatus } from '../database/enums/payment-status.enum';
 import { SubscribeDto } from './dto/subscribe.dto';
-import { WaveWebhookDto } from './dto/wave-webhook.dto';
+import { PaymentWebhookDto } from './dto/payment-webhook.dto';
 import { WAVE_CLIENT } from './wave/wave-client';
 import type { WaveClient } from './wave/wave-client';
+import { WHISH_CLIENT } from './whish/whish-client';
+import type { WhishClient } from './whish/whish-client';
 import { AuthenticatedUser } from '../auth/auth-request';
 
 const SUBSCRIPTION_DURATION_DAYS = 30;
@@ -33,6 +36,7 @@ export class PaymentsService {
     @InjectRepository(SubscriptionPayment)
     private readonly paymentRepository: Repository<SubscriptionPayment>,
     @Inject(WAVE_CLIENT) private readonly waveClient: WaveClient,
+    @Inject(WHISH_CLIENT) private readonly whishClient: WhishClient,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -50,19 +54,36 @@ export class PaymentsService {
       throw new NotFoundException('No craftsman account for this user');
     }
 
+    const user = await this.userRepository.findOne({
+      where: { id: caller.id },
+      relations: { district: true },
+    });
+    if (!user) {
+      throw new NotFoundException('No craftsman account for this user');
+    }
+
+    const { amount, currency } = getSubscriptionPrice(
+      dto.tier,
+      user.district.countryCode,
+    );
+
     const payment = await this.paymentRepository.save(
       this.paymentRepository.create({
         userId: caller.id,
         tier: dto.tier,
-        amountCfa: SUBSCRIPTION_TIER_PRICE_CFA[dto.tier],
+        amount,
+        currency,
         phone: caller.phone,
         reference: `FIXPRO-${randomUUID().slice(0, 8).toUpperCase()}`,
       }),
     );
 
-    const { providerRef } = await this.waveClient.requestCharge({
+    const client =
+      currency === Currency.USD ? this.whishClient : this.waveClient;
+    const { providerRef } = await client.requestCharge({
       phone: payment.phone,
-      amountCfa: payment.amountCfa,
+      amount: payment.amount,
+      currency: payment.currency,
       reference: payment.reference,
     });
     if (providerRef) {
@@ -96,15 +117,18 @@ export class PaymentsService {
     };
   }
 
-  // Idempotent by design: Wave (or a test curl) may call this more than
-  // once for the same reference, and a payment that's already resolved
+  // Idempotent by design: a provider (or a test curl) may call this more
+  // than once for the same reference, and a payment that's already resolved
   // should just no-op rather than re-activate/re-extend the subscription.
   // The status flip is a single atomic UPDATE ... WHERE status = 'pending'
   // (same compare-and-swap pattern as MatchingService.tryAssign) so two
   // concurrent redeliveries for the same reference can't both slip past the
   // "still pending" check and double-apply the subscription extension.
-  async handleWaveWebhook(
-    dto: WaveWebhookDto,
+  // Shared by both /payments/wave/webhook and /payments/whish/webhook — the
+  // reference alone identifies which payment (and provider) resolved, so
+  // there's nothing provider-specific left to branch on here.
+  async handlePaymentWebhook(
+    dto: PaymentWebhookDto,
   ): Promise<{ status: PaymentStatus }> {
     const resolvedStatus =
       dto.status === 'success' ? PaymentStatus.SUCCESS : PaymentStatus.FAILED;

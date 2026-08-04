@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/subscription_tier.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../craftsman_home/craftsman_home_controller.dart';
 import '../../craftsman_home/screens/artisan_shell_screen.dart';
 import '../onboarding_controller.dart';
-import 'wave_payment_checkout_screen.dart';
+import 'payment_checkout_screen.dart';
 
 class TierSelectionScreen extends ConsumerStatefulWidget {
   const TierSelectionScreen({super.key, this.isChangingPlan = false});
@@ -29,7 +30,15 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
       ? SubscriptionTier.values.where((tier) => tier.isPaid).toList()
       : SubscriptionTier.values;
 
-  Future<void> _continue() async {
+  // During onboarding the country comes from the phone field the craftsman
+  // just filled in; when changing an already-active plan there's no
+  // onboarding state, so it comes from their registered account instead
+  // (see CraftsmanHomeState.countryCode, populated from GET /craftsmen/me).
+  String _countryCode(WidgetRef ref) => widget.isChangingPlan
+      ? ref.watch(craftsmanHomeControllerProvider).countryCode
+      : ref.watch(onboardingControllerProvider).phoneCountryCode;
+
+  Future<void> _continue(String countryCode) async {
     final tier = _selected;
     if (tier == null || _continuing) return;
 
@@ -49,8 +58,9 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
 
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => WavePaymentCheckoutScreen(
+        builder: (_) => PaymentCheckoutScreen(
           tier: tier,
+          countryCode: countryCode,
           isChangingPlan: widget.isChangingPlan,
         ),
       ),
@@ -60,6 +70,7 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final countryCode = _countryCode(ref);
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -98,6 +109,7 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
                     final tier = _availableTiers[index];
                     return _TierOption(
                       tier: tier,
+                      countryCode: countryCode,
                       selected: _selected == tier,
                       onTap: () => setState(() => _selected = tier),
                     );
@@ -109,7 +121,7 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
                 label: _continuing ? l10n.loadingButton : l10n.continueButton,
                 onPressed: (_selected == null || _continuing)
                     ? null
-                    : _continue,
+                    : () => _continue(countryCode),
               ),
             ],
           ),
@@ -122,11 +134,13 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
 class _TierOption extends StatelessWidget {
   const _TierOption({
     required this.tier,
+    required this.countryCode,
     required this.selected,
     required this.onTap,
   });
 
   final SubscriptionTier tier;
+  final String countryCode;
   final bool selected;
   final VoidCallback onTap;
 
@@ -166,7 +180,7 @@ class _TierOption extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     tier.isPaid
-                        ? l10n.priceCfaPerMonth(tier.priceCfa)
+                        ? tier.priceLabel(l10n, countryCode)
                         : l10n.freeLabel,
                     style: TextStyle(
                       fontSize: 14,

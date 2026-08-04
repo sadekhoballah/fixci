@@ -28,6 +28,11 @@ export interface CraftsmanMe {
   // False only ever means "an admin rejected this account" (see
   // AdminService.deactivateCraftsman) — every account starts true.
   isActive: boolean;
+  // The craftsman's district's country — lets the mobile app pick the right
+  // subscription currency/provider when changing plans from the Account tab
+  // (see PaymentsService.subscribe, which independently re-derives this
+  // server-side rather than trusting anything the client sends).
+  countryCode: string;
 }
 
 export interface CraftsmanStats {
@@ -113,6 +118,7 @@ export class CraftsmenService {
       serviceCategory: profile.serviceCategory,
       idVerified: profile.idVerified,
       isActive: profile.isActive,
+      countryCode: user.district.countryCode,
     };
   }
 
@@ -287,7 +293,10 @@ export class CraftsmenService {
   private async findCraftsmanByUserId(
     userId: string,
   ): Promise<{ user: User; profile: CraftsmanProfile }> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: { district: true },
+    });
     if (!user || user.role !== UserRole.CRAFTSMAN) {
       throw new NotFoundException('No craftsman account for this user');
     }
