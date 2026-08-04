@@ -148,8 +148,10 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   ),
                   items: ServiceCategory.values
                       .map(
-                        (c) =>
-                            DropdownMenuItem(value: c, child: Text(c.label)),
+                        (c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(c.localizedLabel(l10n)),
+                        ),
                       )
                       .toList(),
                   onChanged: (value) {
