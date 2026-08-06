@@ -35,14 +35,23 @@ class OtpController extends Notifier<OtpState> {
             onFailed: (error) {
               state = state.copyWith(
                 isSendingCode: false,
-                codeSendError: error.error.localizedMessage(l10n),
+                // TEMP DIAGNOSTIC: appends the raw Firebase code/message so
+                // it's visible on screen. Remove with debugDetail once the
+                // phone-auth root cause is found.
+                codeSendError: _withDebugDetail(
+                  error.error.localizedMessage(l10n),
+                  error.debugDetail,
+                ),
               );
             },
           );
     } on PhoneVerificationException catch (e) {
       state = state.copyWith(
         isSendingCode: false,
-        codeSendError: e.error.localizedMessage(l10n),
+        codeSendError: _withDebugDetail(
+          e.error.localizedMessage(l10n),
+          e.debugDetail,
+        ),
       );
     } catch (_) {
       state = state.copyWith(
@@ -70,7 +79,10 @@ class OtpController extends Notifier<OtpState> {
     } on PhoneVerificationException catch (e) {
       state = state.copyWith(
         isVerifyingCode: false,
-        codeVerifyError: e.error.localizedMessage(l10n),
+        codeVerifyError: _withDebugDetail(
+          e.error.localizedMessage(l10n),
+          e.debugDetail,
+        ),
       );
       return false;
     } catch (_) {
@@ -86,3 +98,11 @@ class OtpController extends Notifier<OtpState> {
 final otpControllerProvider = NotifierProvider<OtpController, OtpState>(
   OtpController.new,
 );
+
+// TEMP DIAGNOSTIC: appends the raw Firebase code/message to the localized
+// error text so it's visible on screen. Remove once the phone-auth root
+// cause is found (see PhoneVerificationException.debugDetail).
+String _withDebugDetail(String message, String? debugDetail) {
+  if (debugDetail == null) return message;
+  return '$message\n$debugDetail';
+}

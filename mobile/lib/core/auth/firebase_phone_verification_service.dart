@@ -1,6 +1,22 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import '../platform/firebase_support.dart';
 import 'phone_verification_service.dart';
+
+// TEMP DIAGNOSTIC: logs the exact FirebaseAuthException and builds the
+// PhoneVerificationException that carries it through to the UI. Remove once
+// the phone-auth root cause is found (see debugDetail in
+// phone_verification_service.dart).
+PhoneVerificationException _diagnosticException(FirebaseAuthException e) {
+  debugPrint(
+    'FIREBASE_PHONE_AUTH_ERROR code=${e.code} message=${e.message}\n'
+    'stackTrace=${e.stackTrace}',
+  );
+  return PhoneVerificationException(
+    _errorForCode(e.code),
+    debugDetail: '[${e.code}] ${e.message}',
+  );
+}
 
 PhoneVerificationError _errorForCode(String code) {
   switch (code) {
@@ -45,11 +61,11 @@ class FirebasePhoneVerificationService implements PhoneVerificationService {
           }
           onAutoVerified(idToken);
         } on FirebaseAuthException catch (e) {
-          onFailed(PhoneVerificationException(_errorForCode(e.code)));
+          onFailed(_diagnosticException(e));
         }
       },
       verificationFailed: (FirebaseAuthException e) {
-        onFailed(PhoneVerificationException(_errorForCode(e.code)));
+        onFailed(_diagnosticException(e));
       },
       codeSent: (String verificationId, int? resendToken) {
         onCodeSent(CodeSentResult(verificationId: verificationId));
@@ -81,7 +97,7 @@ class FirebasePhoneVerificationService implements PhoneVerificationService {
       }
       return idToken;
     } on FirebaseAuthException catch (e) {
-      throw PhoneVerificationException(_errorForCode(e.code));
+      throw _diagnosticException(e);
     }
   }
 }

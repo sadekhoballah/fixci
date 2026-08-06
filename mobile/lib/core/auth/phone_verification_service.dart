@@ -21,9 +21,15 @@ extension PhoneVerificationErrorLocalization on PhoneVerificationError {
 }
 
 class PhoneVerificationException implements Exception {
-  PhoneVerificationException(this.error);
+  PhoneVerificationException(this.error, {this.debugDetail});
 
   final PhoneVerificationError error;
+
+  // TEMP DIAGNOSTIC: raw "[code] message" from the underlying
+  // FirebaseAuthException, surfaced in the UI so the real Firebase error can
+  // be identified without needing device logs. Remove once the phone-auth
+  // root cause is found — see firebase_phone_verification_service.dart.
+  final String? debugDetail;
 
   @override
   String toString() => error.name;
