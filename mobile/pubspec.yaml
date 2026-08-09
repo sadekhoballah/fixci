@@ -59,6 +59,7 @@ dependencies:
   # follow semver across minor versions, so anything looser risks a solver
   # conflict on the next `flutter upgrade`.
   intl: 0.20.2
+  firebase_app_check: ^0.4.6
 
 dev_dependencies:
   flutter_test:

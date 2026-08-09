@@ -1,3 +1,4 @@
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +28,19 @@ void main() {
   // several screens later — so it's safe to let this finish in the
   // background; firebaseInitFuture lets that real first user await it.
   if (isFirebaseSupportedPlatform) {
-    firebaseInitFuture = Firebase.initializeApp();
+    // App Check must be activated before any Firebase Auth call (phone
+    // verification included) or Firebase silently rejects the request as
+    // missing an App Check token. Chaining it onto firebaseInitFuture itself
+    // — rather than firing it off separately — means every existing
+    // `await firebaseInitFuture` call site (phone verification, push
+    // notifications, current_auth_token) is automatically covered without
+    // having to hunt down each one.
+    firebaseInitFuture = Firebase.initializeApp().then(
+      (_) => FirebaseAppCheck.instance.activate(
+        androidProvider: AndroidProvider.playIntegrity,
+        appleProvider: AppleProvider.deviceCheck,
+      ),
+    );
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   }
   runApp(const ProviderScope(child: FixCiApp()));
