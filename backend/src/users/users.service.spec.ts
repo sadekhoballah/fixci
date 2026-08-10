@@ -4,14 +4,21 @@ import { UnauthorizedException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { UsersService } from './users.service';
 import { User } from '../database/entities/user.entity';
+import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
+import { ClientProfile } from '../database/entities/client-profile.entity';
+import { District } from '../database/entities/district.entity';
+import { BlacklistedPhone } from '../database/entities/blacklisted-phone.entity';
 import { UserRole } from '../database/enums/user-role.enum';
-import { PhoneTokenVerifierService } from '../firebase/phone-token-verifier.service';
+import { TokensService } from '../auth/tokens.service';
+import { PresenceService } from '../matching/presence.service';
 
 describe('UsersService', () => {
   let service: UsersService;
   let userRepository: { findOne: jest.Mock };
+  let districtRepository: { findOne: jest.Mock };
+  let blacklistedPhoneRepository: { findOne: jest.Mock };
   let dataSource: { transaction: jest.Mock };
-  let phoneTokenVerifier: { verifyPhoneToken: jest.Mock };
+  let tokensService: { verifyRegistrationToken: jest.Mock };
   let manager: { create: jest.Mock; save: jest.Mock };
 
   beforeEach(async () => {
@@ -22,57 +29,58 @@ describe('UsersService', () => {
       ),
     };
     userRepository = { findOne: jest.fn().mockResolvedValue(null) };
+    districtRepository = {
+      findOne: jest.fn().mockResolvedValue({ id: 'district-1' }),
+    };
+    blacklistedPhoneRepository = { findOne: jest.fn().mockResolvedValue(null) };
     dataSource = {
       transaction: jest.fn((cb: (m: typeof manager) => unknown) => cb(manager)),
     };
-    phoneTokenVerifier = { verifyPhoneToken: jest.fn() };
+    tokensService = {
+      verifyRegistrationToken: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
         { provide: getRepositoryToken(User), useValue: userRepository },
+        { provide: getRepositoryToken(CraftsmanProfile), useValue: {} },
+        { provide: getRepositoryToken(ClientProfile), useValue: {} },
+        { provide: getRepositoryToken(District), useValue: districtRepository },
+        {
+          provide: getRepositoryToken(BlacklistedPhone),
+          useValue: blacklistedPhoneRepository,
+        },
         { provide: DataSource, useValue: dataSource },
-        { provide: PhoneTokenVerifierService, useValue: phoneTokenVerifier },
+        { provide: TokensService, useValue: tokensService },
+        { provide: PresenceService, useValue: {} },
       ],
     }).compile();
 
     service = module.get(UsersService);
   });
 
-  it('registers without a token as phoneVerified=false, never calling the verifier', async () => {
+  it('verifies the registration token against the phone and creates the user as phoneVerified=true', async () => {
     const user = await service.register({
       phone: '+2250700000010',
       role: UserRole.CLIENT,
       fullName: 'Aya Kone',
       idCardStorageKey: 'id-cards/aya.png',
+      districtId: 'district-1',
+      registrationToken: 'valid-registration-token',
     });
 
-    expect(phoneTokenVerifier.verifyPhoneToken).not.toHaveBeenCalled();
-    expect(user.phoneVerified).toBe(false);
-  });
-
-  it('sets phoneVerified=true when the token verifies and matches the phone', async () => {
-    phoneTokenVerifier.verifyPhoneToken.mockResolvedValue({ verified: true });
-
-    const user = await service.register({
-      phone: '+2250700000011',
-      role: UserRole.CLIENT,
-      fullName: 'Aya Kone',
-      idCardStorageKey: 'id-cards/aya.png',
-      firebaseIdToken: 'valid-token',
-    });
-
-    expect(phoneTokenVerifier.verifyPhoneToken).toHaveBeenCalledWith(
-      'valid-token',
-      '+2250700000011',
+    expect(tokensService.verifyRegistrationToken).toHaveBeenCalledWith(
+      'valid-registration-token',
+      '+2250700000010',
     );
     expect(user.phoneVerified).toBe(true);
   });
 
-  it('propagates a mismatch as UnauthorizedException and creates no user', async () => {
-    phoneTokenVerifier.verifyPhoneToken.mockRejectedValue(
+  it('propagates a mismatch/invalid token as UnauthorizedException and creates no user', async () => {
+    tokensService.verifyRegistrationToken.mockRejectedValue(
       new UnauthorizedException(
-        'Verification token does not match the phone number being registered',
+        'Registration token does not match the phone number being registered',
       ),
     );
 
@@ -82,27 +90,30 @@ describe('UsersService', () => {
         role: UserRole.CLIENT,
         fullName: 'Aya Kone',
         idCardStorageKey: 'id-cards/aya.png',
-        firebaseIdToken: 'token-for-a-different-phone',
+        districtId: 'district-1',
+        registrationToken: 'token-for-a-different-phone',
       }),
     ).rejects.toThrow(UnauthorizedException);
 
     expect(dataSource.transaction).not.toHaveBeenCalled();
   });
 
-  it('registers as phoneVerified=false when the Admin SDK is unconfigured, even with a token present', async () => {
-    // PhoneTokenVerifierService itself returns { verified: false } (not a
-    // throw) when the Admin SDK isn't configured — see FirebaseAdminModule.
-    phoneTokenVerifier.verifyPhoneToken.mockResolvedValue({ verified: false });
+  it('rejects a blacklisted phone without creating a user, before checking the token', async () => {
+    blacklistedPhoneRepository.findOne.mockResolvedValue({ id: 'bl-1' });
 
-    const user = await service.register({
-      phone: '+2250700000013',
-      role: UserRole.CLIENT,
-      fullName: 'Aya Kone',
-      idCardStorageKey: 'id-cards/aya.png',
-      firebaseIdToken: 'some-token',
-    });
+    await expect(
+      service.register({
+        phone: '+2250700000013',
+        role: UserRole.CLIENT,
+        fullName: 'Aya Kone',
+        idCardStorageKey: 'id-cards/aya.png',
+        districtId: 'district-1',
+        registrationToken: 'valid-registration-token',
+      }),
+    ).rejects.toThrow('This phone number cannot be registered');
 
-    expect(user.phoneVerified).toBe(false);
+    expect(tokensService.verifyRegistrationToken).not.toHaveBeenCalled();
+    expect(dataSource.transaction).not.toHaveBeenCalled();
   });
 
   it('creates a craftsman profile with the service category and id card key', async () => {
@@ -112,6 +123,8 @@ describe('UsersService', () => {
       fullName: 'Kofi Yao',
       serviceCategory: 'plumber' as never,
       idCardStorageKey: 'id-cards/abc.png',
+      districtId: 'district-1',
+      registrationToken: 'valid-registration-token',
     });
 
     expect(manager.create).toHaveBeenCalledWith(

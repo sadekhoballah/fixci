@@ -3,7 +3,6 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
@@ -17,7 +16,7 @@ import { BlacklistedPhone } from '../database/entities/blacklisted-phone.entity'
 import { UserRole } from '../database/enums/user-role.enum';
 import { SubscriptionTier } from '../database/enums/subscription-tier.enum';
 import { RegisterUserDto } from './dto/register-user.dto';
-import { PhoneTokenVerifierService } from '../firebase/phone-token-verifier.service';
+import { TokensService } from '../auth/tokens.service';
 import { PresenceService } from '../matching/presence.service';
 import { UPLOADS_ROOT } from '../uploads/uploads.constants';
 
@@ -47,7 +46,7 @@ export class UsersService {
     @InjectRepository(BlacklistedPhone)
     private readonly blacklistedPhoneRepository: Repository<BlacklistedPhone>,
     private readonly dataSource: DataSource,
-    private readonly phoneTokenVerifier: PhoneTokenVerifierService,
+    private readonly tokensService: TokensService,
     private readonly presenceService: PresenceService,
   ) {}
 
@@ -103,27 +102,16 @@ export class UsersService {
       throw new NotFoundException('District introuvable');
     }
 
-    // Verified outside the transaction: this is a network call to Firebase,
-    // not something that needs (or should hold open) a DB transaction.
-    let phoneVerified = false;
-    if (dto.firebaseIdToken) {
-      const result = await this.phoneTokenVerifier.verifyPhoneToken(
-        dto.firebaseIdToken,
-        dto.phone,
-      );
-      phoneVerified = result.verified;
-    }
-
-    // Outside production, an unverified registration is tolerated (the
-    // desktop dev-bypass flow never has a real token to send at all — see
-    // DevBypassPhoneVerificationService). In production, silently creating
-    // an unverified account defeats the point of phone verification, so
-    // fail loudly instead of persisting phoneVerified:false unnoticed.
-    if (!phoneVerified && process.env.NODE_ENV === 'production') {
-      throw new ServiceUnavailableException(
-        'Phone verification is required and could not be completed',
-      );
-    }
+    // Verified outside the transaction, same as before: this throws
+    // UnauthorizedException if the token is invalid/expired or wasn't
+    // issued for this exact phone (see TokensService.verifyRegistrationToken)
+    // — registration can no longer proceed without having actually passed
+    // OTP verification first, so there's no more "tolerated unverified"
+    // branch to fall back to.
+    await this.tokensService.verifyRegistrationToken(
+      dto.registrationToken,
+      dto.phone,
+    );
 
     try {
       return await this.dataSource.transaction(async (manager) => {
@@ -133,7 +121,7 @@ export class UsersService {
             fullName: dto.fullName ?? null,
             role: dto.role,
             districtId: dto.districtId,
-            phoneVerified,
+            phoneVerified: true,
           }),
         );
 

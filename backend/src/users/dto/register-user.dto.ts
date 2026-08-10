@@ -1,7 +1,6 @@
 import {
   IsEnum,
   IsNotEmpty,
-  IsOptional,
   IsString,
   IsUUID,
   Matches,
@@ -44,7 +43,11 @@ export class RegisterUserDto {
   @MaxLength(255)
   idCardStorageKey: string;
 
-  @IsOptional()
+  // Proof this phone was actually OTP-verified — issued by
+  // POST /auth/verify-otp when no account exists yet for the phone (see
+  // TokensService.issueRegistrationToken). Required: registration can no
+  // longer happen without having verified the phone first.
+  @IsNotEmpty()
   @IsString()
-  firebaseIdToken?: string;
+  registrationToken: string;
 }
