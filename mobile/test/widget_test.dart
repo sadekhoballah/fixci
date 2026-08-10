@@ -5,8 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator_platform_interface/geolocator_platform_interface.dart';
 
 import 'package:mobile/app.dart';
-import 'package:mobile/core/auth/dev_bypass_phone_verification_service.dart';
 import 'package:mobile/core/auth/session_storage.dart';
+import 'package:mobile/core/auth/token_storage.dart';
 import 'package:mobile/core/localization/locale_storage.dart';
 import 'package:mobile/core/media/id_card_picker.dart';
 import 'package:mobile/core/models/subscription_tier.dart';
@@ -14,13 +14,16 @@ import 'package:mobile/core/models/user_role.dart';
 import 'package:mobile/core/network/api_client.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 
-// Running under `flutter test` on this Linux dev machine, isFirebaseSupportedPlatform
-// is false and kDebugMode is true, so phoneVerificationServiceProvider naturally
-// resolves to DevBypassPhoneVerificationService — no override needed. This
-// drives the OTP screen exactly the way it behaves for real on this platform.
+const _correctOtpCode = '123456';
+
+// WhatsApp OTP is plain HTTP (POST /auth/send-otp, POST /auth/verify-otp —
+// see _FakeApiClient below) with no platform-specific SDK or auto-verify, so
+// unlike the old Firebase-backed flow, every platform (including this Linux
+// test runner) drives the OTP screen the same way: type the code, tap
+// Vérifier.
 Future<void> _verifyPhoneViaOtp(WidgetTester tester) async {
   expect(find.text('Vérification du numéro'), findsOneWidget);
-  await tester.enterText(find.byType(TextField), devBypassCode);
+  await tester.enterText(find.byType(TextField), _correctOtpCode);
   await tester.pump();
   await tester.tap(find.text('Vérifier'));
   await tester.pumpAndSettle();
@@ -51,31 +54,60 @@ const _plausibleIdCardPngBase64 =
     'HRAH/Ai3eAAAAB3RJTUUH6gcSCyoLx9crAQAAACZJREFUaN7twTEBAAAAwqD1T20JT6'
     'AAAAAAAAAAAAAAAAAAAICnATvEAAEnf54JAAAAAElFTkSuQmCC';
 
+// Avoids the real FlutterSecureStorage-backed TokenStorage's platform
+// channel calls, same rationale as _FakeSessionStorage below.
+class _FakeTokenStorage implements TokenStorage {
+  String? _accessToken;
+  String? _refreshToken;
+
+  @override
+  Future<void> saveTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    _accessToken = accessToken;
+    _refreshToken = refreshToken;
+  }
+
+  @override
+  Future<String?> loadAccessToken() async => _accessToken;
+
+  @override
+  Future<String?> loadRefreshToken() async => _refreshToken;
+
+  @override
+  Future<bool> hasSession() async => _refreshToken != null;
+
+  @override
+  Future<void> clear() async {
+    _accessToken = null;
+    _refreshToken = null;
+  }
+}
+
 // Fakes only the true I/O boundary (network transport), so every layer above
-// it — OnboardingRepository's field/enum-wire-value mapping, the controller,
-// the widgets — runs for real. The actual backend contract (field names,
-// status codes, response shapes) is separately verified against the live
-// NestJS server, not re-asserted here.
+// it — OtpAuthService/OnboardingRepository's field/enum-wire-value mapping,
+// the controllers, the widgets — runs for real. The actual backend contract
+// (field names, status codes, response shapes) is separately verified
+// against the live NestJS server, not re-asserted here.
 class _FakeApiClient extends ApiClient {
   // All these tests assert against the app's default French copy (no
   // locale override in buildApp), so the fake's own error strings above
-  // match that directly; this just satisfies ApiClient's now-required l10n
-  // constructor param for the fallback messages this fake never triggers.
+  // match that directly; this just satisfies ApiClient's now-required l10n/
+  // tokenStorage constructor params for the fallback logic this fake never
+  // triggers (every method below is overridden outright).
   _FakeApiClient({this.failRegister = false, this.failUpload = false})
-    : super(l10n: lookupAppLocalizations(const Locale('fr')));
+    : super(
+        l10n: lookupAppLocalizations(const Locale('fr')),
+        tokenStorage: _FakeTokenStorage(),
+      );
 
   final bool failRegister;
   final bool failUpload;
   int multipartCallCount = 0;
 
-  // completeAfterVerification() checks for an existing account before
-  // registering — 404 here means "no account yet", the expected case for a
-  // fresh registration test.
   @override
   Future<Map<String, dynamic>> get(String path) async {
-    if (path == '/users/lookup') {
-      throw ApiException('No account with this phone number', statusCode: 404);
-    }
     if (path == '/districts') {
       return {
         'items': [
@@ -124,6 +156,17 @@ class _FakeApiClient extends ApiClient {
     String path,
     Map<String, dynamic> body,
   ) async {
+    if (path == '/auth/send-otp') {
+      return {'ok': true};
+    }
+    if (path == '/auth/verify-otp') {
+      if (body['code'] != _correctOtpCode) {
+        throw ApiException('Incorrect code', statusCode: 401);
+      }
+      // No account exists yet for any phone in these tests — every test
+      // exercises the "new user, falls through to registration" path.
+      return {'status': 'new', 'registrationToken': 'fake-registration-token'};
+    }
     if (path == '/users/register') {
       if (failRegister) {
         throw ApiException(
@@ -136,6 +179,8 @@ class _FakeApiClient extends ApiClient {
         'phone': body['phone'],
         'fullName': body['fullName'],
         'role': body['role'],
+        'accessToken': 'fake-access-token',
+        'refreshToken': 'fake-refresh-token',
       };
     }
     throw UnimplementedError('Unexpected path in fake client: $path');
@@ -282,6 +327,7 @@ void main() {
           _FakeIdCardPicker(tooSmall: tooSmallIdCard),
         ),
         sessionStorageProvider.overrideWithValue(_FakeSessionStorage()),
+        tokenStorageProvider.overrideWithValue(_FakeTokenStorage()),
         localeStorageProvider.overrideWithValue(_FakeLocaleStorage()),
       ],
       child: const FixCiApp(),
@@ -546,7 +592,7 @@ void main() {
       await tester.pumpAndSettle();
       await _verifyPhoneViaOtp(tester);
 
-      // Phone verification itself succeeded (dev bypass); the subsequent
+      // Phone verification itself succeeded; the subsequent
       // POST /users/register call is what fails here.
       expect(find.text('Vérification du numéro'), findsOneWidget);
       expect(find.text('Phone number already registered'), findsOneWidget);

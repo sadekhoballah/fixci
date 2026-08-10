@@ -1,14 +1,10 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import '../platform/firebase_support.dart';
+import 'token_storage.dart';
 
-// The Firebase ID token doubles as this app's bearer credential everywhere
-// a caller must prove who they are — both the REST client (api_client.dart)
-// and the realtime socket (matching_socket_service.dart) resolve it the
-// same way, so this lives in one place rather than two. The SDK caches and
-// auto-refreshes the token, so fetching it fresh on every use is cheap and
-// never goes stale.
-Future<String?> currentAuthToken() async {
-  if (!isFirebaseSupportedPlatform) return null;
-  await firebaseInitFuture;
-  return FirebaseAuth.instance.currentUser?.getIdToken();
-}
+// This app's bearer credential everywhere a caller must prove who they are
+// — both the REST client (api_client.dart) and the realtime socket
+// (matching_socket_service.dart) resolve it the same way, so this lives in
+// one place rather than two. Unlike the old Firebase-backed version, this
+// can return an *expired* token (nothing here checks the JWT's own exp
+// claim) — ApiClient/MatchingSocketService are what react to a resulting
+// 401 by refreshing and retrying, not this function.
+Future<String?> currentAuthToken() => TokenStorage().loadAccessToken();

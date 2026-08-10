@@ -1,4 +1,3 @@
-import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -23,24 +22,13 @@ void main() {
   // Don't await this before runApp: it's a platform-channel round trip that
   // can take over a second on a cold start, which would otherwise hold the
   // splash screen's first frame back and leave the OS's plain-color splash
-  // on screen far longer than intended. Nothing paints before the splash
-  // screen needs Firebase — phone verification is the first real user of it,
-  // several screens later — so it's safe to let this finish in the
-  // background; firebaseInitFuture lets that real first user await it.
+  // on screen far longer than intended. Nothing paints before push
+  // notifications need Firebase — several screens later — so it's safe to
+  // let this finish in the background; firebaseInitFuture lets that real
+  // first user (push_notification_service.dart) await it. Auth no longer
+  // depends on Firebase at all — see core/auth/otp_auth_service.dart.
   if (isFirebaseSupportedPlatform) {
-    // App Check must be activated before any Firebase Auth call (phone
-    // verification included) or Firebase silently rejects the request as
-    // missing an App Check token. Chaining it onto firebaseInitFuture itself
-    // — rather than firing it off separately — means every existing
-    // `await firebaseInitFuture` call site (phone verification, push
-    // notifications, current_auth_token) is automatically covered without
-    // having to hunt down each one.
-    firebaseInitFuture = Firebase.initializeApp().then(
-      (_) => FirebaseAppCheck.instance.activate(
-        androidProvider: AndroidProvider.playIntegrity,
-        appleProvider: AppleProvider.deviceCheck,
-      ),
-    );
+    firebaseInitFuture = Firebase.initializeApp();
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   }
   runApp(const ProviderScope(child: FixCiApp()));

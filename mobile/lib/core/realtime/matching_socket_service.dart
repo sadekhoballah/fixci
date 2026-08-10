@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 import '../auth/current_auth_token.dart';
-import '../auth/dev_bypass_session.dart';
 import '../models/service_category.dart';
 import '../network/api_config.dart';
 
@@ -162,14 +161,8 @@ class MatchingSocketService {
           .disableAutoConnect()
           .setReconnectionAttempts(999999)
           .setAuthFn((callback) async {
-            final auth = <String, dynamic>{};
             final token = await currentAuthToken();
-            if (token != null) {
-              auth['token'] = token;
-            } else if (devBypassPhone != null) {
-              auth['devPhone'] = devBypassPhone;
-            }
-            callback(auth);
+            callback(<String, dynamic>{'token': ?token});
           })
           .build(),
     );
@@ -197,10 +190,15 @@ class MatchingSocketService {
       _connectionStatusController.add(SocketConnectionStatus.disconnected);
     });
     socket.onConnectError((error) {
-      // Auth failures (expired Firebase token, no matching account for the
+      // Auth failures (expired access token, no matching account for the
       // phone — see matching.gateway.ts afterInit) land here and previously
       // vanished silently: the status stream just flipped to "disconnected"
-      // with no way to tell that apart from a plain network drop.
+      // with no way to tell that apart from a plain network drop. Unlike
+      // ApiClient, this doesn't retry with a refreshed token — a dropped
+      // socket already auto-reconnects (setReconnectionAttempts above) and
+      // re-reads currentAuthToken() on every attempt, so a token refreshed
+      // elsewhere (e.g. by the next REST call) is picked up on the very
+      // next reconnect anyway.
       debugPrint('MatchingSocketService connect error: $error');
       _connectionStatusController.add(SocketConnectionStatus.disconnected);
     });

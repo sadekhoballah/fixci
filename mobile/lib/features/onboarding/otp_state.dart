@@ -1,6 +1,6 @@
 class OtpState {
   const OtpState({
-    this.verificationId,
+    this.codeWasSent = false,
     this.isSendingCode = false,
     this.isVerifyingCode = false,
     this.codeSendError,
@@ -8,14 +8,12 @@ class OtpState {
     this.resendAvailableAt,
   });
 
-  final String? verificationId;
+  final bool codeWasSent;
   final bool isSendingCode;
   final bool isVerifyingCode;
   final String? codeSendError;
   final String? codeVerifyError;
   final DateTime? resendAvailableAt;
-
-  bool get codeWasSent => verificationId != null;
 
   bool get canResend =>
       resendAvailableAt == null || DateTime.now().isAfter(resendAvailableAt!);
@@ -27,7 +25,7 @@ class OtpState {
   }
 
   OtpState copyWith({
-    String? verificationId,
+    bool? codeWasSent,
     bool? isSendingCode,
     bool? isVerifyingCode,
     String? codeSendError,
@@ -37,7 +35,7 @@ class OtpState {
     DateTime? resendAvailableAt,
   }) {
     return OtpState(
-      verificationId: verificationId ?? this.verificationId,
+      codeWasSent: codeWasSent ?? this.codeWasSent,
       isSendingCode: isSendingCode ?? this.isSendingCode,
       isVerifyingCode: isVerifyingCode ?? this.isVerifyingCode,
       codeSendError: clearCodeSendError

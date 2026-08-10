@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/auth/dev_bypass_session.dart';
+import '../../core/auth/otp_auth_service.dart';
 import '../../core/auth/session_storage.dart';
-import '../../core/auth/user_lookup_service.dart';
+import '../../core/auth/token_storage.dart';
 import '../../core/localization/locale_controller.dart';
 import '../../core/media/id_card_picker.dart';
 import '../../core/media/image_validation.dart';
@@ -38,7 +38,7 @@ class OnboardingController extends Notifier<OnboardingState> {
     state = state.copyWith(
       phone: value,
       clearVerifiedPhone: !stillVerified,
-      clearFirebaseIdToken: !stillVerified,
+      clearRegistrationToken: !stillVerified,
     );
   }
 
@@ -51,12 +51,41 @@ class OnboardingController extends Notifier<OnboardingState> {
     state = state.copyWith(phoneCountryCode: isoCode, clearDistrict: true);
   }
 
-  void setVerifiedPhone({required String phone, required String? idToken}) {
-    state = state.copyWith(
-      verifiedPhone: phone,
-      firebaseIdToken: idToken,
-      clearFirebaseIdToken: idToken == null,
-    );
+  // Called right after OTP verification succeeds. POST /auth/verify-otp
+  // already tells us whether this phone has an account (see
+  // otp_auth_service.dart) — an ExistingUserSession means the caller is
+  // logged in immediately (tokens persisted below, exactly like a
+  // successful POST /users/register would); a NewUserVerified just carries
+  // proof-of-verification for that register call to use later.
+  Future<void> setVerifiedPhone({
+    required String phone,
+    required VerifyOtpOutcome outcome,
+  }) async {
+    switch (outcome) {
+      case ExistingUserSession():
+        await ref.read(tokenStorageProvider).saveTokens(
+          accessToken: outcome.accessToken,
+          refreshToken: outcome.refreshToken,
+        );
+        final storage = ref.read(sessionStorageProvider);
+        await storage.saveRole(outcome.role);
+        await storage.savePhone(phone);
+        if (outcome.subscriptionTier != null) {
+          await storage.saveTier(outcome.subscriptionTier!);
+        }
+        state = state.copyWith(
+          verifiedPhone: phone,
+          clearRegistrationToken: true,
+          loggedIntoExistingAccount: true,
+          role: outcome.role,
+          selectedTier: outcome.subscriptionTier,
+        );
+      case NewUserVerified():
+        state = state.copyWith(
+          verifiedPhone: phone,
+          registrationToken: outcome.registrationToken,
+        );
+    }
   }
 
   void setServiceCategory(ServiceCategory category) {
@@ -121,13 +150,6 @@ class OnboardingController extends Notifier<OnboardingState> {
     }
 
     state = state.copyWith(isUploadingIdCard: true, clearIdCardUploadError: true);
-    // No account (and no real Firebase session on unsupported platforms)
-    // exists yet at this point — on those platforms, this is the earliest
-    // the phone being registered is known, so it's what dev-bypass auth
-    // uses for this call. Harmless no-op on platforms with a real session.
-    if (state.phone.trim().isNotEmpty) {
-      devBypassPhone = state.phone.trim();
-    }
     try {
       final storageKey = await ref
           .read(onboardingRepositoryProvider)
@@ -147,44 +169,15 @@ class OnboardingController extends Notifier<OnboardingState> {
     }
   }
 
-  // Called right after OTP verification succeeds. Checks whether this phone
-  // already has an account before ever attempting to create one — if it
-  // does, logs straight into it instead of hitting the 409 from
-  // POST /users/register with no way to recover. Only genuinely new phones
-  // fall through to submitRegistration() below.
+  // Called right after OTP verification succeeds. POST /auth/verify-otp
+  // already told us whether this phone has an account — see
+  // OnboardingController.setVerifiedPhone, which set
+  // loggedIntoExistingAccount and persisted a full session for that case.
+  // Only genuinely new phones fall through to submitRegistration() below.
   Future<bool> completeAfterVerification() async {
-    state = state.copyWith(isSubmitting: true, clearSubmissionError: true);
-    final l10n = ref.read(l10nProvider);
-    try {
-      final existing = await ref
-          .read(userLookupServiceProvider)
-          .findExistingAccount();
-      if (existing != null) {
-        final storage = ref.read(sessionStorageProvider);
-        await storage.saveRole(existing.role);
-        await storage.savePhone(state.phone.trim());
-        if (existing.subscriptionTier != null) {
-          await storage.saveTier(existing.subscriptionTier!);
-        }
-        devBypassPhone = state.phone.trim();
-        state = state.copyWith(
-          isSubmitting: false,
-          registrationSucceeded: true,
-          loggedIntoExistingAccount: true,
-          role: existing.role,
-          selectedTier: existing.subscriptionTier,
-        );
-        return true;
-      }
-    } on ApiException catch (e) {
-      state = state.copyWith(isSubmitting: false, submissionError: e.message);
-      return false;
-    } catch (_) {
-      state = state.copyWith(
-        isSubmitting: false,
-        submissionError: l10n.unexpectedErrorMessage,
-      );
-      return false;
+    if (state.loggedIntoExistingAccount) {
+      state = state.copyWith(registrationSucceeded: true);
+      return true;
     }
     return submitRegistration();
   }
@@ -193,12 +186,19 @@ class OnboardingController extends Notifier<OnboardingState> {
     state = state.copyWith(isSubmitting: true, clearSubmissionError: true);
     final l10n = ref.read(l10nProvider);
     try {
-      await ref.read(onboardingRepositoryProvider).registerUser(state);
-      state = state.copyWith(isSubmitting: false, registrationSucceeded: true);
+      final tokens = await ref
+          .read(onboardingRepositoryProvider)
+          .registerUser(state);
+      await ref
+          .read(tokenStorageProvider)
+          .saveTokens(
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+          );
       final storage = ref.read(sessionStorageProvider);
       await storage.saveRole(state.role!);
       await storage.savePhone(state.phone.trim());
-      devBypassPhone = state.phone.trim();
+      state = state.copyWith(isSubmitting: false, registrationSucceeded: true);
       return true;
     } on ApiException catch (e) {
       state = state.copyWith(isSubmitting: false, submissionError: e.message);
