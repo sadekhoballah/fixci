@@ -34,6 +34,7 @@
   "idCardAddPrompt": "Add your ID document",
   "otpTitle": "Phone verification",
   "otpInstructions": "Enter the code sent to {phone}",
+  "otpWhatsappNotice": "We'll send it to you on WhatsApp, using this same number.",
   "retryButton": "Retry",
   "otpCodeLabel": "6-digit code",
   "verifyingButton": "Verifying...",

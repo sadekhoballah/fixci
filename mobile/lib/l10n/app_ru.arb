@@ -34,6 +34,7 @@
   "idCardAddPrompt": "Добавьте документ, удостоверяющий личность",
   "otpTitle": "Подтверждение номера",
   "otpInstructions": "Введите код, отправленный на {phone}",
+  "otpWhatsappNotice": "Мы отправим его вам в WhatsApp на этот же номер.",
   "retryButton": "Повторить",
   "otpCodeLabel": "6-значный код",
   "verifyingButton": "Проверка...",

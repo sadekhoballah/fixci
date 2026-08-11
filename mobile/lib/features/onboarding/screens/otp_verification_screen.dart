@@ -112,6 +112,8 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                 l10n.otpInstructions(widget.phone),
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
+              const SizedBox(height: 12),
+              _WhatsappNotice(text: l10n.otpWhatsappNotice),
               const SizedBox(height: 24),
               if (otpState.isSendingCode)
                 const Center(child: CircularProgressIndicator())
@@ -184,6 +186,49 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// Reassures the user that the code lands in their WhatsApp, not a regular
+// SMS — the app switched OTP delivery from Firebase Phone Auth to the
+// WhatsApp Cloud API (see whatsapp/whatsapp.service.ts on the backend), so
+// nothing here is a substitute for a real SMS the user might be watching
+// for instead.
+class _WhatsappNotice extends StatelessWidget {
+  const _WhatsappNotice({required this.text});
+
+  final String text;
+
+  // WhatsApp's brand green, used only as an accent so the icon reads as
+  // "that app" at a glance — not a reproduction of their logo mark.
+  static const _whatsappGreen = Color(0xFF25D366);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: _whatsappGreen.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const CircleAvatar(
+            radius: 14,
+            backgroundColor: _whatsappGreen,
+            child: Icon(Icons.chat, color: Colors.white, size: 16),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
       ),
     );
   }
