@@ -26,17 +26,20 @@ export class WhatsappService {
   // Business Manager — free-form text can't be sent outside a 24h customer
   // session window, which an OTP request never has.
   //
-  // NOTE: if your approved template also has a "Copy code" button
-  // component (common for the "Authentication" template category), add a
-  // matching `{ type: 'button', sub_type: 'url', index: '0', parameters:
-  // [{ type: 'text', text: code }] }` entry to `components` below — left
-  // out here since we don't know the exact template shape yet.
+  // "Authentication" category templates come with a "Copy code" button by
+  // default, which is its own component the send call must fill in
+  // separately from the body — Meta 400s the whole request if the
+  // components sent don't match the approved template's shape. Controlled
+  // by WHATSAPP_OTP_TEMPLATE_HAS_BUTTON (defaults to on, since that's
+  // Meta's default for this template category); set it to "false" only if
+  // you approved a template without that button.
   async sendOtpMessage(phone: string, code: string): Promise<void> {
     const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
     const apiVersion = process.env.WHATSAPP_API_VERSION || DEFAULT_API_VERSION;
     const templateName = process.env.WHATSAPP_OTP_TEMPLATE_NAME;
     const templateLang = process.env.WHATSAPP_OTP_TEMPLATE_LANG || 'en_US';
+    const templateHasButton = process.env.WHATSAPP_OTP_TEMPLATE_HAS_BUTTON !== 'false';
 
     if (!accessToken || !phoneNumberId || !templateName) {
       throw new WhatsappSendError(
@@ -46,6 +49,23 @@ export class WhatsappService {
 
     // Meta's examples send the "to" number without a leading "+".
     const to = phone.startsWith('+') ? phone.slice(1) : phone;
+
+    const components = [
+      {
+        type: 'body',
+        parameters: [{ type: 'text', text: code }],
+      },
+      ...(templateHasButton
+        ? [
+            {
+              type: 'button',
+              sub_type: 'url',
+              index: '0',
+              parameters: [{ type: 'text', text: code }],
+            },
+          ]
+        : []),
+    ];
 
     let response: Response;
     try {
@@ -64,12 +84,7 @@ export class WhatsappService {
             template: {
               name: templateName,
               language: { code: templateLang },
-              components: [
-                {
-                  type: 'body',
-                  parameters: [{ type: 'text', text: code }],
-                },
-              ],
+              components,
             },
           }),
         },
