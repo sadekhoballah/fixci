@@ -14,24 +14,35 @@ import type { Request } from 'express';
 import { UsersService } from './users.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { UpdateFcmTokenDto } from './dto/update-fcm-token.dto';
-import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
+import { AccessTokenGuard } from '../auth/access-token.guard';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { TokensService } from '../auth/tokens.service';
 import { UserRole } from '../database/enums/user-role.enum';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly tokensService: TokensService,
+  ) {}
 
+  // Registration only ever gets here after POST /auth/verify-otp proved the
+  // phone (see RegisterUserDto.registrationToken) — so, like the "existing
+  // user" branch of verify-otp, a successful registration logs the caller
+  // straight in rather than making them go through send-otp/verify-otp
+  // again just to get their first token pair.
   @Post('register')
   async register(@Body() dto: RegisterUserDto) {
     const user = await this.usersService.register(dto);
+    const tokens = await this.tokensService.issueTokens(user);
     return {
       id: user.id,
       phone: user.phone,
       fullName: user.fullName,
       role: user.role,
       phoneVerified: user.phoneVerified,
+      ...tokens,
     };
   }
 
@@ -42,7 +53,7 @@ export class UsersController {
   // ever looks up the caller's own (token-verified) phone number — never an
   // arbitrary one — so this can't be used to enumerate other accounts.
   @Get('lookup')
-  @UseGuards(FirebaseAuthGuard)
+  @UseGuards(AccessTokenGuard)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   async lookup(@Req() request: Request) {
     const user = await this.usersService.findByPhone(request.authPhone!);
@@ -65,7 +76,7 @@ export class UsersController {
 
   // Called on every app launch once logged in, and again whenever FCM hands
   // the app a refreshed token — see PushNotificationService on mobile.
-  // AuthGuard (not just FirebaseAuthGuard) because this needs an existing
+  // AuthGuard (not just AccessTokenGuard) because this needs an existing
   // account to attach the token to.
   @Post('me/fcm-token')
   @UseGuards(AuthGuard)
@@ -79,7 +90,7 @@ export class UsersController {
 
   // Self-service, irreversible account deletion — see
   // UsersService.deleteAccount for what actually happens. AuthGuard (not
-  // FirebaseAuthGuard) because, like every other "me" endpoint, this only
+  // AccessTokenGuard) because, like every other "me" endpoint, this only
   // ever acts on the caller's own account, resolved from their verified
   // phone number.
   @Delete('me')

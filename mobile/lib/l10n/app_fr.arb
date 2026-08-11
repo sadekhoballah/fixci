@@ -12,7 +12,7 @@
   "@roleSelectionTitle": {
     "description": "Role selection screen's main heading."
   },
-  "roleSelectionSubtitle": "Choisissez comment vous voulez utiliser FixCi",
+  "roleSelectionSubtitle": "Choisissez comment vous voulez utiliser Fix Pro",
   "@roleSelectionSubtitle": {
     "description": "Role selection screen's subheading."
   },
@@ -75,6 +75,7 @@
       "phone": { "type": "String" }
     }
   },
+  "otpWhatsappNotice": "Nous vous l'enverrons sur WhatsApp, au même numéro.",
   "retryButton": "Réessayer",
   "otpCodeLabel": "Code à 6 chiffres",
   "verifyingButton": "Vérification...",

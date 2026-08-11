@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/app.dart';
-import 'package:mobile/core/auth/phone_verification_provider.dart';
-import 'package:mobile/core/auth/phone_verification_service.dart';
+import 'package:mobile/core/auth/otp_auth_service.dart';
 import 'package:mobile/core/auth/session_storage.dart';
+import 'package:mobile/core/auth/token_storage.dart';
 import 'package:mobile/core/localization/locale_storage.dart';
 import 'package:mobile/core/media/id_card_picker.dart';
 import 'package:mobile/core/models/subscription_tier.dart';
@@ -26,58 +26,56 @@ const _plausibleIdCardPngBase64 =
 
 const _correctCode = '123456';
 
-// Fakes only the true I/O boundary (mirrors _FakeApiClient/_FakeIdCardPicker
-// in widget_test.dart) — everything above it (OtpController, OnboardingController,
-// the screens) runs for real.
-class _FakePhoneVerificationService implements PhoneVerificationService {
-  _FakePhoneVerificationService({this.failSend = false});
-
-  final bool failSend;
-  int sendCodeCallCount = 0;
+// Avoids the real FlutterSecureStorage-backed TokenStorage's platform
+// channel calls, same rationale as _FakeSessionStorage below.
+class _FakeTokenStorage implements TokenStorage {
+  String? _accessToken;
+  String? _refreshToken;
 
   @override
-  Future<void> sendCode({
-    required String phoneNumber,
-    required void Function(CodeSentResult result) onCodeSent,
-    required void Function(String idToken) onAutoVerified,
-    required void Function(PhoneVerificationException error) onFailed,
+  Future<void> saveTokens({
+    required String accessToken,
+    required String refreshToken,
   }) async {
-    sendCodeCallCount++;
-    if (failSend) {
-      onFailed(
-        PhoneVerificationException(PhoneVerificationError.invalidPhoneNumber),
-      );
-      return;
-    }
-    onCodeSent(CodeSentResult(verificationId: 'fake-verification-id'));
+    _accessToken = accessToken;
+    _refreshToken = refreshToken;
   }
 
   @override
-  Future<String?> confirmCode({
-    required String verificationId,
-    required String smsCode,
-  }) async {
-    if (smsCode != _correctCode) {
-      throw PhoneVerificationException(PhoneVerificationError.invalidCode);
-    }
-    return 'fake-id-token';
+  Future<String?> loadAccessToken() async => _accessToken;
+
+  @override
+  Future<String?> loadRefreshToken() async => _refreshToken;
+
+  @override
+  Future<bool> hasSession() async => _refreshToken != null;
+
+  @override
+  Future<void> clear() async {
+    _accessToken = null;
+    _refreshToken = null;
   }
 }
 
+// Fakes only the true I/O boundary (mirrors _FakeApiClient in
+// widget_test.dart) — everything above it (OtpAuthService, OtpController,
+// OnboardingController, the screens) runs for real.
 class _FakeApiClient extends ApiClient {
   // These tests assert against the app's default French copy (no locale
-  // override in buildApp) — just satisfies ApiClient's now-required l10n
-  // constructor param for the fallback messages this fake never triggers.
-  _FakeApiClient() : super(l10n: lookupAppLocalizations(const Locale('fr')));
+  // override in buildApp) — just satisfies ApiClient's now-required l10n/
+  // tokenStorage constructor params for the fallback logic this fake never
+  // triggers.
+  _FakeApiClient({this.failSend = false})
+    : super(
+        l10n: lookupAppLocalizations(const Locale('fr')),
+        tokenStorage: _FakeTokenStorage(),
+      );
 
-  // completeAfterVerification() checks for an existing account before
-  // registering — 404 here means "no account yet", the expected case for a
-  // fresh registration test.
+  final bool failSend;
+  int sendOtpCallCount = 0;
+
   @override
   Future<Map<String, dynamic>> get(String path) async {
-    if (path == '/users/lookup') {
-      throw ApiException('No account with this phone number', statusCode: 404);
-    }
     if (path == '/districts') {
       return {
         'items': [
@@ -99,12 +97,28 @@ class _FakeApiClient extends ApiClient {
     String path,
     Map<String, dynamic> body,
   ) async {
+    if (path == '/auth/send-otp') {
+      sendOtpCallCount++;
+      if (failSend) {
+        throw ApiException('Invalid phone number.');
+      }
+      return {'ok': true};
+    }
+    if (path == '/auth/verify-otp') {
+      if (body['code'] != _correctCode) {
+        throw ApiException('Incorrect code', statusCode: 401);
+      }
+      // No account exists yet for any phone in these tests.
+      return {'status': 'new', 'registrationToken': 'fake-registration-token'};
+    }
     if (path == '/users/register') {
       return {
         'id': 'fake-user-id',
         'phone': body['phone'],
         'fullName': body['fullName'],
         'role': body['role'],
+        'accessToken': 'fake-access-token',
+        'refreshToken': 'fake-refresh-token',
       };
     }
     throw UnimplementedError('Unexpected path in fake client: $path');
@@ -185,13 +199,15 @@ class _FakeLocaleStorage implements LocaleStorage {
 }
 
 void main() {
-  Widget buildApp(PhoneVerificationService phoneService) {
+  Widget buildApp({_FakeApiClient? apiClient, TokenStorage? tokenStorage}) {
     return ProviderScope(
       overrides: [
-        apiClientProvider.overrideWithValue(_FakeApiClient()),
-        phoneVerificationServiceProvider.overrideWithValue(phoneService),
+        apiClientProvider.overrideWithValue(apiClient ?? _FakeApiClient()),
         idCardPickerProvider.overrideWithValue(_FakeIdCardPicker()),
         sessionStorageProvider.overrideWithValue(_FakeSessionStorage()),
+        tokenStorageProvider.overrideWithValue(
+          tokenStorage ?? _FakeTokenStorage(),
+        ),
         localeStorageProvider.overrideWithValue(_FakeLocaleStorage()),
       ],
       child: const FixCiApp(),
@@ -209,8 +225,12 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> goToOtpScreen(WidgetTester tester, {String phone = '+2250700000099'}) async {
-    await tester.pumpWidget(buildApp(_FakePhoneVerificationService()));
+  Future<void> goToOtpScreen(
+    WidgetTester tester, {
+    String phone = '+2250700000099',
+    _FakeApiClient? apiClient,
+  }) async {
+    await tester.pumpWidget(buildApp(apiClient: apiClient));
     await tester.pumpAndSettle(const Duration(seconds: 4));
 
     await tester.tap(find.text('Client'));
@@ -303,9 +323,7 @@ void main() {
   testWidgets('a failed send shows an inline error with a retry option', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      buildApp(_FakePhoneVerificationService(failSend: true)),
-    );
+    await tester.pumpWidget(buildApp(apiClient: _FakeApiClient(failSend: true)));
     await tester.pumpAndSettle(const Duration(seconds: 4));
 
     await tester.tap(find.text('Client'));
@@ -337,25 +355,27 @@ void main() {
     await tester.tap(find.text("S'inscrire"));
     await tester.pumpAndSettle();
 
-    expect(find.text('Numéro de téléphone invalide.'), findsOneWidget);
+    expect(find.text('Invalid phone number.'), findsOneWidget);
     expect(find.text('Réessayer'), findsOneWidget);
   });
 
-  test('editing the phone after verifying it clears the verification', () {
-    final container = ProviderContainer();
+  test('editing the phone after verifying it clears the verification', () async {
+    final container = ProviderContainer(
+      overrides: [tokenStorageProvider.overrideWithValue(_FakeTokenStorage())],
+    );
     addTearDown(container.dispose);
     final controller = container.read(onboardingControllerProvider.notifier);
 
     controller.setPhone('+2250700000001');
-    controller.setVerifiedPhone(
+    await controller.setVerifiedPhone(
       phone: '+2250700000001',
-      idToken: 'fake-id-token',
+      outcome: NewUserVerified(registrationToken: 'fake-registration-token'),
     );
     expect(container.read(onboardingControllerProvider).isPhoneVerified, isTrue);
 
     controller.setPhone('+2250700000002');
     final state = container.read(onboardingControllerProvider);
     expect(state.isPhoneVerified, isFalse);
-    expect(state.firebaseIdToken, isNull);
+    expect(state.registrationToken, isNull);
   });
 }

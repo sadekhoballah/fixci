@@ -19,7 +19,7 @@ class OnboardingState {
     this.isUploadingIdCard = false,
     this.idCardUploadError,
     this.verifiedPhone,
-    this.firebaseIdToken,
+    this.registrationToken,
     this.isSubmitting = false,
     this.submissionError,
     this.registrationSucceeded = false,
@@ -44,24 +44,28 @@ class OnboardingState {
   final Uint8List? idCardPreviewBytes;
   final bool isUploadingIdCard;
   final String? idCardUploadError;
-  // The phone number that was successfully OTP-verified, and the Firebase ID
-  // token proving it (null on the dev-bypass path — see
-  // core/auth/dev_bypass_phone_verification_service.dart). setPhone() clears
-  // both if the user edits the number after verifying it.
+  // The phone number that was successfully OTP-verified, and the proof of
+  // that verification for a brand-new phone (null once loggedIntoExistingAccount
+  // is true — POST /auth/verify-otp already logged that case straight in,
+  // see OnboardingController.setVerifiedPhone). setPhone() clears both if
+  // the user edits the number after verifying it.
   final String? verifiedPhone;
-  final String? firebaseIdToken;
+  final String? registrationToken;
   final bool isSubmitting;
   final String? submissionError;
   final bool registrationSucceeded;
-  // Set once the artisan picks a plan on TierSelectionScreen; persisted via
-  // OnboardingController.confirmActiveTier() once it's actually active (free
-  // tiers immediately, paid tiers after PaymentCheckoutScreen).
+  // Set once the artisan picks a plan on TierSelectionScreen, or (for a
+  // returning craftsman) straight from POST /auth/verify-otp's response —
+  // persisted via OnboardingController.confirmActiveTier() once it's
+  // actually active (free tiers immediately, paid tiers after
+  // PaymentCheckoutScreen).
   final SubscriptionTier? selectedTier;
   // True when the phone entered during "registration" turned out to already
-  // have an account (GET /users/lookup found it) — the app logged the user
-  // straight into that existing account instead of creating a new one, so
-  // the post-verification screen should skip the "welcome, new account"
-  // flow and go directly to that account's home screen.
+  // have an account (POST /auth/verify-otp returned status:"existing") —
+  // the app logged the user straight into that existing account instead of
+  // creating a new one, so the post-verification screen should skip the
+  // "welcome, new account" flow and go directly to that account's home
+  // screen.
   final bool loggedIntoExistingAccount;
 
   bool get idCardAttached => idCardStorageKey != null;
@@ -108,8 +112,8 @@ class OnboardingState {
     bool clearIdCardUploadError = false,
     String? verifiedPhone,
     bool clearVerifiedPhone = false,
-    String? firebaseIdToken,
-    bool clearFirebaseIdToken = false,
+    String? registrationToken,
+    bool clearRegistrationToken = false,
     bool? isSubmitting,
     String? submissionError,
     bool clearSubmissionError = false,
@@ -139,9 +143,9 @@ class OnboardingState {
       verifiedPhone: clearVerifiedPhone
           ? null
           : (verifiedPhone ?? this.verifiedPhone),
-      firebaseIdToken: clearFirebaseIdToken
+      registrationToken: clearRegistrationToken
           ? null
-          : (firebaseIdToken ?? this.firebaseIdToken),
+          : (registrationToken ?? this.registrationToken),
       isSubmitting: isSubmitting ?? this.isSubmitting,
       submissionError: clearSubmissionError
           ? null

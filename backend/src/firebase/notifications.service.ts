@@ -14,8 +14,9 @@ export interface PushNotificationContent {
 // Fallback delivery path for when a socket push can't reach the app —
 // backgrounded, or killed outright by the OS. Sockets stay the primary path
 // (faster, and already wired everywhere): this only needs to be reliable
-// enough that a missed socket event still surfaces eventually. Lives next to
-// PhoneTokenVerifierService as the other consumer of FIREBASE_ADMIN_APP.
+// enough that a missed socket event still surfaces eventually. The only
+// consumer of FIREBASE_ADMIN_APP now — phone verification (the app's other
+// past consumer) moved to WhatsappService/TokensService.
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger('NotificationsService');

@@ -3,28 +3,28 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { App, ServiceAccount, cert, initializeApp } from 'firebase-admin/app';
 import { existsSync, readFileSync } from 'fs';
 import { FIREBASE_ADMIN_APP } from './firebase-admin.constants';
-import { PhoneTokenVerifierService } from './phone-token-verifier.service';
 import { NotificationsService } from './notifications.service';
 import { User } from '../database/entities/user.entity';
 
 const logger = new Logger('FirebaseAdminModule');
 
-// Phone verification is optional infrastructure during initial setup: the
-// rest of the app (matching, uploads, registration itself) must keep working
-// even before a Firebase service account is in place, so this never throws —
-// PhoneTokenVerifierService treats a null app as "verification unavailable"
-// rather than the whole backend failing to boot.
+// Only used for FCM push (NotificationsService) now — phone verification
+// moved to WhatsappModule/AuthModule (see otp.service.ts, tokens.service.ts).
+// Still optional infrastructure: the rest of the app must keep working even
+// before a Firebase service account is in place, so this never throws —
+// NotificationsService treats a null app as "push unavailable" rather than
+// the whole backend failing to boot.
 function initializeFirebaseAdmin(): App | null {
   const credsPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
   if (!credsPath) {
     logger.warn(
-      'FIREBASE_SERVICE_ACCOUNT_PATH not set — phone verification tokens will not be checked; new users will be created with phoneVerified=false.',
+      'FIREBASE_SERVICE_ACCOUNT_PATH not set — push notifications are disabled.',
     );
     return null;
   }
   if (!existsSync(credsPath)) {
     logger.warn(
-      `FIREBASE_SERVICE_ACCOUNT_PATH is set to "${credsPath}" but no file exists there — phone verification is disabled.`,
+      `FIREBASE_SERVICE_ACCOUNT_PATH is set to "${credsPath}" but no file exists there — push notifications are disabled.`,
     );
     return null;
   }
@@ -37,7 +37,7 @@ function initializeFirebaseAdmin(): App | null {
     });
   } catch (error) {
     logger.error(
-      `Failed to initialize Firebase Admin SDK from "${credsPath}" — phone verification is disabled.`,
+      `Failed to initialize Firebase Admin SDK from "${credsPath}" — push notifications are disabled.`,
       error instanceof Error ? error.stack : String(error),
     );
     return null;
@@ -52,13 +52,8 @@ function initializeFirebaseAdmin(): App | null {
       provide: FIREBASE_ADMIN_APP,
       useFactory: initializeFirebaseAdmin,
     },
-    PhoneTokenVerifierService,
     NotificationsService,
   ],
-  exports: [
-    FIREBASE_ADMIN_APP,
-    PhoneTokenVerifierService,
-    NotificationsService,
-  ],
+  exports: [FIREBASE_ADMIN_APP, NotificationsService],
 })
 export class FirebaseAdminModule {}

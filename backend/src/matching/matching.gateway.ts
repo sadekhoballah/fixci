@@ -9,7 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { Server, Socket } from 'socket.io';
 import { PresenceService } from './presence.service';
 import { CreatedServiceRequest, MatchingService } from './matching.service';
@@ -24,9 +24,10 @@ import { clientRoom, craftsmanRoom } from './matching.rooms';
 import { ServiceCategory } from '../database/enums/service-category.enum';
 import { User } from '../database/entities/user.entity';
 import { UserRole } from '../database/enums/user-role.enum';
-import { PhoneTokenVerifierService } from '../firebase/phone-token-verifier.service';
 import { NotificationsService } from '../firebase/notifications.service';
-import { resolveVerifiedPhone } from '../auth/resolve-verified-phone';
+import { TokensService } from '../auth/tokens.service';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
+import { resolveVerifiedAuth } from '../auth/resolve-verified-phone';
 
 const SERVICE_CATEGORY_LABELS_FR: Record<ServiceCategory, string> = {
   [ServiceCategory.PLUMBER]: 'plomberie',
@@ -145,14 +146,15 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
   constructor(
     private readonly matchingService: MatchingService,
     private readonly presenceService: PresenceService,
-    private readonly phoneTokenVerifier: PhoneTokenVerifierService,
+    private readonly tokensService: TokensService,
+    private readonly whatsapp: WhatsappService,
     private readonly notificationsService: NotificationsService,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
 
   // Every socket must prove who it is before any handler runs — otherwise a
   // client could claim to be any clientId/craftsmanId in its message bodies.
-  // Mirrors FirebaseAuthGuard/AuthGuard's HTTP logic (same resolveVerifiedPhone
+  // Mirrors AccessTokenGuard/AuthGuard's HTTP logic (same resolveVerifiedAuth
   // helper), just reading handshake.auth instead of headers, since a plain
   // socket.io connection has no per-message Authorization header.
   afterInit(server: Server): void {
@@ -161,8 +163,17 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
       const devPhone = socket.handshake.auth?.['devPhone'] as
         string | undefined;
 
-      resolveVerifiedPhone(this.phoneTokenVerifier, token, devPhone)
-        .then((phone) => this.userRepository.findOne({ where: { phone } }))
+      resolveVerifiedAuth(this.tokensService, this.whatsapp, token, devPhone)
+        .then(({ phone, userId }) =>
+          // Same id-vs-phone rationale as AuthGuard: a real token's userId
+          // is authoritative and immune to phone-reuse after a deletion;
+          // the dev-bypass path has no signed id, so it falls back to phone.
+          userId
+            ? this.userRepository.findOne({
+                where: { id: userId, deletedAt: IsNull() },
+              })
+            : this.userRepository.findOne({ where: { phone } }),
+        )
         .then((user) => {
           if (!user) {
             next(new Error('No account for this phone number'));

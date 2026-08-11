@@ -1,13 +1,12 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/auth/session_storage.dart';
+import '../../../core/auth/token_storage.dart';
 import '../../../core/media/id_card_picker.dart';
 import '../../../core/models/service_category.dart';
 import '../../../core/models/subscription_tier.dart';
 import '../../../core/network/api_client.dart';
-import '../../../core/platform/firebase_support.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../craftsman_home/craftsman_home_controller.dart';
 import '../../onboarding/screens/role_selection_screen.dart';
@@ -63,9 +62,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     try {
       await ref.read(apiClientProvider).delete('/users/me');
       await ref.read(sessionStorageProvider).clearSession();
-      if (isFirebaseSupportedPlatform && FirebaseAuth.instance.currentUser != null) {
-        await FirebaseAuth.instance.signOut();
-      }
+      await ref.read(tokenStorageProvider).clear();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),

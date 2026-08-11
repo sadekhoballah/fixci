@@ -8,6 +8,13 @@ import '../../core/models/user_role.dart';
 import '../../l10n/app_localizations.dart';
 import 'onboarding_state.dart';
 
+class RegisteredTokens {
+  const RegisteredTokens({required this.accessToken, required this.refreshToken});
+
+  final String accessToken;
+  final String refreshToken;
+}
+
 class OnboardingRepository {
   OnboardingRepository(this._apiClient, this._l10n);
 
@@ -32,13 +39,13 @@ class OnboardingRepository {
     return response['storageKey'] as String;
   }
 
-  Future<void> registerUser(OnboardingState state) async {
+  Future<RegisteredTokens> registerUser(OnboardingState state) async {
     final role = state.role;
     if (role == null) {
       throw ApiException(_l10n.selectRoleBeforeContinuingMessage);
     }
 
-    await _apiClient.post('/users/register', {
+    final response = await _apiClient.post('/users/register', {
       'phone': state.phone.trim(),
       'fullName': state.fullName.trim(),
       'role': role.wireValue,
@@ -48,9 +55,12 @@ class OnboardingRepository {
         'serviceCategory': state.serviceCategory!.wireValue,
       if (role == UserRole.craftsman)
         'experienceDetails': state.experienceDetails.trim(),
-      if (state.isPhoneVerified && state.firebaseIdToken != null)
-        'firebaseIdToken': state.firebaseIdToken,
+      'registrationToken': state.registrationToken,
     });
+    return RegisteredTokens(
+      accessToken: response['accessToken'] as String,
+      refreshToken: response['refreshToken'] as String,
+    );
   }
 
   // Kicks off a Wave charge for the given plan and returns our reference —

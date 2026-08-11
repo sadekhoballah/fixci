@@ -1,9 +1,26 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/auth/phone_verification_provider.dart';
-import '../../core/auth/phone_verification_service.dart';
+import '../../core/auth/otp_auth_service.dart';
 import '../../core/localization/locale_controller.dart';
+import '../../core/network/api_client.dart';
+import '../../l10n/app_localizations.dart';
 import 'onboarding_controller.dart';
 import 'otp_state.dart';
+
+// POST /auth/verify-otp (see backend/src/auth/otp.controller.ts) always
+// fails with one of these three exact English messages — mapped to this
+// app's own localized copy rather than shown raw, since this is the one
+// error a user is likely to hit repeatedly (a mistyped/expired code).
+// Anything else (network errors, unexpected backend text) falls back to
+// e.message as-is.
+String _verifyErrorMessage(String backendMessage, AppLocalizations l10n) {
+  return switch (backendMessage) {
+    'Incorrect code' => l10n.invalidCodeMessage,
+    'Code expired or not found — request a new one' => l10n.codeExpiredMessage,
+    'Too many incorrect attempts — request a new code' =>
+      l10n.tooManyAttemptsMessage,
+    _ => backendMessage,
+  };
+}
 
 class OtpController extends Notifier<OtpState> {
   static const resendCooldown = Duration(seconds: 45);
@@ -15,44 +32,14 @@ class OtpController extends Notifier<OtpState> {
     state = state.copyWith(isSendingCode: true, clearCodeSendError: true);
     final l10n = ref.read(l10nProvider);
     try {
-      await ref
-          .read(phoneVerificationServiceProvider)
-          .sendCode(
-            phoneNumber: phoneNumber,
-            onCodeSent: (result) {
-              state = state.copyWith(
-                isSendingCode: false,
-                verificationId: result.verificationId,
-                resendAvailableAt: DateTime.now().add(resendCooldown),
-              );
-            },
-            onAutoVerified: (idToken) {
-              state = state.copyWith(isSendingCode: false);
-              ref
-                  .read(onboardingControllerProvider.notifier)
-                  .setVerifiedPhone(phone: phoneNumber, idToken: idToken);
-            },
-            onFailed: (error) {
-              state = state.copyWith(
-                isSendingCode: false,
-                // TEMP DIAGNOSTIC: appends the raw Firebase code/message so
-                // it's visible on screen. Remove with debugDetail once the
-                // phone-auth root cause is found.
-                codeSendError: _withDebugDetail(
-                  error.error.localizedMessage(l10n),
-                  error.debugDetail,
-                ),
-              );
-            },
-          );
-    } on PhoneVerificationException catch (e) {
+      await ref.read(otpAuthServiceProvider).sendOtp(phoneNumber);
       state = state.copyWith(
         isSendingCode: false,
-        codeSendError: _withDebugDetail(
-          e.error.localizedMessage(l10n),
-          e.debugDetail,
-        ),
+        codeWasSent: true,
+        resendAvailableAt: DateTime.now().add(resendCooldown),
       );
+    } on ApiException catch (e) {
+      state = state.copyWith(isSendingCode: false, codeSendError: e.message);
     } catch (_) {
       state = state.copyWith(
         isSendingCode: false,
@@ -62,27 +49,21 @@ class OtpController extends Notifier<OtpState> {
   }
 
   Future<bool> confirmCode(String phoneNumber, String smsCode) async {
-    final verificationId = state.verificationId;
-    if (verificationId == null) return false;
-
     state = state.copyWith(isVerifyingCode: true, clearCodeVerifyError: true);
     final l10n = ref.read(l10nProvider);
     try {
-      final idToken = await ref
-          .read(phoneVerificationServiceProvider)
-          .confirmCode(verificationId: verificationId, smsCode: smsCode);
+      final outcome = await ref
+          .read(otpAuthServiceProvider)
+          .verifyOtp(phoneNumber, smsCode);
       state = state.copyWith(isVerifyingCode: false);
-      ref
+      await ref
           .read(onboardingControllerProvider.notifier)
-          .setVerifiedPhone(phone: phoneNumber, idToken: idToken);
+          .setVerifiedPhone(phone: phoneNumber, outcome: outcome);
       return true;
-    } on PhoneVerificationException catch (e) {
+    } on ApiException catch (e) {
       state = state.copyWith(
         isVerifyingCode: false,
-        codeVerifyError: _withDebugDetail(
-          e.error.localizedMessage(l10n),
-          e.debugDetail,
-        ),
+        codeVerifyError: _verifyErrorMessage(e.message, l10n),
       );
       return false;
     } catch (_) {
@@ -98,11 +79,3 @@ class OtpController extends Notifier<OtpState> {
 final otpControllerProvider = NotifierProvider<OtpController, OtpState>(
   OtpController.new,
 );
-
-// TEMP DIAGNOSTIC: appends the raw Firebase code/message to the localized
-// error text so it's visible on screen. Remove once the phone-auth root
-// cause is found (see PhoneVerificationException.debugDetail).
-String _withDebugDetail(String message, String? debugDetail) {
-  if (debugDetail == null) return message;
-  return '$message\n$debugDetail';
-}
