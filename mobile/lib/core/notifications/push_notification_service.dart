@@ -24,7 +24,7 @@ import '../../features/craftsman_home/screens/artisan_shell_screen.dart';
 // the suffix again any time the sound changes.
 const _androidChannel = AndroidNotificationChannel(
   'job_updates_v2',
-  'Notifications FixCi',
+  'Notifications Fix Pro',
   description: 'Suivi de vos demandes et missions',
   importance: Importance.high,
   sound: RawResourceAndroidNotificationSound('job_notification'),
