@@ -25,8 +25,10 @@ void main() {
   // on screen far longer than intended. Nothing paints before push
   // notifications need Firebase — several screens later — so it's safe to
   // let this finish in the background; firebaseInitFuture lets that real
-  // first user (push_notification_service.dart) await it. Auth no longer
-  // depends on Firebase at all — see core/auth/otp_auth_service.dart.
+  // first user (push_notification_service.dart) await it. Auth doesn't
+  // depend on Firebase at all — see core/auth/phone_hint_service.dart
+  // (Android's Phone Number Hint API, part of Google Play services, not
+  // Firebase) and onboarding_repository.dart.
   if (isFirebaseSupportedPlatform) {
     firebaseInitFuture = Firebase.initializeApp();
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);

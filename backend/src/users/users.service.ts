@@ -16,7 +16,6 @@ import { BlacklistedPhone } from '../database/entities/blacklisted-phone.entity'
 import { UserRole } from '../database/enums/user-role.enum';
 import { SubscriptionTier } from '../database/enums/subscription-tier.enum';
 import { RegisterUserDto } from './dto/register-user.dto';
-import { TokensService } from '../auth/tokens.service';
 import { PresenceService } from '../matching/presence.service';
 import { UPLOADS_ROOT } from '../uploads/uploads.constants';
 
@@ -46,7 +45,6 @@ export class UsersService {
     @InjectRepository(BlacklistedPhone)
     private readonly blacklistedPhoneRepository: Repository<BlacklistedPhone>,
     private readonly dataSource: DataSource,
-    private readonly tokensService: TokensService,
     private readonly presenceService: PresenceService,
   ) {}
 
@@ -102,26 +100,19 @@ export class UsersService {
       throw new NotFoundException('District introuvable');
     }
 
-    // Verified outside the transaction, same as before: this throws
-    // UnauthorizedException if the token is invalid/expired or wasn't
-    // issued for this exact phone (see TokensService.verifyRegistrationToken)
-    // — registration can no longer proceed without having actually passed
-    // OTP verification first, so there's no more "tolerated unverified"
-    // branch to fall back to.
-    await this.tokensService.verifyRegistrationToken(
-      dto.registrationToken,
-      dto.phone,
-    );
-
     try {
       return await this.dataSource.transaction(async (manager) => {
+        // phoneVerified is deliberately left at its column default (false)
+        // — phone verification is gone entirely for this phase (Phone
+        // Number Hint API is a weak, unverified signal, not proof of
+        // ownership) and nothing sets this column anymore. Kept only so a
+        // future real-verification phase doesn't need a schema migration.
         const user = await manager.save(
           manager.create(User, {
             phone: dto.phone,
             fullName: dto.fullName ?? null,
             role: dto.role,
             districtId: dto.districtId,
-            phoneVerified: true,
           }),
         );
 

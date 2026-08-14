@@ -74,4 +74,8 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Phone Number Hint API (Identity.getSignInClient(...).getPhoneNumberHintIntent)
+    // — used by MainActivity's PHONE_HINT_CHANNEL to read SIM-based phone
+    // numbers without any runtime permission. See MainActivity.kt.
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
 }

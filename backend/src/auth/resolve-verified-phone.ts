@@ -1,6 +1,5 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { TokensService } from './tokens.service';
-import { WhatsappService } from '../whatsapp/whatsapp.service';
 
 export interface VerifiedAuth {
   phone: string;
@@ -14,9 +13,14 @@ export interface VerifiedAuth {
 // middleware (WS) — both need the same "verify the bearer token, or fall
 // back to the gated dev-bypass" logic, just extracted from different
 // transports (headers vs. handshake.auth).
+//
+// Used to also require WhatsApp to be unconfigured before the bypass could
+// engage (belt-and-suspenders against ever enabling it somewhere real
+// credentials were reachable) — dropped along with WhatsappService itself;
+// NODE_ENV/ALLOW_DEV_AUTH_BYPASS alone now gate it, same as
+// ADMIN_JWT_SECRET's dev fallback elsewhere in this codebase.
 export async function resolveVerifiedAuth(
   tokensService: TokensService,
-  whatsapp: WhatsappService,
   token: string | undefined,
   devPhone: string | undefined,
 ): Promise<VerifiedAuth> {
@@ -26,7 +30,6 @@ export async function resolveVerifiedAuth(
   }
 
   const bypassEnabled =
-    !whatsapp.isConfigured &&
     process.env.NODE_ENV !== 'production' &&
     process.env.ALLOW_DEV_AUTH_BYPASS === 'true';
   if (bypassEnabled && devPhone) {

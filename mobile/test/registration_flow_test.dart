@@ -5,16 +5,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/app.dart';
-import 'package:mobile/core/auth/otp_auth_service.dart';
+import 'package:mobile/core/auth/phone_hint_service.dart';
 import 'package:mobile/core/auth/session_storage.dart';
 import 'package:mobile/core/auth/token_storage.dart';
 import 'package:mobile/core/localization/locale_storage.dart';
 import 'package:mobile/core/media/id_card_picker.dart';
 import 'package:mobile/core/models/subscription_tier.dart';
 import 'package:mobile/core/models/user_role.dart';
+import 'package:mobile/core/models/district.dart';
 import 'package:mobile/core/network/api_client.dart';
 import 'package:mobile/features/onboarding/onboarding_controller.dart';
+import 'package:mobile/features/onboarding/onboarding_state.dart';
 import 'package:mobile/l10n/app_localizations.dart';
+
+const _fakeDistrict = District(
+  id: 'fake-district-id',
+  name: 'Cocody',
+  countryCode: 'CI',
+  isArtisanRegistrationActive: true,
+  isClientOrderingActive: true,
+);
 
 // A real 400x300 PNG — plausible ID-card-ish dimensions, passes validation
 // (mirrors the constant in widget_test.dart).
@@ -23,8 +33,6 @@ const _plausibleIdCardPngBase64 =
     '+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGUExURYfO6/////E3Kz4AAAABYkt'
     'HRAH/Ai3eAAAAB3RJTUUH6gcSCyoLx9crAQAAACZJREFUaN7twTEBAAAAwqD1T20JT6'
     'AAAAAAAAAAAAAAAAAAAICnATvEAAEnf54JAAAAAElFTkSuQmCC';
-
-const _correctCode = '123456';
 
 // Avoids the real FlutterSecureStorage-backed TokenStorage's platform
 // channel calls, same rationale as _FakeSessionStorage below.
@@ -57,22 +65,30 @@ class _FakeTokenStorage implements TokenStorage {
   }
 }
 
+// A phone number that POST /users/register (below) treats as already
+// belonging to an existing account, to exercise the 409 branches of
+// OnboardingController.completeRegistration. _alreadyRegisteredLocalNumber
+// is what a test actually types into the field (see
+// fillAndSubmitRegistrationForm); _alreadyRegisteredPhone is the resulting
+// E.164 form (+225 dial code) the fake backend matches against.
+const _alreadyRegisteredLocalNumber = '0700000099';
+const _alreadyRegisteredPhone = '+225$_alreadyRegisteredLocalNumber';
+
 // Fakes only the true I/O boundary (mirrors _FakeApiClient in
-// widget_test.dart) — everything above it (OtpAuthService, OtpController,
-// OnboardingController, the screens) runs for real.
+// widget_test.dart) — everything above it (OnboardingController, the
+// screens) runs for real.
 class _FakeApiClient extends ApiClient {
   // These tests assert against the app's default French copy (no locale
   // override in buildApp) — just satisfies ApiClient's now-required l10n/
   // tokenStorage constructor params for the fallback logic this fake never
   // triggers.
-  _FakeApiClient({this.failSend = false})
+  _FakeApiClient({this.failRegister = false})
     : super(
         l10n: lookupAppLocalizations(const Locale('fr')),
         tokenStorage: _FakeTokenStorage(),
       );
 
-  final bool failSend;
-  int sendOtpCallCount = 0;
+  final bool failRegister;
 
   @override
   Future<Map<String, dynamic>> get(String path) async {
@@ -97,21 +113,13 @@ class _FakeApiClient extends ApiClient {
     String path,
     Map<String, dynamic> body,
   ) async {
-    if (path == '/auth/send-otp') {
-      sendOtpCallCount++;
-      if (failSend) {
+    if (path == '/users/register') {
+      if (failRegister) {
         throw ApiException('Invalid phone number.');
       }
-      return {'ok': true};
-    }
-    if (path == '/auth/verify-otp') {
-      if (body['code'] != _correctCode) {
-        throw ApiException('Incorrect code', statusCode: 401);
+      if (body['phone'] == _alreadyRegisteredPhone) {
+        throw ApiException('Phone number already registered', statusCode: 409);
       }
-      // No account exists yet for any phone in these tests.
-      return {'status': 'new', 'registrationToken': 'fake-registration-token'};
-    }
-    if (path == '/users/register') {
       return {
         'id': 'fake-user-id',
         'phone': body['phone'],
@@ -119,6 +127,22 @@ class _FakeApiClient extends ApiClient {
         'role': body['role'],
         'accessToken': 'fake-access-token',
         'refreshToken': 'fake-refresh-token',
+      };
+    }
+    if (path == '/auth/reconnect') {
+      if (body['phone'] != _alreadyRegisteredPhone) {
+        throw ApiException('No account with this phone number', statusCode: 404);
+      }
+      return {
+        'accessToken': 'fake-reconnect-access-token',
+        'refreshToken': 'fake-reconnect-refresh-token',
+        'user': {
+          'id': 'fake-user-id',
+          'phone': body['phone'],
+          'fullName': 'Existing Artisan',
+          'role': 'client',
+          'subscriptionTier': null,
+        },
       };
     }
     throw UnimplementedError('Unexpected path in fake client: $path');
@@ -198,8 +222,29 @@ class _FakeLocaleStorage implements LocaleStorage {
   Future<void> saveLocaleCode(String code) async {}
 }
 
+// Never reports itself as supported unless a test opts in — widget tests
+// run on the host platform (never "really" Android), so the real
+// PhoneHintService.isSupported would always be false anyway; being
+// explicit here documents that the manual-entry tests are exercising the
+// same path a real iOS device or a real Android device with no SIM data
+// would take, not an accident of the test host's OS.
+class _FakePhoneHintService implements PhoneHintService {
+  _FakePhoneHintService({this.isSupported = false, this.hint});
+
+  @override
+  final bool isSupported;
+  final String? hint;
+
+  @override
+  Future<String?> requestHint() async => isSupported ? hint : null;
+}
+
 void main() {
-  Widget buildApp({_FakeApiClient? apiClient, TokenStorage? tokenStorage}) {
+  Widget buildApp({
+    _FakeApiClient? apiClient,
+    TokenStorage? tokenStorage,
+    PhoneHintService? phoneHintService,
+  }) {
     return ProviderScope(
       overrides: [
         apiClientProvider.overrideWithValue(apiClient ?? _FakeApiClient()),
@@ -209,6 +254,9 @@ void main() {
           tokenStorage ?? _FakeTokenStorage(),
         ),
         localeStorageProvider.overrideWithValue(_FakeLocaleStorage()),
+        phoneHintServiceProvider.overrideWithValue(
+          phoneHintService ?? _FakePhoneHintService(),
+        ),
       ],
       child: const FixCiApp(),
     );
@@ -225,12 +273,19 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> goToOtpScreen(
+  // localNumber is what a real user types: just the national digits, since
+  // the "+225" dial code is already shown separately via the field's flag
+  // prefix (typing a full "+225..." string into the underlying TextField
+  // would double up the dial code in PhoneNumber.completeNumber).
+  Future<void> fillAndSubmitRegistrationForm(
     WidgetTester tester, {
-    String phone = '+2250700000099',
+    required String localNumber,
     _FakeApiClient? apiClient,
+    PhoneHintService? phoneHintService,
   }) async {
-    await tester.pumpWidget(buildApp(apiClient: apiClient));
+    await tester.pumpWidget(
+      buildApp(apiClient: apiClient, phoneHintService: phoneHintService),
+    );
     await tester.pumpAndSettle(const Duration(seconds: 4));
 
     await tester.tap(find.text('Client'));
@@ -248,7 +303,7 @@ void main() {
     );
     await tester.enterText(
       find.widgetWithText(TextField, 'Numéro de téléphone'),
-      phone,
+      localNumber,
     );
     await tester.pump();
 
@@ -268,114 +323,127 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('correct code verifies the phone and completes registration', (
+  testWidgets(
+    'a manually-entered phone number registers directly, with no OTP step',
+    (tester) async {
+      await fillAndSubmitRegistrationForm(tester, localNumber: '0700000001');
+
+      expect(find.text('Bienvenue, Aya Kone !'), findsOneWidget);
+    },
+  );
+
+  testWidgets('a failed registration shows an inline error and stays on the form', (
     tester,
   ) async {
-    await goToOtpScreen(tester);
-    expect(find.text('Vérification du numéro'), findsOneWidget);
-
-    await tester.enterText(find.byType(TextField), _correctCode);
-    await tester.pump();
-    await tester.tap(find.text('Vérifier'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Bienvenue, Aya Kone !'), findsOneWidget);
-  });
-
-  testWidgets('wrong code shows an inline error and stays on the OTP screen', (
-    tester,
-  ) async {
-    await goToOtpScreen(tester);
-
-    await tester.enterText(find.byType(TextField), '000000');
-    await tester.pump();
-    await tester.tap(find.text('Vérifier'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Vérification du numéro'), findsOneWidget);
-    expect(find.text('Code incorrect. Veuillez réessayer.'), findsOneWidget);
-
-    // Correcting the code afterwards still works — the failure didn't
-    // burn the verification session.
-    await tester.enterText(find.byType(TextField), _correctCode);
-    await tester.pump();
-    await tester.tap(find.text('Vérifier'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Bienvenue, Aya Kone !'), findsOneWidget);
-  });
-
-  testWidgets('resend is disabled during the cooldown window', (
-    tester,
-  ) async {
-    await goToOtpScreen(tester);
-
-    final resendButton = find.byType(TextButton);
-    expect(resendButton, findsOneWidget);
-    expect(
-      tester.widget<TextButton>(resendButton).onPressed,
-      isNull,
-      reason: 'Resend should be disabled immediately after a code is sent',
+    await fillAndSubmitRegistrationForm(
+      tester,
+      localNumber: '0700000002',
+      apiClient: _FakeApiClient(failRegister: true),
     );
-    expect(find.textContaining('Renvoyer le code ('), findsOneWidget);
-  });
-
-  testWidgets('a failed send shows an inline error with a retry option', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildApp(apiClient: _FakeApiClient(failSend: true)));
-    await tester.pumpAndSettle(const Duration(seconds: 4));
-
-    await tester.tap(find.text('Client'));
-    await tester.pump();
-    await tester.tap(find.text('Continuer'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Prénom (comme sur votre pièce d\'identité)'),
-      'Aya',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Nom de famille (comme sur votre pièce d\'identité)'),
-      'Kone',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Numéro de téléphone'),
-      '+2250700000098',
-    );
-    await tester.pump();
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Votre zone / commune'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Cocody').last);
-    await tester.pumpAndSettle();
-    await attachIdCard(tester);
-
-    await tester.ensureVisible(find.text("S'inscrire"));
-    await tester.tap(find.text("S'inscrire"));
-    await tester.pumpAndSettle();
 
     expect(find.text('Invalid phone number.'), findsOneWidget);
-    expect(find.text('Réessayer'), findsOneWidget);
+    expect(find.text('Inscription'), findsOneWidget);
   });
 
-  test('editing the phone after verifying it clears the verification', () async {
-    final container = ProviderContainer(
-      overrides: [tokenStorageProvider.overrideWithValue(_FakeTokenStorage())],
-    );
-    addTearDown(container.dispose);
-    final controller = container.read(onboardingControllerProvider.notifier);
+  testWidgets(
+    'a manually-typed number that is already registered shows a contact-support '
+    'message instead of logging in',
+    (tester) async {
+      await fillAndSubmitRegistrationForm(
+        tester,
+        localNumber: _alreadyRegisteredLocalNumber,
+      );
 
-    controller.setPhone('+2250700000001');
-    await controller.setVerifiedPhone(
-      phone: '+2250700000001',
-      outcome: NewUserVerified(registrationToken: 'fake-registration-token'),
-    );
-    expect(container.read(onboardingControllerProvider).isPhoneVerified, isTrue);
+      expect(
+        find.text(
+          'Ce numéro est déjà associé à un compte. Contactez le support pour récupérer votre accès.',
+        ),
+        findsOneWidget,
+      );
+      // Never navigated away — a manually-typed number gets no free pass.
+      expect(find.text('Inscription'), findsOneWidget);
+    },
+  );
 
-    controller.setPhone('+2250700000002');
-    final state = container.read(onboardingControllerProvider);
-    expect(state.isPhoneVerified, isFalse);
-    expect(state.registrationToken, isNull);
-  });
+  test(
+    'requestPhoneHint locks the phone field to a device-sourced number',
+    () async {
+      final container = ProviderContainer(
+        overrides: [
+          tokenStorageProvider.overrideWithValue(_FakeTokenStorage()),
+          phoneHintServiceProvider.overrideWithValue(
+            _FakePhoneHintService(isSupported: true, hint: '+2250700000003'),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(onboardingControllerProvider.notifier);
+
+      await controller.requestPhoneHint();
+
+      final state = container.read(onboardingControllerProvider);
+      expect(state.phone, '+2250700000003');
+      expect(state.phoneLocked, isTrue);
+      expect(state.phoneSource, PhoneSource.deviceHint);
+    },
+  );
+
+  test(
+    'requestPhoneHint with no result leaves the field unlocked for manual entry',
+    () async {
+      final container = ProviderContainer(
+        overrides: [
+          tokenStorageProvider.overrideWithValue(_FakeTokenStorage()),
+          phoneHintServiceProvider.overrideWithValue(
+            _FakePhoneHintService(isSupported: true, hint: null),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(onboardingControllerProvider.notifier);
+
+      await controller.requestPhoneHint();
+
+      final state = container.read(onboardingControllerProvider);
+      expect(state.phoneLocked, isFalse);
+      expect(state.phoneSource, PhoneSource.manual);
+    },
+  );
+
+  test(
+    'completeRegistration reconnects automatically for a device-sourced number '
+    'that is already registered',
+    () async {
+      final container = ProviderContainer(
+        overrides: [
+          apiClientProvider.overrideWithValue(_FakeApiClient()),
+          tokenStorageProvider.overrideWithValue(_FakeTokenStorage()),
+          sessionStorageProvider.overrideWithValue(_FakeSessionStorage()),
+          phoneHintServiceProvider.overrideWithValue(
+            _FakePhoneHintService(
+              isSupported: true,
+              hint: _alreadyRegisteredPhone,
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(onboardingControllerProvider.notifier);
+      controller.selectRole(UserRole.client);
+      controller.setDistrict(_fakeDistrict);
+
+      await controller.requestPhoneHint();
+      expect(
+        container.read(onboardingControllerProvider).phoneSource,
+        PhoneSource.deviceHint,
+      );
+
+      final succeeded = await controller.completeRegistration();
+
+      expect(succeeded, isTrue);
+      final state = container.read(onboardingControllerProvider);
+      expect(state.loggedIntoExistingAccount, isTrue);
+      expect(state.registrationSucceeded, isTrue);
+    },
+  );
 }

@@ -12,7 +12,7 @@ import { AdminUser } from '../database/entities/admin-user.entity';
 import { AdminJwtPayload } from '../admin-auth/admin-auth.service';
 
 // Guards every /admin/* route. Unrelated to AuthGuard/AccessTokenGuard (the
-// phone-OTP path for clients/craftsmen) — admin identity comes from a
+// client/craftsman phone-based path) — admin identity comes from a
 // separate admin_users table and a JWT issued by POST /admin-auth/login.
 @Injectable()
 export class AdminJwtGuard implements CanActivate {

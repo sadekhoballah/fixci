@@ -3,12 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { User } from '../database/entities/user.entity';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
-import { BlacklistModule } from '../blacklist/blacklist.module';
 import { AccessTokenGuard } from './access-token.guard';
 import { AuthGuard } from './auth.guard';
-import { OtpService } from './otp.service';
 import { TokensService } from './tokens.service';
-import { OtpController } from './otp.controller';
+import { ReconnectController } from './reconnect.controller';
 
 // Global, like FirebaseAdminModule: every feature module needs these guards,
 // and there's nothing route-specific to configure per-module.
@@ -16,15 +14,14 @@ import { OtpController } from './otp.controller';
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, CraftsmanProfile]),
-    BlacklistModule,
     // No default secret registered — TokensService always passes its own
-    // secret per call (access/refresh/registration each sign with a
-    // different one, see tokens.service.ts), so there's nothing to
-    // configure here beyond making JwtService injectable.
+    // secret per call (access/refresh each sign with a different one, see
+    // tokens.service.ts), so there's nothing to configure here beyond
+    // making JwtService injectable.
     JwtModule.register({}),
   ],
-  controllers: [OtpController],
-  providers: [AccessTokenGuard, AuthGuard, OtpService, TokensService],
+  controllers: [ReconnectController],
+  providers: [AccessTokenGuard, AuthGuard, TokensService],
   // TypeOrmModule is re-exported too: AuthGuard depends on the User
   // repository, and a class passed to @UseGuards() is resolved from the
   // consuming module's own injector — being @Global() makes AuthGuard's

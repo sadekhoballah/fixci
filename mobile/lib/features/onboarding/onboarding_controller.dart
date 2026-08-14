@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/auth/otp_auth_service.dart';
+import '../../core/auth/phone_hint_service.dart';
 import '../../core/auth/session_storage.dart';
 import '../../core/auth/token_storage.dart';
 import '../../core/localization/locale_controller.dart';
@@ -11,6 +11,7 @@ import '../../core/models/service_category.dart';
 import '../../core/models/subscription_tier.dart';
 import '../../core/models/user_role.dart';
 import '../../core/network/api_client.dart';
+import 'allowed_countries.dart';
 import 'onboarding_repository.dart';
 import 'onboarding_state.dart';
 
@@ -30,15 +31,15 @@ class OnboardingController extends Notifier<OnboardingState> {
     state = state.copyWith(lastName: value);
   }
 
+  // Manual typing path — the iOS field, and the Android fallback once the
+  // Phone Number Hint API has come back empty. Never reachable while
+  // phoneLocked is true (the field is read-only in the UI at that point),
+  // but resets phoneSource defensively in case that ever changes.
   void setPhone(String value) {
-    // Editing the phone after it was verified invalidates that verification
-    // — the token/verifiedPhone pair only means something for the exact
-    // number it was issued for.
-    final stillVerified = value == state.verifiedPhone;
     state = state.copyWith(
       phone: value,
-      clearVerifiedPhone: !stillVerified,
-      clearRegistrationToken: !stillVerified,
+      phoneLocked: false,
+      phoneSource: PhoneSource.manual,
     );
   }
 
@@ -51,41 +52,40 @@ class OnboardingController extends Notifier<OnboardingState> {
     state = state.copyWith(phoneCountryCode: isoCode, clearDistrict: true);
   }
 
-  // Called right after OTP verification succeeds. POST /auth/verify-otp
-  // already tells us whether this phone has an account (see
-  // otp_auth_service.dart) — an ExistingUserSession means the caller is
-  // logged in immediately (tokens persisted below, exactly like a
-  // successful POST /users/register would); a NewUserVerified just carries
-  // proof-of-verification for that register call to use later.
-  Future<void> setVerifiedPhone({
-    required String phone,
-    required VerifyOtpOutcome outcome,
-  }) async {
-    switch (outcome) {
-      case ExistingUserSession():
-        await ref.read(tokenStorageProvider).saveTokens(
-          accessToken: outcome.accessToken,
-          refreshToken: outcome.refreshToken,
-        );
-        final storage = ref.read(sessionStorageProvider);
-        await storage.saveRole(outcome.role);
-        await storage.savePhone(phone);
-        if (outcome.subscriptionTier != null) {
-          await storage.saveTier(outcome.subscriptionTier!);
-        }
-        state = state.copyWith(
-          verifiedPhone: phone,
-          clearRegistrationToken: true,
-          loggedIntoExistingAccount: true,
-          role: outcome.role,
-          selectedTier: outcome.subscriptionTier,
-        );
-      case NewUserVerified():
-        state = state.copyWith(
-          verifiedPhone: phone,
-          registrationToken: outcome.registrationToken,
-        );
+  // Android only (see PhoneHintService.isSupported) — launches the system
+  // phone-number picker and, on a result, locks the field to whatever was
+  // picked. A null result (no numbers on the device, or the user dismissed
+  // the picker — Android doesn't distinguish the two) leaves the field
+  // exactly as it was: unlocked and empty, i.e. the manual-entry fallback,
+  // with nothing further to do here. Also used to *re*-open the picker for
+  // a dual-SIM switch — see _PhoneField in registration_screen.dart, which
+  // routes both the initial request and every "change" gesture through
+  // this same method while locked.
+  Future<void> requestPhoneHint() async {
+    final service = ref.read(phoneHintServiceProvider);
+    if (!service.isSupported) return;
+
+    state = state.copyWith(isRequestingPhoneHint: true);
+    final raw = await service.requestHint();
+    if (raw == null) {
+      state = state.copyWith(isRequestingPhoneHint: false);
+      return;
     }
+
+    final parsed = parsePhoneHint(
+      raw,
+      allowedCountries: allowedCountries,
+      currentCountryIsoCode: state.phoneCountryCode,
+    );
+    final countryChanged = parsed.countryIsoCode != state.phoneCountryCode;
+    state = state.copyWith(
+      phone: parsed.e164Number,
+      phoneCountryCode: parsed.countryIsoCode,
+      phoneLocked: true,
+      phoneSource: PhoneSource.deviceHint,
+      isRequestingPhoneHint: false,
+      clearDistrict: countryChanged,
+    );
   }
 
   void setServiceCategory(ServiceCategory category) {
@@ -169,20 +169,15 @@ class OnboardingController extends Notifier<OnboardingState> {
     }
   }
 
-  // Called right after OTP verification succeeds. POST /auth/verify-otp
-  // already told us whether this phone has an account — see
-  // OnboardingController.setVerifiedPhone, which set
-  // loggedIntoExistingAccount and persisted a full session for that case.
-  // Only genuinely new phones fall through to submitRegistration() below.
-  Future<bool> completeAfterVerification() async {
-    if (state.loggedIntoExistingAccount) {
-      state = state.copyWith(registrationSucceeded: true);
-      return true;
-    }
-    return submitRegistration();
-  }
-
-  Future<bool> submitRegistration() async {
+  // No phone verification happens before this for this phase (see
+  // backend/src/database/entities/user.entity.ts's phoneVerified column
+  // comment) — POST /users/register is called directly with whatever
+  // number is in state.phone. A 409 means that number already has an
+  // account: for a device-sourced number (PhoneSource.deviceHint) that's
+  // treated as a login via POST /auth/reconnect; for a manually-typed one
+  // it isn't, since there's no possession signal behind it at all — see
+  // OnboardingState.PhoneSource and reconnect.controller.ts's doc comment.
+  Future<bool> completeRegistration() async {
     state = state.copyWith(isSubmitting: true, clearSubmissionError: true);
     final l10n = ref.read(l10nProvider);
     try {
@@ -199,6 +194,54 @@ class OnboardingController extends Notifier<OnboardingState> {
       await storage.saveRole(state.role!);
       await storage.savePhone(state.phone.trim());
       state = state.copyWith(isSubmitting: false, registrationSucceeded: true);
+      return true;
+    } on ApiException catch (e) {
+      if (e.statusCode == 409 && state.phoneSource == PhoneSource.deviceHint) {
+        return _reconnectExistingAccount();
+      }
+      if (e.statusCode == 409) {
+        state = state.copyWith(
+          isSubmitting: false,
+          submissionError: l10n.phoneAlreadyRegisteredManualMessage,
+        );
+        return false;
+      }
+      state = state.copyWith(isSubmitting: false, submissionError: e.message);
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isSubmitting: false,
+        submissionError: l10n.unexpectedErrorMessage,
+      );
+      return false;
+    }
+  }
+
+  Future<bool> _reconnectExistingAccount() async {
+    final l10n = ref.read(l10nProvider);
+    try {
+      final session = await ref
+          .read(onboardingRepositoryProvider)
+          .reconnect(state.phone.trim());
+      await ref
+          .read(tokenStorageProvider)
+          .saveTokens(
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken,
+          );
+      final storage = ref.read(sessionStorageProvider);
+      await storage.saveRole(session.role);
+      await storage.savePhone(state.phone.trim());
+      if (session.subscriptionTier != null) {
+        await storage.saveTier(session.subscriptionTier!);
+      }
+      state = state.copyWith(
+        isSubmitting: false,
+        registrationSucceeded: true,
+        loggedIntoExistingAccount: true,
+        role: session.role,
+        selectedTier: session.subscriptionTier,
+      );
       return true;
     } on ApiException catch (e) {
       state = state.copyWith(isSubmitting: false, submissionError: e.message);
