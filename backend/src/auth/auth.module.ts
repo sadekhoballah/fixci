@@ -6,7 +6,7 @@ import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity'
 import { AccessTokenGuard } from './access-token.guard';
 import { AuthGuard } from './auth.guard';
 import { TokensService } from './tokens.service';
-import { ReconnectController } from './reconnect.controller';
+import { AuthController } from './auth.controller';
 
 // Global, like FirebaseAdminModule: every feature module needs these guards,
 // and there's nothing route-specific to configure per-module.
@@ -20,7 +20,7 @@ import { ReconnectController } from './reconnect.controller';
     // making JwtService injectable.
     JwtModule.register({}),
   ],
-  controllers: [ReconnectController],
+  controllers: [AuthController],
   providers: [AccessTokenGuard, AuthGuard, TokensService],
   // TypeOrmModule is re-exported too: AuthGuard depends on the User
   // repository, and a class passed to @UseGuards() is resolved from the

@@ -9,7 +9,7 @@ import '../../core/models/user_role.dart';
 // (see completeRegistration): a device-sourced number gets a best-effort
 // reconnect via POST /auth/reconnect, a manually-typed one doesn't, because
 // there's no possession signal at all behind it. See
-// backend/src/auth/reconnect.controller.ts's doc comment for the full
+// backend/src/auth/auth.controller.ts's doc comment for the full
 // rationale — this is the one enum value that phase 2's real verification
 // will need to touch.
 enum PhoneSource { deviceHint, manual }

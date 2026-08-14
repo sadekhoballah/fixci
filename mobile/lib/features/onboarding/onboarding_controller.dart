@@ -176,7 +176,7 @@ class OnboardingController extends Notifier<OnboardingState> {
   // account: for a device-sourced number (PhoneSource.deviceHint) that's
   // treated as a login via POST /auth/reconnect; for a manually-typed one
   // it isn't, since there's no possession signal behind it at all — see
-  // OnboardingState.PhoneSource and reconnect.controller.ts's doc comment.
+  // OnboardingState.PhoneSource and auth.controller.ts's doc comment.
   Future<bool> completeRegistration() async {
     state = state.copyWith(isSubmitting: true, clearSubmissionError: true);
     final l10n = ref.read(l10nProvider);

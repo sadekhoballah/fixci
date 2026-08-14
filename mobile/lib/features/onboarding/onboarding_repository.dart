@@ -81,7 +81,7 @@ class OnboardingRepository {
   // Called only after POST /users/register 409s AND the phone came from the
   // Phone Number Hint API (see PhoneSource) — logs straight into the
   // existing account behind that number. See
-  // backend/src/auth/reconnect.controller.ts for why this is safe to do
+  // backend/src/auth/auth.controller.ts for why this is safe to do
   // without any further proof for a device-sourced number, and why a
   // manually-typed one never reaches this call.
   Future<ExistingAccountSession> reconnect(String phone) async {
