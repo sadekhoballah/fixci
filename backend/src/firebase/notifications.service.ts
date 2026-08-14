@@ -16,7 +16,8 @@ export interface PushNotificationContent {
 // (faster, and already wired everywhere): this only needs to be reliable
 // enough that a missed socket event still surfaces eventually. The only
 // consumer of FIREBASE_ADMIN_APP now — phone verification (the app's other
-// past consumer) moved to WhatsappService/TokensService.
+// past consumer, via the WhatsApp Cloud API) has been dropped for this
+// phase.
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger('NotificationsService');

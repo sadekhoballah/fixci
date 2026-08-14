@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl_phone_field/countries.dart' show Country, countries;
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/auth/phone_hint_service.dart';
 import '../../../core/media/id_card_picker.dart';
 import '../../../core/models/district.dart';
 import '../../../core/models/service_category.dart';
@@ -11,10 +11,10 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../client_home/screens/client_shell_screen.dart';
 import '../../craftsman_home/screens/artisan_shell_screen.dart';
+import '../allowed_countries.dart';
 import '../onboarding_controller.dart';
 import '../onboarding_repository.dart';
 import '../onboarding_state.dart';
-import 'otp_verification_screen.dart';
 import 'registration_success_screen.dart';
 import 'tier_selection_screen.dart';
 
@@ -33,12 +33,6 @@ class RegistrationScreen extends ConsumerStatefulWidget {
 // registered under. Display text is looked up separately per locale below.
 const _experienceValues = ['1-2 ans', '2-4 ans', 'Plus de 5 ans'];
 
-// Only markets currently launched — see IntlPhoneField below. Order fixes
-// the picker's display order (Côte d'Ivoire, then Liban, then Russie).
-final List<Country> _allowedCountries = ['CI', 'LB', 'RU']
-    .map((code) => countries.firstWhere((c) => c.code == code))
-    .toList();
-
 class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
@@ -55,15 +49,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     OnboardingState state,
     OnboardingController controller,
   ) async {
-    if (!state.isPhoneVerified) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => OtpVerificationScreen(phone: state.phone),
-        ),
-      );
-      return;
-    }
-    final succeeded = await controller.completeAfterVerification();
+    final succeeded = await controller.completeRegistration();
     if (!context.mounted || !succeeded) return;
 
     final latest = ref.read(onboardingControllerProvider);
@@ -128,15 +114,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 decoration: InputDecoration(labelText: l10n.lastNameLabel),
               ),
               const SizedBox(height: 16),
-              IntlPhoneField(
-                initialCountryCode: 'CI',
-                countries: _allowedCountries,
-                onChanged: (phoneNumber) =>
-                    controller.setPhone(phoneNumber.completeNumber),
-                onCountryChanged: (country) =>
-                    controller.setPhoneCountryCode(country.code),
-                decoration: InputDecoration(labelText: l10n.phoneNumberLabel),
-              ),
+              const _PhoneField(),
               const SizedBox(height: 16),
               _DistrictPicker(state: state, controller: controller),
               if (isCraftsman) ...[
@@ -226,6 +204,127 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// Android: on first focus, launches the Phone Number Hint API and locks the
+// field to whatever the user picks — they can no longer type into it, only
+// re-open the system picker (tap the field, or the "Modifier" action) to
+// pick the device's other SIM. A null result (no numbers on the device, or
+// the picker was dismissed — Android doesn't tell us which) leaves the
+// field as a normal editable one, which is also exactly what iOS gets from
+// the start (see PhoneHintService.isSupported).
+class _PhoneField extends ConsumerStatefulWidget {
+  const _PhoneField();
+
+  @override
+  ConsumerState<_PhoneField> createState() => _PhoneFieldState();
+}
+
+class _PhoneFieldState extends ConsumerState<_PhoneField> {
+  final _textController = TextEditingController();
+  final _focusNode = FocusNode();
+  bool _autoHintTriggered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
+    _textController.dispose();
+    super.dispose();
+  }
+
+  // "When the user reaches the phone number field" — approximated as "the
+  // first time it gains focus", since it sits inline in a larger scrolling
+  // form rather than behind its own navigation step.
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus || _autoHintTriggered) return;
+    final state = ref.read(onboardingControllerProvider);
+    if (state.phoneLocked || !ref.read(phoneHintServiceProvider).isSupported) {
+      return;
+    }
+    _autoHintTriggered = true;
+    ref.read(onboardingControllerProvider.notifier).requestPhoneHint();
+  }
+
+  void _reopenPicker() {
+    ref.read(onboardingControllerProvider.notifier).requestPhoneHint();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(onboardingControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
+
+    if (state.phoneLocked) {
+      final parsed = parsePhoneHint(
+        state.phone,
+        allowedCountries: allowedCountries,
+        currentCountryIsoCode: state.phoneCountryCode,
+      );
+      if (_textController.text != parsed.localNumber) {
+        _textController.text = parsed.localNumber;
+      }
+    }
+
+    final field = IntlPhoneField(
+      // initialCountryCode is only read once, at construction — changing
+      // the key forces a fresh instance so a hint-resolved country actually
+      // updates the displayed flag.
+      key: ValueKey('phone-${state.phoneCountryCode}'),
+      controller: _textController,
+      focusNode: _focusNode,
+      initialCountryCode: state.phoneCountryCode,
+      countries: allowedCountries,
+      readOnly: state.phoneLocked,
+      onChanged: state.phoneLocked
+          ? null
+          : (phoneNumber) => ref
+                .read(onboardingControllerProvider.notifier)
+                .setPhone(phoneNumber.completeNumber),
+      onCountryChanged: state.phoneLocked
+          ? null
+          : (country) => ref
+                .read(onboardingControllerProvider.notifier)
+                .setPhoneCountryCode(country.code),
+      decoration: InputDecoration(
+        labelText: l10n.phoneNumberLabel,
+        suffixIcon: state.isRequestingPhoneHint
+            ? const Padding(
+                padding: EdgeInsets.all(14),
+                child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : state.phoneLocked
+            ? TextButton(
+                onPressed: _reopenPicker,
+                child: Text(l10n.phoneChangeAction),
+              )
+            : null,
+      ),
+    );
+
+    if (!state.phoneLocked) return field;
+
+    // AbsorbPointer, not just readOnly/enabled: readOnly alone still lets
+    // IntlPhoneField's own flag icon open its internal country-picker
+    // dialog (a separate tap target from the text field itself), which
+    // would let the country be changed manually — not allowed once locked.
+    // Wrapping the whole field means every tap, wherever it lands, does the
+    // one thing a locked field should do: re-open the device's own picker.
+    return GestureDetector(
+      onTap: _reopenPicker,
+      child: AbsorbPointer(child: field),
     );
   }
 }

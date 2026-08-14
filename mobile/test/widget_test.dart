@@ -14,21 +14,6 @@ import 'package:mobile/core/models/user_role.dart';
 import 'package:mobile/core/network/api_client.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 
-const _correctOtpCode = '123456';
-
-// WhatsApp OTP is plain HTTP (POST /auth/send-otp, POST /auth/verify-otp —
-// see _FakeApiClient below) with no platform-specific SDK or auto-verify, so
-// unlike the old Firebase-backed flow, every platform (including this Linux
-// test runner) drives the OTP screen the same way: type the code, tap
-// Vérifier.
-Future<void> _verifyPhoneViaOtp(WidgetTester tester) async {
-  expect(find.text('Vérification du numéro'), findsOneWidget);
-  await tester.enterText(find.byType(TextField), _correctOtpCode);
-  await tester.pump();
-  await tester.tap(find.text('Vérifier'));
-  await tester.pumpAndSettle();
-}
-
 // A real 1x1 PNG — decodable, but far below the minimum ID-card dimension,
 // so it exercises the "image too small" client-side validation path.
 const _tinyPngBase64 =
@@ -156,17 +141,6 @@ class _FakeApiClient extends ApiClient {
     String path,
     Map<String, dynamic> body,
   ) async {
-    if (path == '/auth/send-otp') {
-      return {'ok': true};
-    }
-    if (path == '/auth/verify-otp') {
-      if (body['code'] != _correctOtpCode) {
-        throw ApiException('Incorrect code', statusCode: 401);
-      }
-      // No account exists yet for any phone in these tests — every test
-      // exercises the "new user, falls through to registration" path.
-      return {'status': 'new', 'registrationToken': 'fake-registration-token'};
-    }
     if (path == '/users/register') {
       if (failRegister) {
         throw ApiException(
@@ -392,7 +366,6 @@ void main() {
       await tester.ensureVisible(find.text("S'inscrire"));
       await tester.tap(find.text("S'inscrire"));
       await tester.pumpAndSettle();
-      await _verifyPhoneViaOtp(tester);
 
       expect(find.text('Bienvenue, Aya Kone !'), findsOneWidget);
 
@@ -480,7 +453,6 @@ void main() {
       await tester.ensureVisible(find.text("S'inscrire"));
       await tester.tap(find.text("S'inscrire"));
       await tester.pumpAndSettle();
-      await _verifyPhoneViaOtp(tester);
 
       expect(find.text('Bienvenue, Aya Kone !'), findsOneWidget);
 
@@ -573,8 +545,14 @@ void main() {
   );
 
   testWidgets(
-    'registration failure shows a server error after phone verification '
-    'succeeds, and stays on the OTP screen',
+    // failRegister makes POST /users/register 409 ("already registered") —
+    // this test runs on the host platform, where PhoneHintService.isSupported
+    // is false (see registration_flow_test.dart), so the phone here is
+    // always PhoneSource.manual: a manually-typed number that turns out to
+    // already have an account shows the contact-support copy rather than
+    // logging the caller in — see reconnect.controller.ts's doc comment for
+    // why that's a deliberate asymmetry with the device-hint path.
+    'registration failure shows the contact-support message and stays on the form',
     (tester) async {
       await tester.pumpWidget(buildApp(failRegister: true));
       await tester.pumpAndSettle(const Duration(seconds: 4));
@@ -590,12 +568,14 @@ void main() {
       await tester.ensureVisible(find.text("S'inscrire"));
       await tester.tap(find.text("S'inscrire"));
       await tester.pumpAndSettle();
-      await _verifyPhoneViaOtp(tester);
 
-      // Phone verification itself succeeded; the subsequent
-      // POST /users/register call is what fails here.
-      expect(find.text('Vérification du numéro'), findsOneWidget);
-      expect(find.text('Phone number already registered'), findsOneWidget);
+      expect(find.text('Inscription'), findsOneWidget);
+      expect(
+        find.text(
+          'Ce numéro est déjà associé à un compte. Contactez le support pour récupérer votre accès.',
+        ),
+        findsOneWidget,
+      );
     },
   );
 }

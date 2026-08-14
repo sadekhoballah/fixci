@@ -9,7 +9,6 @@ import { IsNull, Repository } from 'typeorm';
 import { Request } from 'express';
 import { User } from '../database/entities/user.entity';
 import { TokensService } from './tokens.service';
-import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { AccessTokenGuard } from './access-token.guard';
 
 // Like AccessTokenGuard, but also requires a local account to already exist
@@ -18,10 +17,9 @@ import { AccessTokenGuard } from './access-token.guard';
 export class AuthGuard extends AccessTokenGuard implements CanActivate {
   constructor(
     tokensService: TokensService,
-    whatsapp: WhatsappService,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {
-    super(tokensService, whatsapp);
+    super(tokensService);
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

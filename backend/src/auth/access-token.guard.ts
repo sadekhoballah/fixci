@@ -1,7 +1,6 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Request } from 'express';
 import { TokensService } from './tokens.service';
-import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { resolveVerifiedAuth, VerifiedAuth } from './resolve-verified-phone';
 
 // Every protected route needs to know "who is calling, really" — this reads
@@ -11,10 +10,7 @@ import { resolveVerifiedAuth, VerifiedAuth } from './resolve-verified-phone';
 // account exists (upload, lookup) use this guard directly.
 @Injectable()
 export class AccessTokenGuard implements CanActivate {
-  constructor(
-    protected readonly tokensService: TokensService,
-    protected readonly whatsapp: WhatsappService,
-  ) {}
+  constructor(protected readonly tokensService: TokensService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -33,6 +29,6 @@ export class AccessTokenGuard implements CanActivate {
     const devHeader = request.headers['x-dev-phone'];
     const devPhone = Array.isArray(devHeader) ? devHeader[0] : devHeader;
 
-    return resolveVerifiedAuth(this.tokensService, this.whatsapp, token, devPhone);
+    return resolveVerifiedAuth(this.tokensService, token, devPhone);
   }
 }

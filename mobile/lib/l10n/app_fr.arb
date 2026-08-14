@@ -68,24 +68,14 @@
   "idCardUploading": "Envoi en cours...",
   "idCardAdded": "Pièce d'identité ajoutée",
   "idCardAddPrompt": "Ajouter votre pièce d'identité",
-  "otpTitle": "Vérification du numéro",
-  "otpInstructions": "Entrez le code envoyé au {phone}",
-  "@otpInstructions": {
-    "placeholders": {
-      "phone": { "type": "String" }
-    }
-  },
-  "otpWhatsappNotice": "Nous vous l'enverrons sur WhatsApp, au même numéro.",
   "retryButton": "Réessayer",
-  "otpCodeLabel": "Code à 6 chiffres",
-  "verifyingButton": "Vérification...",
-  "verifyButton": "Vérifier",
-  "resendCode": "Renvoyer le code",
-  "resendCodeCooldown": "Renvoyer le code ({seconds}s)",
-  "@resendCodeCooldown": {
-    "placeholders": {
-      "seconds": { "type": "int" }
-    }
+  "phoneChangeAction": "Modifier",
+  "@phoneChangeAction": {
+    "description": "Small tappable action next to the phone field, locked after the Phone Number Hint API filled it in — reopens the device's number picker (e.g. to switch SIM on a dual-SIM device)."
+  },
+  "phoneAlreadyRegisteredManualMessage": "Ce numéro est déjà associé à un compte. Contactez le support pour récupérer votre accès.",
+  "@phoneAlreadyRegisteredManualMessage": {
+    "description": "Shown when a manually-typed phone number (no Phone Number Hint API result, or iOS) already belongs to an existing account — manual entry can't be trusted enough to log the caller straight in, unlike a device-sourced number."
   },
   "welcomeMessage": "Bienvenue, {name} !",
   "@welcomeMessage": {
@@ -383,10 +373,6 @@
   "cameraUnavailableMessage": "La caméra n'est pas disponible sur cet appareil.",
   "cameraPermissionDeniedMessage": "Autorisation caméra refusée. Activez-la dans les paramètres de l'appareil.",
   "invalidPhoneNumberMessage": "Numéro de téléphone invalide.",
-  "tooManyAttemptsMessage": "Trop de tentatives. Réessayez plus tard.",
-  "invalidCodeMessage": "Code incorrect. Veuillez réessayer.",
-  "codeExpiredMessage": "Le code a expiré. Demandez un nouveau code.",
-  "verificationErrorMessage": "Une erreur est survenue lors de la vérification.",
   "selectRoleBeforeContinuingMessage": "Veuillez choisir un rôle avant de continuer.",
   "idCardSendFailedMessage": "Échec de l'envoi de l'image.",
   "unexpectedErrorMessage": "Une erreur inattendue est survenue.",

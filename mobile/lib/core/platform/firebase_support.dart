@@ -1,10 +1,9 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-// firebase_messaging (push notifications, the only remaining Firebase
-// consumer — auth no longer uses Firebase at all, see
-// core/auth/otp_auth_service.dart) has no official Linux/Windows desktop
-// implementation.
+// firebase_messaging (push notifications, the only Firebase consumer —
+// auth doesn't use Firebase at all, see core/auth/phone_hint_service.dart)
+// has no official Linux/Windows desktop implementation.
 bool get isFirebaseSupportedPlatform =>
     kIsWeb || Platform.isAndroid || Platform.isIOS;
 

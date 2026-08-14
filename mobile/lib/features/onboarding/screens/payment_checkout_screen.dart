@@ -65,9 +65,9 @@ class _PaymentCheckoutScreenState
   void initState() {
     super.initState();
     _startPayment();
-    // Saved by OnboardingController.submitRegistration/completeAfterVerification
-    // (onboarding flow) or already present from a previous session (change-plan
-    // flow) — either way it's in SessionStorage by the time this screen can
+    // Saved by OnboardingController.completeRegistration (onboarding flow)
+    // or already present from a previous session (change-plan flow) —
+    // either way it's in SessionStorage by the time this screen can
     // ever be reached, so a plain load (no fallback) is enough here.
     ref.read(sessionStorageProvider).loadPhone().then((phone) {
       if (mounted) setState(() => _phone = phone);

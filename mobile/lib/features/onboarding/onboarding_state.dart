@@ -4,6 +4,16 @@ import '../../core/models/service_category.dart';
 import '../../core/models/subscription_tier.dart';
 import '../../core/models/user_role.dart';
 
+// Where OnboardingState.phone came from — decides how OnboardingController
+// reacts to a "phone already registered" conflict from POST /users/register
+// (see completeRegistration): a device-sourced number gets a best-effort
+// reconnect via POST /auth/reconnect, a manually-typed one doesn't, because
+// there's no possession signal at all behind it. See
+// backend/src/auth/reconnect.controller.ts's doc comment for the full
+// rationale — this is the one enum value that phase 2's real verification
+// will need to touch.
+enum PhoneSource { deviceHint, manual }
+
 class OnboardingState {
   const OnboardingState({
     this.role,
@@ -11,6 +21,9 @@ class OnboardingState {
     this.lastName = '',
     this.phone = '',
     this.phoneCountryCode = 'CI',
+    this.phoneLocked = false,
+    this.phoneSource = PhoneSource.manual,
+    this.isRequestingPhoneHint = false,
     this.district,
     this.serviceCategory,
     this.experienceDetails = '',
@@ -18,8 +31,6 @@ class OnboardingState {
     this.idCardPreviewBytes,
     this.isUploadingIdCard = false,
     this.idCardUploadError,
-    this.verifiedPhone,
-    this.registrationToken,
     this.isSubmitting = false,
     this.submissionError,
     this.registrationSucceeded = false,
@@ -37,6 +48,17 @@ class OnboardingState {
   // the Russia "coming soon" gate; not itself sent to the backend (the
   // phone number's own dial code already encodes it there).
   final String phoneCountryCode;
+  // True once a number picked via the Android Phone Number Hint API has
+  // been applied — the phone field goes read-only and the country selector
+  // stops accepting manual taps while this is true (see
+  // registration_screen.dart's _PhoneField). Never true on iOS or after the
+  // "no numbers on this device" fallback.
+  final bool phoneLocked;
+  final PhoneSource phoneSource;
+  // Drives the phone field's loading state while the system picker is being
+  // requested/shown — separate from phoneLocked since this is true only
+  // during the request itself.
+  final bool isRequestingPhoneHint;
   final District? district;
   final ServiceCategory? serviceCategory;
   final String experienceDetails;
@@ -44,33 +66,24 @@ class OnboardingState {
   final Uint8List? idCardPreviewBytes;
   final bool isUploadingIdCard;
   final String? idCardUploadError;
-  // The phone number that was successfully OTP-verified, and the proof of
-  // that verification for a brand-new phone (null once loggedIntoExistingAccount
-  // is true — POST /auth/verify-otp already logged that case straight in,
-  // see OnboardingController.setVerifiedPhone). setPhone() clears both if
-  // the user edits the number after verifying it.
-  final String? verifiedPhone;
-  final String? registrationToken;
   final bool isSubmitting;
   final String? submissionError;
   final bool registrationSucceeded;
   // Set once the artisan picks a plan on TierSelectionScreen, or (for a
-  // returning craftsman) straight from POST /auth/verify-otp's response —
+  // returning craftsman) straight from POST /auth/reconnect's response —
   // persisted via OnboardingController.confirmActiveTier() once it's
   // actually active (free tiers immediately, paid tiers after
   // PaymentCheckoutScreen).
   final SubscriptionTier? selectedTier;
-  // True when the phone entered during "registration" turned out to already
-  // have an account (POST /auth/verify-otp returned status:"existing") —
-  // the app logged the user straight into that existing account instead of
-  // creating a new one, so the post-verification screen should skip the
-  // "welcome, new account" flow and go directly to that account's home
-  // screen.
+  // True when phone turned out to already have an account and
+  // OnboardingController.completeRegistration() logged the caller straight
+  // into it via POST /auth/reconnect (device-sourced number only — see
+  // PhoneSource) instead of creating a new one, so the post-registration
+  // screen should skip the "welcome, new account" flow and go directly to
+  // that account's home screen.
   final bool loggedIntoExistingAccount;
 
   bool get idCardAttached => idCardStorageKey != null;
-
-  bool get isPhoneVerified => verifiedPhone != null && verifiedPhone == phone;
 
   // Every field is required — mirrors the ID card the photo is meant to
   // match, so first/last name are collected (and validated) separately
@@ -100,6 +113,9 @@ class OnboardingState {
     String? lastName,
     String? phone,
     String? phoneCountryCode,
+    bool? phoneLocked,
+    PhoneSource? phoneSource,
+    bool? isRequestingPhoneHint,
     District? district,
     bool clearDistrict = false,
     ServiceCategory? serviceCategory,
@@ -110,10 +126,6 @@ class OnboardingState {
     bool? isUploadingIdCard,
     String? idCardUploadError,
     bool clearIdCardUploadError = false,
-    String? verifiedPhone,
-    bool clearVerifiedPhone = false,
-    String? registrationToken,
-    bool clearRegistrationToken = false,
     bool? isSubmitting,
     String? submissionError,
     bool clearSubmissionError = false,
@@ -127,6 +139,9 @@ class OnboardingState {
       lastName: lastName ?? this.lastName,
       phone: phone ?? this.phone,
       phoneCountryCode: phoneCountryCode ?? this.phoneCountryCode,
+      phoneLocked: phoneLocked ?? this.phoneLocked,
+      phoneSource: phoneSource ?? this.phoneSource,
+      isRequestingPhoneHint: isRequestingPhoneHint ?? this.isRequestingPhoneHint,
       district: clearDistrict ? null : (district ?? this.district),
       serviceCategory: serviceCategory ?? this.serviceCategory,
       experienceDetails: experienceDetails ?? this.experienceDetails,
@@ -140,12 +155,6 @@ class OnboardingState {
       idCardUploadError: clearIdCardUploadError
           ? null
           : (idCardUploadError ?? this.idCardUploadError),
-      verifiedPhone: clearVerifiedPhone
-          ? null
-          : (verifiedPhone ?? this.verifiedPhone),
-      registrationToken: clearRegistrationToken
-          ? null
-          : (registrationToken ?? this.registrationToken),
       isSubmitting: isSubmitting ?? this.isSubmitting,
       submissionError: clearSubmissionError
           ? null

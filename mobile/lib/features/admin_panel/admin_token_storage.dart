@@ -2,9 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Separate from mobile's SessionStorage on purpose — that one caches
-// client/craftsman session state (role, tier, phone) for the phone-OTP
-// flow; this holds the admin dashboard's own JWT from POST /admin-auth/login,
-// a completely different auth mechanism.
+// client/craftsman session state (role, tier, phone); this holds the admin
+// dashboard's own JWT from POST /admin-auth/login, a completely different
+// auth mechanism.
 class AdminTokenStorage {
   static const _tokenKey = 'admin_jwt';
 

@@ -22,7 +22,6 @@ import { BlacklistModule } from './blacklist/blacklist.module';
 import { BroadcastModule } from './broadcast/broadcast.module';
 import { DirectoryModule } from './directory/directory.module';
 import { AuthModule } from './auth/auth.module';
-import { WhatsappModule } from './whatsapp/whatsapp.module';
 
 @Module({
   imports: [
@@ -33,7 +32,6 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
     }),
     RedisModule,
     FirebaseAdminModule,
-    WhatsappModule,
     AuthModule,
     MatchingModule,
     UsersModule,

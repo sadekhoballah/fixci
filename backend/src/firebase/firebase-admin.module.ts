@@ -9,8 +9,10 @@ import { User } from '../database/entities/user.entity';
 const logger = new Logger('FirebaseAdminModule');
 
 // Only used for FCM push (NotificationsService) now — phone verification
-// moved to WhatsappModule/AuthModule (see otp.service.ts, tokens.service.ts).
-// Still optional infrastructure: the rest of the app must keep working even
+// (which used to go through the WhatsApp Cloud API) has been dropped for
+// this phase; see AuthModule/ReconnectController for what phone-related
+// flows remain. Still optional infrastructure: the rest of the app must
+// keep working even
 // before a Firebase service account is in place, so this never throws —
 // NotificationsService treats a null app as "push unavailable" rather than
 // the whole backend failing to boot.

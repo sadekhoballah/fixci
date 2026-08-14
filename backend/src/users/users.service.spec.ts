@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { UnauthorizedException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { UsersService } from './users.service';
 import { User } from '../database/entities/user.entity';
@@ -9,7 +8,6 @@ import { ClientProfile } from '../database/entities/client-profile.entity';
 import { District } from '../database/entities/district.entity';
 import { BlacklistedPhone } from '../database/entities/blacklisted-phone.entity';
 import { UserRole } from '../database/enums/user-role.enum';
-import { TokensService } from '../auth/tokens.service';
 import { PresenceService } from '../matching/presence.service';
 
 describe('UsersService', () => {
@@ -18,7 +16,6 @@ describe('UsersService', () => {
   let districtRepository: { findOne: jest.Mock };
   let blacklistedPhoneRepository: { findOne: jest.Mock };
   let dataSource: { transaction: jest.Mock };
-  let tokensService: { verifyRegistrationToken: jest.Mock };
   let manager: { create: jest.Mock; save: jest.Mock };
 
   beforeEach(async () => {
@@ -36,9 +33,6 @@ describe('UsersService', () => {
     dataSource = {
       transaction: jest.fn((cb: (m: typeof manager) => unknown) => cb(manager)),
     };
-    tokensService = {
-      verifyRegistrationToken: jest.fn().mockResolvedValue(undefined),
-    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -52,7 +46,6 @@ describe('UsersService', () => {
           useValue: blacklistedPhoneRepository,
         },
         { provide: DataSource, useValue: dataSource },
-        { provide: TokensService, useValue: tokensService },
         { provide: PresenceService, useValue: {} },
       ],
     }).compile();
@@ -60,45 +53,27 @@ describe('UsersService', () => {
     service = module.get(UsersService);
   });
 
-  it('verifies the registration token against the phone and creates the user as phoneVerified=true', async () => {
+  // No phone verification happens before registration for this phase (see
+  // ReconnectController's doc comment) — phoneVerified is left at its column
+  // default rather than ever being set true here.
+  it('creates the user without requiring or setting phone verification', async () => {
     const user = await service.register({
       phone: '+2250700000010',
       role: UserRole.CLIENT,
       fullName: 'Aya Kone',
       idCardStorageKey: 'id-cards/aya.png',
       districtId: 'district-1',
-      registrationToken: 'valid-registration-token',
     });
 
-    expect(tokensService.verifyRegistrationToken).toHaveBeenCalledWith(
-      'valid-registration-token',
-      '+2250700000010',
-    );
-    expect(user.phoneVerified).toBe(true);
+    const [, createArgs] = manager.create.mock.calls[0] as [
+      unknown,
+      Record<string, unknown>,
+    ];
+    expect(createArgs).not.toHaveProperty('phoneVerified');
+    expect(user.phoneVerified).toBeUndefined();
   });
 
-  it('propagates a mismatch/invalid token as UnauthorizedException and creates no user', async () => {
-    tokensService.verifyRegistrationToken.mockRejectedValue(
-      new UnauthorizedException(
-        'Registration token does not match the phone number being registered',
-      ),
-    );
-
-    await expect(
-      service.register({
-        phone: '+2250700000012',
-        role: UserRole.CLIENT,
-        fullName: 'Aya Kone',
-        idCardStorageKey: 'id-cards/aya.png',
-        districtId: 'district-1',
-        registrationToken: 'token-for-a-different-phone',
-      }),
-    ).rejects.toThrow(UnauthorizedException);
-
-    expect(dataSource.transaction).not.toHaveBeenCalled();
-  });
-
-  it('rejects a blacklisted phone without creating a user, before checking the token', async () => {
+  it('rejects a blacklisted phone without creating a user', async () => {
     blacklistedPhoneRepository.findOne.mockResolvedValue({ id: 'bl-1' });
 
     await expect(
@@ -108,11 +83,9 @@ describe('UsersService', () => {
         fullName: 'Aya Kone',
         idCardStorageKey: 'id-cards/aya.png',
         districtId: 'district-1',
-        registrationToken: 'valid-registration-token',
       }),
     ).rejects.toThrow('This phone number cannot be registered');
 
-    expect(tokensService.verifyRegistrationToken).not.toHaveBeenCalled();
     expect(dataSource.transaction).not.toHaveBeenCalled();
   });
 
@@ -124,7 +97,6 @@ describe('UsersService', () => {
       serviceCategory: 'plumber' as never,
       idCardStorageKey: 'id-cards/abc.png',
       districtId: 'district-1',
-      registrationToken: 'valid-registration-token',
     });
 
     expect(manager.create).toHaveBeenCalledWith(

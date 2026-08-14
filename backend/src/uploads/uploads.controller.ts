@@ -52,15 +52,15 @@ export class UploadsController {
   ) {}
 
   // Deliberately NOT behind an auth guard: the registration screen lets a
-  // user attach their ID card before phone OTP verification happens (see
-  // registration_screen.dart — the picker sits above the "S'inscrire"
-  // button that triggers OTP), so no access token exists yet at the time
-  // this is called, on any platform. There is nothing to verify a caller's
-  // identity against here by construction, not by oversight — don't
-  // "fix" this by adding a guard back without first moving ID-card
-  // attachment after OTP verification in the UI flow. What actually
-  // protects this data is the authenticated, ownership-checked GET below,
-  // plus the size/type/dimension validation and rate limiting here.
+  // user attach their ID card before POST /users/register is ever called
+  // (see registration_screen.dart — the picker sits above the "S'inscrire"
+  // button), so no access token exists yet at the time this is called, on
+  // any platform. There is nothing to verify a caller's identity against
+  // here by construction, not by oversight — don't "fix" this by adding a
+  // guard back without first moving ID-card attachment later in the UI
+  // flow. What actually protects this data is the authenticated,
+  // ownership-checked GET below, plus the size/type/dimension validation
+  // and rate limiting here.
   @Post('id-card')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @UseInterceptors(

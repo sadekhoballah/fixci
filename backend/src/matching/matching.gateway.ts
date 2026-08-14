@@ -26,7 +26,6 @@ import { User } from '../database/entities/user.entity';
 import { UserRole } from '../database/enums/user-role.enum';
 import { NotificationsService } from '../firebase/notifications.service';
 import { TokensService } from '../auth/tokens.service';
-import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { resolveVerifiedAuth } from '../auth/resolve-verified-phone';
 
 const SERVICE_CATEGORY_LABELS_FR: Record<ServiceCategory, string> = {
@@ -147,7 +146,6 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     private readonly matchingService: MatchingService,
     private readonly presenceService: PresenceService,
     private readonly tokensService: TokensService,
-    private readonly whatsapp: WhatsappService,
     private readonly notificationsService: NotificationsService,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
@@ -163,7 +161,7 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
       const devPhone = socket.handshake.auth?.['devPhone'] as
         string | undefined;
 
-      resolveVerifiedAuth(this.tokensService, this.whatsapp, token, devPhone)
+      resolveVerifiedAuth(this.tokensService, token, devPhone)
         .then(({ phone, userId }) =>
           // Same id-vs-phone rationale as AuthGuard: a real token's userId
           // is authoritative and immune to phone-reuse after a deletion;
