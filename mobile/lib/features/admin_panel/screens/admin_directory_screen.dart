@@ -116,6 +116,15 @@ class AdminDirectoryScreen extends ConsumerWidget {
                                 child: _DirectoryCard(
                                   entry: entry,
                                   colorScheme: colorScheme,
+                                  isProcessing: state.processingIds.contains(
+                                    entry.userId,
+                                  ),
+                                  onDelete: () =>
+                                      _confirmDeleteAccount(
+                                        context,
+                                        controller,
+                                        entry,
+                                      ),
                                 ),
                               ),
                             ),
@@ -128,13 +137,68 @@ class AdminDirectoryScreen extends ConsumerWidget {
       ),
     );
   }
+
+  // Step 1 of the "reset account" flow: type the phone number back to
+  // confirm (irreversible action), then delete. If the account still has a
+  // mission in progress, the delete comes back as activeMission instead of
+  // a dead-end error — offer to force-cancel the mission and retry once.
+  Future<void> _confirmDeleteAccount(
+    BuildContext context,
+    AdminDirectoryController controller,
+    DirectoryEntry entry,
+  ) async {
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (dialogContext) => _DeleteAccountDialog(entry: entry),
+    );
+    if (result == null) return;
+    final reason = result.isEmpty ? null : result;
+
+    final outcome = await controller.deleteAccount(entry.userId, reason);
+    if (outcome != DeleteAccountOutcome.activeMission || !context.mounted) {
+      return;
+    }
+
+    final shouldCancelMission = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Mission en cours'),
+        content: Text(
+          'Ce compte (${entry.phone}) a une mission en cours. '
+          "L'annuler et supprimer le compte quand même ?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Annuler la mission et supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (shouldCancelMission != true) return;
+
+    final cancelled = await controller.cancelActiveMissions(entry.userId);
+    if (!cancelled) return;
+    await controller.deleteAccount(entry.userId, reason);
+  }
 }
 
 class _DirectoryCard extends StatelessWidget {
-  const _DirectoryCard({required this.entry, required this.colorScheme});
+  const _DirectoryCard({
+    required this.entry,
+    required this.colorScheme,
+    required this.isProcessing,
+    required this.onDelete,
+  });
 
   final DirectoryEntry entry;
   final ColorScheme colorScheme;
+  final bool isProcessing;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -185,8 +249,93 @@ class _DirectoryCard extends StatelessWidget {
             ),
           ),
           _OnlineBadge(isOnline: entry.isOnline),
+          const SizedBox(width: 8),
+          isProcessing
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.person_remove_outlined),
+                  tooltip: 'Supprimer le compte',
+                  onPressed: onDelete,
+                ),
         ],
       ),
+    );
+  }
+}
+
+class _DeleteAccountDialog extends StatefulWidget {
+  const _DeleteAccountDialog({required this.entry});
+
+  final DirectoryEntry entry;
+
+  @override
+  State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
+  final _phoneController = TextEditingController();
+  final _reasonController = TextEditingController();
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final entry = widget.entry;
+    return AlertDialog(
+      title: const Text('Supprimer le compte ?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Action irréversible. ${entry.fullName ?? 'Ce compte'} pourra '
+            'se réinscrire avec ce numéro par la suite.\n\n'
+            'Tapez ${entry.phone} pour confirmer.',
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _phoneController,
+            autofocus: true,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(labelText: 'Téléphone'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _reasonController,
+            decoration: const InputDecoration(labelText: 'Motif (optionnel)'),
+            maxLines: 2,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Annuler'),
+        ),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _phoneController,
+          builder: (context, value, _) {
+            final matches = value.text.trim() == entry.phone;
+            return TextButton(
+              onPressed: matches
+                  ? () => Navigator.of(
+                      context,
+                    ).pop(_reasonController.text.trim())
+                  : null,
+              child: const Text('Supprimer'),
+            );
+          },
+        ),
+      ],
     );
   }
 }

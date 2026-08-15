@@ -15,6 +15,6 @@ import { PresenceService } from './presence.service';
   ],
   controllers: [MatchingController],
   providers: [MatchingService, MatchingGateway, PresenceService],
-  exports: [PresenceService],
+  exports: [PresenceService, MatchingService, MatchingGateway],
 })
 export class MatchingModule {}
