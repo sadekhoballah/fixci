@@ -2,6 +2,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { unlink } from 'fs/promises';
@@ -34,6 +35,8 @@ const ACTIVE_REQUEST_STATUSES = [
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     @InjectRepository(CraftsmanProfile)
@@ -216,5 +219,23 @@ export class UsersService {
     if (user.role === UserRole.CRAFTSMAN) {
       await this.presenceService.setOffline(userId).catch(() => undefined);
     }
+  }
+
+  // Admin-triggered variant of deleteAccount, called from the Annuaire tab
+  // (e.g. a mis-registered or misbehaving account) rather than by the user
+  // themselves. Same anonymization path and the same "blocked while a
+  // mission is active" guard — the admin panel is expected to call
+  // MatchingService.adminCancelActiveRequests first when that guard fires.
+  // The only addition is a log line, since once this returns the row itself
+  // no longer holds any trace of who was deleted or why.
+  async adminDeleteAccount(
+    userId: string,
+    adminId: string,
+    reason: string | null,
+  ): Promise<void> {
+    await this.deleteAccount(userId);
+    this.logger.warn(
+      `Admin ${adminId} deleted account ${userId}${reason ? ` — ${reason}` : ''}`,
+    );
   }
 }

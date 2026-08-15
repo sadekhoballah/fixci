@@ -106,11 +106,20 @@ class AdminApiClient {
     return _handleResponse(response);
   }
 
-  Future<Map<String, dynamic>> delete(String path) async {
+  Future<Map<String, dynamic>> delete(
+    String path, [
+    Map<String, dynamic>? body,
+  ]) async {
     final http.Response response;
     try {
       response = await _client
-          .delete(Uri.parse('${ApiConfig.baseUrl}$path'), headers: _headers())
+          .delete(
+            Uri.parse('${ApiConfig.baseUrl}$path'),
+            headers: _headers(
+              body != null ? const {'Content-Type': 'application/json'} : const {},
+            ),
+            body: body != null ? jsonEncode(body) : null,
+          )
           .timeout(const Duration(seconds: 15));
     } catch (_) {
       throw AdminApiException(

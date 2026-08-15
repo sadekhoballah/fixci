@@ -3,11 +3,16 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../database/entities/user.entity';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 import { MatchingModule } from '../matching/matching.module';
+import { UsersModule } from '../users/users.module';
 import { DirectoryService } from './directory.service';
 import { AdminDirectoryController } from './admin-directory.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, CraftsmanProfile]), MatchingModule],
+  imports: [
+    TypeOrmModule.forFeature([User, CraftsmanProfile]),
+    MatchingModule,
+    UsersModule,
+  ],
   controllers: [AdminDirectoryController],
   providers: [DirectoryService],
 })

@@ -3,6 +3,16 @@ import { DataSource } from 'typeorm';
 import { ServiceCategory } from '../database/enums/service-category.enum';
 import { INITIAL_RADIUS_METERS } from './matching.constants';
 
+// Duplicated from UsersService's own copy rather than imported — these two
+// modules don't otherwise depend on each other, and the list is small and
+// stable (it mirrors the service_requests_one_active_per_client index).
+const ACTIVE_REQUEST_STATUSES = [
+  'pending',
+  'assigned',
+  'in_progress',
+  'awaiting_client_confirmation',
+];
+
 export interface CreatedServiceRequest {
   id: string;
   clientId: string;
@@ -330,6 +340,33 @@ export class MatchingService {
     if (rows.length === 0) return null;
     return { requestId: rows[0].id, clientId: rows[0].client_id };
   }
+
+  // Admin-only: force-closes every unresolved request the given user is a
+  // party to, as either client or craftsman — unlike cancelByClient/cancelJob,
+  // this isn't gated on the caller owning the request, since the caller here
+  // is an admin acting on someone else's account. Used ahead of
+  // UsersService.adminDeleteAccount so a mid-job account never gets
+  // anonymized out from under an active counterparty.
+  async adminCancelActiveRequests(
+    userId: string,
+  ): Promise<AdminCancelledRequest[]> {
+    const rows: Array<{
+      id: string;
+      client_id: string;
+      craftsman_id: string | null;
+    }> = await this.dataSource.query(
+      `UPDATE "service_requests"
+       SET "status" = 'cancelled', "cancelled_at" = now(), "updated_at" = now()
+       WHERE ("client_id" = $1 OR "craftsman_id" = $1) AND "status" = ANY($2)
+       RETURNING "id", "client_id", "craftsman_id"`,
+      [userId, ACTIVE_REQUEST_STATUSES],
+    );
+    return rows.map((row) => ({
+      requestId: row.id,
+      clientId: row.client_id,
+      craftsmanId: row.craftsman_id,
+    }));
+  }
 }
 
 export interface JobTransitionResult {
@@ -345,6 +382,12 @@ export interface ClientCancelResult {
 export interface ClientConfirmResult {
   requestId: string;
   craftsmanId: string;
+}
+
+export interface AdminCancelledRequest {
+  requestId: string;
+  clientId: string;
+  craftsmanId: string | null;
 }
 
 export interface RatingResult {

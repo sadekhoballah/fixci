@@ -31,6 +31,23 @@ class AdminDirectoryRepository {
     return _parseItems(response, includeCategory: true);
   }
 
+  // Force-cancels any mission the account is currently a party to. Must be
+  // called before deleteAccount when that throws a 409 ("mission en
+  // cours") — see AdminDirectoryController.deleteAccount.
+  Future<void> cancelActiveMissions(String userId) => _apiClient.post(
+    '/admin/directory/users/$userId/cancel-active-missions',
+    const {},
+  );
+
+  // Irreversible: anonymizes the account so its phone number is freed for
+  // re-registration. Throws AdminApiException with statusCode 409 if the
+  // account still has a mission in progress.
+  Future<void> deleteAccount(String userId, String? reason) => _apiClient
+      .delete(
+        '/admin/directory/users/$userId',
+        (reason != null && reason.isNotEmpty) ? {'reason': reason} : null,
+      );
+
   List<DirectoryEntry> _parseItems(
     Map<String, dynamic> response, {
     required bool includeCategory,

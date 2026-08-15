@@ -27,6 +27,7 @@ class AdminDirectoryState {
     this.errorMessage,
     this.search = '',
     this.category,
+    this.processingIds = const {},
   });
 
   final DirectoryTab tab;
@@ -36,6 +37,8 @@ class AdminDirectoryState {
   final String search;
   // Craftsmen tab only — the ServiceCategory wire value, or null for all.
   final String? category;
+  // Which rows currently have a cancel-mission/delete request in flight.
+  final Set<String> processingIds;
 
   AdminDirectoryState copyWith({
     DirectoryTab? tab,
@@ -46,6 +49,7 @@ class AdminDirectoryState {
     String? search,
     String? category,
     bool clearCategory = false,
+    Set<String>? processingIds,
   }) {
     return AdminDirectoryState(
       tab: tab ?? this.tab,
@@ -54,6 +58,7 @@ class AdminDirectoryState {
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       search: search ?? this.search,
       category: clearCategory ? null : (category ?? this.category),
+      processingIds: processingIds ?? this.processingIds,
     );
   }
 }
