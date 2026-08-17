@@ -42,4 +42,17 @@ export class RegisterUserDto {
   @IsString()
   @MaxLength(255)
   idCardStorageKey: string;
+
+  // Second mandatory document, taxi/camion craftsmen only — see
+  // CraftsmanProfile.licenseStorageKey.
+  @ValidateIf(
+    (dto: RegisterUserDto) =>
+      dto.role === UserRole.CRAFTSMAN &&
+      (dto.serviceCategory === ServiceCategory.TAXI ||
+        dto.serviceCategory === ServiceCategory.CAMION),
+  )
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(255)
+  licenseStorageKey?: string;
 }

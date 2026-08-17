@@ -1,10 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Not, Repository } from 'typeorm';
+import { In, IsNull, Not, Repository } from 'typeorm';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 import { ClientProfile } from '../database/entities/client-profile.entity';
+import { ServiceCategory } from '../database/enums/service-category.enum';
 import { PresenceService } from '../matching/presence.service';
 import { NotificationsService } from '../firebase/notifications.service';
+
+const LICENSE_REQUIRED_CATEGORIES = [
+  ServiceCategory.TAXI,
+  ServiceCategory.CAMION,
+];
 
 export interface PendingVerification {
   userId: string;
@@ -15,6 +21,10 @@ export interface PendingVerification {
   serviceCategory: string | null;
   experienceDetails: string | null;
   idCardStorageKey: string;
+  // Craftsman-only, and only ever set for taxi/camion (see
+  // CraftsmanProfile.licenseStorageKey) — null for every other role/category.
+  licenseStorageKey: string | null;
+  licenseVerified: boolean;
   createdAt: Date;
 }
 
@@ -35,15 +45,31 @@ export class AdminService {
   // excluded from both halves — rejecting is how a review gets resolved, so
   // a rejected account shouldn't keep reappearing in the queue.
   async getPendingVerifications(): Promise<PendingVerification[]> {
+    // Craftsman queue is an OR of two conditions: the normal "ID card not
+    // yet verified" case (every category), plus — taxi/camion only — "ID
+    // card verified but the license isn't yet", so those two categories
+    // never disappear from the queue after just one of their two documents
+    // is approved. A profile can match both conditions at once (neither
+    // document verified yet), hence the de-dup by userId below.
     const craftsmanProfiles = await this.craftsmanProfileRepository.find({
-      where: {
-        idVerified: false,
-        isActive: true,
-        idCardStorageKey: Not(IsNull()),
-      },
+      where: [
+        { idVerified: false, isActive: true, idCardStorageKey: Not(IsNull()) },
+        {
+          serviceCategory: In(LICENSE_REQUIRED_CATEGORIES),
+          licenseVerified: false,
+          isActive: true,
+          idCardStorageKey: Not(IsNull()),
+          licenseStorageKey: Not(IsNull()),
+        },
+      ],
       relations: { user: true },
       order: { createdAt: 'ASC' },
     });
+    const dedupedCraftsmanProfiles = [
+      ...new Map(
+        craftsmanProfiles.map((profile) => [profile.userId, profile]),
+      ).values(),
+    ];
 
     const clientProfiles = await this.clientProfileRepository.find({
       where: {
@@ -56,7 +82,7 @@ export class AdminService {
     });
 
     const entries: PendingVerification[] = [
-      ...craftsmanProfiles.map((profile) => ({
+      ...dedupedCraftsmanProfiles.map((profile) => ({
         userId: profile.userId,
         role: 'craftsman' as const,
         fullName: profile.user.fullName,
@@ -64,6 +90,8 @@ export class AdminService {
         serviceCategory: profile.serviceCategory,
         experienceDetails: profile.experienceDetails,
         idCardStorageKey: profile.idCardStorageKey!,
+        licenseStorageKey: profile.licenseStorageKey,
+        licenseVerified: profile.licenseVerified,
         createdAt: profile.createdAt,
       })),
       ...clientProfiles.map((profile) => ({
@@ -74,6 +102,8 @@ export class AdminService {
         serviceCategory: null,
         experienceDetails: null,
         idCardStorageKey: profile.idCardStorageKey!,
+        licenseStorageKey: null,
+        licenseVerified: false,
         createdAt: profile.createdAt,
       })),
     ];
@@ -83,11 +113,22 @@ export class AdminService {
     );
   }
 
+  // A single "Approuver" action covers both documents at once — there's no
+  // separate per-document review flow (see AdminKycScreen), so this also
+  // marks the license verified whenever one was submitted. Harmless for
+  // every category other than taxi/camion: licenseStorageKey stays null for
+  // them forever, so this update is a no-op for that column in practice.
   async verifyCraftsman(userId: string): Promise<void> {
-    const result = await this.craftsmanProfileRepository.update(
-      { userId },
-      { idVerified: true },
-    );
+    const result = await this.craftsmanProfileRepository
+      .createQueryBuilder()
+      .update(CraftsmanProfile)
+      .set({
+        idVerified: true,
+        licenseVerified: () =>
+          `CASE WHEN "license_storage_key" IS NOT NULL THEN true ELSE "license_verified" END`,
+      })
+      .where('user_id = :userId', { userId })
+      .execute();
     if (result.affected === 0) {
       throw new NotFoundException('No craftsman profile for this account');
     }

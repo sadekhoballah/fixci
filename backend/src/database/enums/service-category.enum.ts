@@ -14,4 +14,6 @@ export enum ServiceCategory {
   BLACKSMITH = 'blacksmith',
   HOUSEKEEPING = 'housekeeping',
   HOME_TUTORING = 'home_tutoring',
+  TAXI = 'taxi',
+  CAMION = 'camion',
 }

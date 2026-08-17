@@ -126,6 +126,7 @@ export class UsersService {
               serviceCategory: dto.serviceCategory,
               experienceDetails: dto.experienceDetails ?? null,
               idCardStorageKey: dto.idCardStorageKey ?? null,
+              licenseStorageKey: dto.licenseStorageKey ?? null,
             }),
           );
         } else {
@@ -161,6 +162,7 @@ export class UsersService {
     }
 
     let idCardStorageKey: string | null = null;
+    let licenseStorageKey: string | null = null;
 
     await this.dataSource.transaction(async (manager) => {
       const [{ count }]: [{ count: string }] = await manager.query(
@@ -180,12 +182,14 @@ export class UsersService {
           where: { userId },
         });
         idCardStorageKey = profile?.idCardStorageKey ?? null;
+        licenseStorageKey = profile?.licenseStorageKey ?? null;
         await manager.update(
           CraftsmanProfile,
           { userId },
           {
             experienceDetails: null,
             idCardStorageKey: null,
+            licenseStorageKey: null,
             location: null,
             isAvailable: false,
             isActive: false,
@@ -215,6 +219,11 @@ export class UsersService {
     // never undo (or appear to fail) an already-committed deletion.
     if (idCardStorageKey) {
       await unlink(join(UPLOADS_ROOT, idCardStorageKey)).catch(() => undefined);
+    }
+    if (licenseStorageKey) {
+      await unlink(join(UPLOADS_ROOT, licenseStorageKey)).catch(
+        () => undefined,
+      );
     }
     if (user.role === UserRole.CRAFTSMAN) {
       await this.presenceService.setOffline(userId).catch(() => undefined);

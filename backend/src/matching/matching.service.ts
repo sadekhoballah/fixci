@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { ServiceCategory } from '../database/enums/service-category.enum';
-import { INITIAL_RADIUS_METERS } from './matching.constants';
+import { initialRadiusMetersFor } from './matching.constants';
 
 // Duplicated from UsersService's own copy rather than imported — these two
 // modules don't otherwise depend on each other, and the list is small and
@@ -44,7 +44,13 @@ export class MatchingService {
            ("client_id", "service_category", "client_location", "search_radius_meters")
          VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5)
          RETURNING "id"`,
-        [clientId, serviceCategory, longitude, latitude, INITIAL_RADIUS_METERS],
+        [
+          clientId,
+          serviceCategory,
+          longitude,
+          latitude,
+          initialRadiusMetersFor(serviceCategory),
+        ],
       );
       return {
         id: rows[0].id,

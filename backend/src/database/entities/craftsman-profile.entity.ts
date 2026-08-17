@@ -48,6 +48,24 @@ export class CraftsmanProfile {
   @Column({ name: 'id_rejection_reason', type: 'text', nullable: true })
   idRejectionReason: string | null;
 
+  // Second KYC document, only ever populated for ServiceCategory.TAXI /
+  // CAMION (see register-user.dto.ts) — mirrors the idCard* triplet above
+  // exactly. PresenceService.setOnline gates going online for those two
+  // categories on idVerified AND licenseVerified both being true.
+  @Column({
+    name: 'license_storage_key',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  licenseStorageKey: string | null;
+
+  @Column({ name: 'license_verified', type: 'boolean', default: false })
+  licenseVerified: boolean;
+
+  @Column({ name: 'license_rejection_reason', type: 'text', nullable: true })
+  licenseRejectionReason: string | null;
+
   // PostGIS geography(Point,4326); TypeORM round-trips this as raw EWKB hex on
   // plain find/save, so reads/writes that need coordinates go through raw
   // ST_ functions (ST_AsGeoJSON/ST_SetSRID) via the query builder instead.

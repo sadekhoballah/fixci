@@ -10,6 +10,7 @@ class PendingVerification {
     required this.phone,
     required this.serviceCategory,
     required this.experienceDetails,
+    required this.licenseVerified,
     required this.createdAt,
   });
 
@@ -20,6 +21,10 @@ class PendingVerification {
   // Craftsman-only — null for a client entry.
   final ServiceCategory? serviceCategory;
   final String? experienceDetails;
+  // Craftsman-only, meaningful only when serviceCategory.requiresDriverLicense
+  // is true (taxi/camion) — whether the license half of KYC is done, so the
+  // card can show its own preview/status independent of the ID card's.
+  final bool licenseVerified;
   final DateTime createdAt;
 }
 

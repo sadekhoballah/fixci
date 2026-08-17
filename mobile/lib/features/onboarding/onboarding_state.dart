@@ -31,6 +31,10 @@ class OnboardingState {
     this.idCardPreviewBytes,
     this.isUploadingIdCard = false,
     this.idCardUploadError,
+    this.licenseStorageKey,
+    this.licensePreviewBytes,
+    this.isUploadingLicense = false,
+    this.licenseUploadError,
     this.isSubmitting = false,
     this.submissionError,
     this.registrationSucceeded = false,
@@ -66,6 +70,14 @@ class OnboardingState {
   final Uint8List? idCardPreviewBytes;
   final bool isUploadingIdCard;
   final String? idCardUploadError;
+  // Second mandatory document, only shown/required for a craftsman whose
+  // serviceCategory.requiresDriverLicense is true (taxi/camion) — see
+  // isRegistrationComplete below and registration_screen.dart's
+  // _LicensePicker.
+  final String? licenseStorageKey;
+  final Uint8List? licensePreviewBytes;
+  final bool isUploadingLicense;
+  final String? licenseUploadError;
   final bool isSubmitting;
   final String? submissionError;
   final bool registrationSucceeded;
@@ -84,6 +96,7 @@ class OnboardingState {
   final bool loggedIntoExistingAccount;
 
   bool get idCardAttached => idCardStorageKey != null;
+  bool get licenseAttached => licenseStorageKey != null;
 
   // Every field is required — mirrors the ID card the photo is meant to
   // match, so first/last name are collected (and validated) separately
@@ -102,7 +115,13 @@ class OnboardingState {
     if (district == null) return false;
     if (!idCardAttached) return false;
     if (role == UserRole.craftsman) {
-      return serviceCategory != null && experienceDetails.trim().isNotEmpty;
+      if (serviceCategory == null || experienceDetails.trim().isEmpty) {
+        return false;
+      }
+      if (serviceCategory!.requiresDriverLicense && !licenseAttached) {
+        return false;
+      }
+      return true;
     }
     return true;
   }
@@ -126,6 +145,12 @@ class OnboardingState {
     bool? isUploadingIdCard,
     String? idCardUploadError,
     bool clearIdCardUploadError = false,
+    String? licenseStorageKey,
+    bool clearLicense = false,
+    Uint8List? licensePreviewBytes,
+    bool? isUploadingLicense,
+    String? licenseUploadError,
+    bool clearLicenseUploadError = false,
     bool? isSubmitting,
     String? submissionError,
     bool clearSubmissionError = false,
@@ -155,6 +180,16 @@ class OnboardingState {
       idCardUploadError: clearIdCardUploadError
           ? null
           : (idCardUploadError ?? this.idCardUploadError),
+      licenseStorageKey: clearLicense
+          ? null
+          : (licenseStorageKey ?? this.licenseStorageKey),
+      licensePreviewBytes: clearLicense
+          ? null
+          : (licensePreviewBytes ?? this.licensePreviewBytes),
+      isUploadingLicense: isUploadingLicense ?? this.isUploadingLicense,
+      licenseUploadError: clearLicenseUploadError
+          ? null
+          : (licenseUploadError ?? this.licenseUploadError),
       isSubmitting: isSubmitting ?? this.isSubmitting,
       submissionError: clearSubmissionError
           ? null

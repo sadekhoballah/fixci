@@ -24,6 +24,8 @@ import {
   ALLOWED_ID_CARD_MIME_TYPES,
   ID_CARDS_DIR,
   ID_CARDS_SUBDIR,
+  LICENSES_DIR,
+  LICENSES_SUBDIR,
   MAX_ID_CARD_ASPECT_RATIO,
   MAX_ID_CARD_SIZE_BYTES,
   MIN_ID_CARD_DIMENSION,
@@ -38,6 +40,9 @@ import { ClientProfile } from '../database/entities/client-profile.entity';
 
 if (!existsSync(ID_CARDS_DIR)) {
   mkdirSync(ID_CARDS_DIR, { recursive: true });
+}
+if (!existsSync(LICENSES_DIR)) {
+  mkdirSync(LICENSES_DIR, { recursive: true });
 }
 
 const ALLOWED_IMAGE_SIZE_TYPES = new Set(['jpg', 'png']);
@@ -88,13 +93,53 @@ export class UploadsController {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
+    await this.assertLooksLikeDocumentPhoto(file.path);
+    return { storageKey: `${ID_CARDS_SUBDIR}/${file.filename}` };
+  }
 
-    // The mimetype/extension filter above only checks what the client
-    // *claims* the file is. Decode it for real before trusting it: this
-    // catches corrupt files, disguised non-images, and implausible ID-card
-    // photos (too small or too oddly-shaped to be one).
+  // Second KYC document, taxi/camion craftsmen only (see
+  // CraftsmanProfile.licenseStorageKey) — same rationale/guards as
+  // uploadIdCard above (no AuthGuard, same throttle, same photo validation),
+  // just a distinct storage subdir so the two documents never collide.
+  @Post('license')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: LICENSES_DIR,
+        filename: (_req, file, callback) => {
+          callback(null, `${randomUUID()}${extname(file.originalname)}`);
+        },
+      }),
+      limits: { fileSize: MAX_ID_CARD_SIZE_BYTES },
+      fileFilter: (_req, file, callback) => {
+        if (!ALLOWED_ID_CARD_MIME_TYPES.includes(file.mimetype)) {
+          callback(
+            new BadRequestException('Only JPEG or PNG images are allowed'),
+            false,
+          );
+          return;
+        }
+        callback(null, true);
+      },
+    }),
+  )
+  async uploadLicense(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+    await this.assertLooksLikeDocumentPhoto(file.path);
+    return { storageKey: `${LICENSES_SUBDIR}/${file.filename}` };
+  }
+
+  // The mimetype/extension filter on each FileInterceptor above only checks
+  // what the client *claims* the file is. Decode it for real before trusting
+  // it: this catches corrupt files, disguised non-images, and implausible
+  // document photos (too small or too oddly-shaped to be one). Shared by
+  // uploadIdCard and uploadLicense — same document-photo shape either way.
+  private async assertLooksLikeDocumentPhoto(filePath: string): Promise<void> {
     try {
-      const buffer = readFileSync(file.path);
+      const buffer = readFileSync(filePath);
       if (buffer.length === 0) {
         throw new BadRequestException('Uploaded file is empty');
       }
@@ -120,25 +165,24 @@ export class UploadsController {
 
       // None of the checks above look at the image's *content* — a plausibly
       // sized/shaped photo of a car or a blank wall would still pass them.
-      // A real CNI/passport is dense with printed text; a quick OCR pass is
-      // enough to reject the obvious non-documents client-side validation
-      // can't catch. This is a coarse filter, not identity verification —
-      // idVerified stays false either way, for a human to review.
-      const text = await extractDocumentText(file.path);
+      // A real CNI/passport/permis is dense with printed text; a quick OCR
+      // pass is enough to reject the obvious non-documents client-side
+      // validation can't catch. This is a coarse filter, not identity
+      // verification — idVerified/licenseVerified stay false either way,
+      // for a human to review.
+      const text = await extractDocumentText(filePath);
       if (text.length < MIN_ID_DOCUMENT_TEXT_CHARACTERS) {
         throw new BadRequestException(
-          'Le fichier téléchargé ne ressemble pas à un document officiel (CNI/Passeport). Veuillez réessayer avec une photo claire.',
+          'Le fichier téléchargé ne ressemble pas à un document officiel (CNI/Passeport/Permis). Veuillez réessayer avec une photo claire.',
         );
       }
     } catch (error) {
-      unlinkSync(file.path);
+      unlinkSync(filePath);
       if (error instanceof BadRequestException) {
         throw error;
       }
       throw new BadRequestException('Uploaded file is not a valid image');
     }
-
-    return { storageKey: `${ID_CARDS_SUBDIR}/${file.filename}` };
   }
 
   // Replaces the previous public static-file serving of /uploads: an ID-card
@@ -170,5 +214,31 @@ export class UploadsController {
     }
 
     res.sendFile(join(ID_CARDS_DIR, filename));
+  }
+
+  // Owner-checked counterpart to GET /uploads/id-card/:filename, for the
+  // license document. Only craftsmen ever have one, so only that repository
+  // is checked (unlike the id-card version, which also checks clients).
+  @Get('license/:filename')
+  @UseGuards(AuthGuard)
+  async getLicense(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('filename') filename: string,
+    @Res() res: Response,
+  ) {
+    if (filename.includes('/') || filename.includes('..')) {
+      throw new NotFoundException('No license found for this account');
+    }
+    const storageKey = `${LICENSES_SUBDIR}/${filename}`;
+
+    const craftsmanProfile = await this.craftsmanProfileRepository.findOne({
+      where: { userId: user.id, licenseStorageKey: storageKey },
+    });
+
+    if (!craftsmanProfile) {
+      throw new NotFoundException('No license found for this account');
+    }
+
+    res.sendFile(join(LICENSES_DIR, filename));
   }
 }

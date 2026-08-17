@@ -55,6 +55,17 @@ class OnboardingRepository {
     return response['storageKey'] as String;
   }
 
+  Future<String> uploadLicense(PickedImage image) async {
+    final response = await _apiClient.postMultipart(
+      '/uploads/license',
+      'file',
+      image.bytes,
+      image.filename,
+      contentTypeHeader: image.mimeType,
+    );
+    return response['storageKey'] as String;
+  }
+
   Future<RegisteredTokens> registerUser(OnboardingState state) async {
     final role = state.role;
     if (role == null) {
@@ -71,6 +82,9 @@ class OnboardingRepository {
         'serviceCategory': state.serviceCategory!.wireValue,
       if (role == UserRole.craftsman)
         'experienceDetails': state.experienceDetails.trim(),
+      if (role == UserRole.craftsman &&
+          (state.serviceCategory?.requiresDriverLicense ?? false))
+        'licenseStorageKey': state.licenseStorageKey,
     });
     return RegisteredTokens(
       accessToken: response['accessToken'] as String,

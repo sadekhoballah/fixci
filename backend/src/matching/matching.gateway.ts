@@ -19,6 +19,8 @@ import {
   WAKEUP_ACCEPT_TIMEOUT_MS,
   WAKEUP_CANDIDATES,
   buildRadiusSequence,
+  isTightRadiusCategory,
+  worstCaseLoopDurationMs,
 } from './matching.constants';
 import { clientRoom, craftsmanRoom } from './matching.rooms';
 import { ServiceCategory } from '../database/enums/service-category.enum';
@@ -44,6 +46,8 @@ const SERVICE_CATEGORY_LABELS_FR: Record<ServiceCategory, string> = {
   [ServiceCategory.BLACKSMITH]: 'ferronnerie',
   [ServiceCategory.HOUSEKEEPING]: 'ménage',
   [ServiceCategory.HOME_TUTORING]: 'soutien scolaire',
+  [ServiceCategory.TAXI]: 'taxi',
+  [ServiceCategory.CAMION]: 'camion',
 };
 
 // Generic copy for the lifecycle events relayed through notifyClient/
@@ -313,8 +317,7 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     this.cancelledRequestIds.add(requestId);
     setTimeout(
       () => this.cancelledRequestIds.delete(requestId),
-      buildRadiusSequence().length * ACCEPT_TIMEOUT_MS +
-        WAKEUP_ACCEPT_TIMEOUT_MS,
+      worstCaseLoopDurationMs(),
     );
     this.acceptResolvers.get(requestId)?.('');
   }
@@ -380,7 +383,7 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     // (and either declined or went quiet) gets double-pushed.
     const triedCraftsmanIds = new Set<string>();
 
-    for (const radius of buildRadiusSequence()) {
+    for (const radius of buildRadiusSequence(request.serviceCategory)) {
       if (this.cancelledRequestIds.delete(request.id)) return;
 
       await this.matchingService.updateSearchRadius(request.id, radius);
@@ -445,6 +448,18 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
       }
     }
 
+    if (this.cancelledRequestIds.delete(request.id)) return;
+
+    // Taxi/camion never fall through to the wake-up phase below: it queries
+    // last-known Postgres location with no radius cap at all, which would
+    // silently break the founder's explicit "never further than 4km"
+    // requirement for these two categories. Every other category keeps the
+    // wake-up fallback as-is.
+    if (isTightRadiusCategory(request.serviceCategory)) {
+      await this.expireAndNotify(request);
+      return;
+    }
+
     // Fallback for the common early-stage-marketplace case: zero craftsmen
     // currently hold a live socket in Redis (app backgrounded/killed), but at
     // least one has a last-known Postgres location on file. Push a
@@ -455,8 +470,6 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     // request:new for this still-pending request with zero new code on that
     // path. Their subsequent request:accept resolves this very waitForAccept
     // call via the same requestId — no new accept mechanism needed.
-    if (this.cancelledRequestIds.delete(request.id)) return;
-
     const wakeupCandidates =
       await this.matchingService.findNearestByLastKnownLocation(
         request.serviceCategory,
@@ -492,6 +505,12 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
       }
     }
 
+    await this.expireAndNotify(request);
+  }
+
+  // Shared by both the taxi/camion early-exit above (no wake-up phase for
+  // those) and the normal end-of-loop fallthrough for every other category.
+  private async expireAndNotify(request: CreatedServiceRequest): Promise<void> {
     const expired = await this.matchingService.expireRequest(request.id);
     if (expired) {
       this.server

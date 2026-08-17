@@ -18,7 +18,7 @@ import { AdminService } from './admin.service';
 import { AdminJwtGuard } from '../auth/admin-jwt.guard';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 import { ClientProfile } from '../database/entities/client-profile.entity';
-import { ID_CARDS_DIR } from '../uploads/uploads.constants';
+import { ID_CARDS_DIR, LICENSES_DIR } from '../uploads/uploads.constants';
 import { DeactivateAccountDto } from './dto/deactivate-account.dto';
 
 @Controller('admin')
@@ -84,6 +84,26 @@ export class AdminController {
     const filePath = join(ID_CARDS_DIR, basename(profile.idCardStorageKey));
     if (!existsSync(filePath)) {
       throw new NotFoundException('ID card file not found');
+    }
+    res.sendFile(filePath);
+  }
+
+  // Driver's license counterpart to the above — taxi/camion craftsmen only.
+  // Same rationale: admin-only, keyed by craftsman user id.
+  @Get('craftsmen/:id/license')
+  async getLicense(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res() res: Response,
+  ) {
+    const profile = await this.craftsmanProfileRepository.findOne({
+      where: { userId: id },
+    });
+    if (!profile?.licenseStorageKey) {
+      throw new NotFoundException('No license on file for this craftsman');
+    }
+    const filePath = join(LICENSES_DIR, basename(profile.licenseStorageKey));
+    if (!existsSync(filePath)) {
+      throw new NotFoundException('License file not found');
     }
     res.sendFile(filePath);
   }

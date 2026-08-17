@@ -169,6 +169,72 @@ class OnboardingController extends Notifier<OnboardingState> {
     }
   }
 
+  // Second mandatory document, taxi/camion only — reuses the same
+  // idCardPickerProvider (a generic photo picker despite its name) and the
+  // same image-shape validation as the ID card above; only the upload
+  // endpoint and the state fields it writes into differ.
+  Future<void> pickLicenseFromGallery() =>
+      _pickAndUploadLicense(ref.read(idCardPickerProvider).pickFromGallery);
+
+  Future<void> pickLicenseFromCamera() =>
+      _pickAndUploadLicense(ref.read(idCardPickerProvider).pickFromCamera);
+
+  Future<void> _pickAndUploadLicense(
+    Future<PickedImage?> Function() pick,
+  ) async {
+    state = state.copyWith(clearLicenseUploadError: true);
+    final l10n = ref.read(l10nProvider);
+    final PickedImage? image;
+    try {
+      image = await pick();
+    } on IdCardPickerException catch (e) {
+      state = state.copyWith(
+        licenseUploadError: e.error.localizedMessage(l10n),
+      );
+      return;
+    } catch (_) {
+      state = state.copyWith(
+        licenseUploadError: l10n.unableToSelectImageMessage,
+      );
+      return;
+    }
+    if (image == null) return; // user cancelled the picker
+
+    try {
+      await validateIdCardImage(image.bytes);
+    } on ImageValidationException catch (e) {
+      state = state.copyWith(
+        licenseUploadError: e.error.localizedMessage(l10n),
+      );
+      return;
+    }
+
+    state = state.copyWith(
+      isUploadingLicense: true,
+      clearLicenseUploadError: true,
+    );
+    try {
+      final storageKey = await ref
+          .read(onboardingRepositoryProvider)
+          .uploadLicense(image);
+      state = state.copyWith(
+        isUploadingLicense: false,
+        licenseStorageKey: storageKey,
+        licensePreviewBytes: Uint8List.fromList(image.bytes),
+      );
+    } on ApiException catch (e) {
+      state = state.copyWith(
+        isUploadingLicense: false,
+        licenseUploadError: e.message,
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isUploadingLicense: false,
+        licenseUploadError: l10n.licenseSendFailedMessage,
+      );
+    }
+  }
+
   // No phone verification happens before this for this phase (see
   // backend/src/database/entities/user.entity.ts's phoneVerified column
   // comment) — POST /users/register is called directly with whatever

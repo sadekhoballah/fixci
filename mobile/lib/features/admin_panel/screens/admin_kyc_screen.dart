@@ -201,7 +201,40 @@ class _VerificationCard extends ConsumerWidget {
             style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
-          _IdCardPreview(userId: entry.userId, role: entry.role),
+          _DocumentPreview(
+            load: () => ref
+                .read(adminKycRepositoryProvider)
+                .getIdCardBytes(entry.userId, entry.role),
+          ),
+          if (entry.serviceCategory?.requiresDriverLicense ?? false) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text(
+                  'Permis de conduire',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(
+                  entry.licenseVerified
+                      ? Icons.check_circle
+                      : Icons.hourglass_bottom_rounded,
+                  size: 14,
+                  color: entry.licenseVerified ? Colors.green : Colors.orange,
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            _DocumentPreview(
+              load: () => ref
+                  .read(adminKycRepositoryProvider)
+                  .getLicenseBytes(entry.userId),
+            ),
+          ],
           const SizedBox(height: 14),
           Row(
             children: [
@@ -238,25 +271,25 @@ class _VerificationCard extends ConsumerWidget {
   }
 }
 
-class _IdCardPreview extends ConsumerStatefulWidget {
-  const _IdCardPreview({required this.userId, required this.role});
+// Renders a KYC document photo, fetched lazily via [load] — shared by the ID
+// card preview and (for taxi/camion) the driver's license preview above, the
+// only difference between the two being which endpoint [load] hits.
+class _DocumentPreview extends StatefulWidget {
+  const _DocumentPreview({required this.load});
 
-  final String userId;
-  final VerificationRole role;
+  final Future<Uint8List> Function() load;
 
   @override
-  ConsumerState<_IdCardPreview> createState() => _IdCardPreviewState();
+  State<_DocumentPreview> createState() => _DocumentPreviewState();
 }
 
-class _IdCardPreviewState extends ConsumerState<_IdCardPreview> {
+class _DocumentPreviewState extends State<_DocumentPreview> {
   late Future<Uint8List> _bytesFuture;
 
   @override
   void initState() {
     super.initState();
-    _bytesFuture = ref
-        .read(adminKycRepositoryProvider)
-        .getIdCardBytes(widget.userId, widget.role);
+    _bytesFuture = widget.load();
   }
 
   @override

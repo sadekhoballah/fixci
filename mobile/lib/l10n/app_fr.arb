@@ -68,6 +68,9 @@
   "idCardUploading": "Envoi en cours...",
   "idCardAdded": "Pièce d'identité ajoutée",
   "idCardAddPrompt": "Ajouter votre pièce d'identité",
+  "licenseUploading": "Envoi en cours...",
+  "licenseAdded": "Permis de conduire ajouté",
+  "licenseAddPrompt": "Ajouter votre permis de conduire",
   "retryButton": "Réessayer",
   "phoneChangeAction": "Modifier",
   "@phoneChangeAction": {
@@ -180,6 +183,10 @@
   "categoryHousekeepingDescription": "Ménage à domicile, repassage et entretien courant du foyer.",
   "categoryHomeTutoringLabel": "Cours à domicile",
   "categoryHomeTutoringDescription": "Cours particuliers à domicile pour tous niveaux et matières.",
+  "categoryTaxiLabel": "Chauffeur taxi",
+  "categoryTaxiDescription": "Transport de personnes à proximité, avec permis de conduire vérifié.",
+  "categoryCamionLabel": "Chauffeur camion",
+  "categoryCamionDescription": "Transport de marchandises et déménagement, avec permis de conduire vérifié.",
   "noCraftsmanTitle": "Aucun professionnel disponible",
   "noCraftsmanMessage": "Nous n'avons trouvé aucun {category} disponible pour le moment. Réessayez dans quelques minutes.",
   "@noCraftsmanMessage": {
@@ -375,6 +382,7 @@
   "invalidPhoneNumberMessage": "Numéro de téléphone invalide.",
   "selectRoleBeforeContinuingMessage": "Veuillez choisir un rôle avant de continuer.",
   "idCardSendFailedMessage": "Échec de l'envoi de l'image.",
+  "licenseSendFailedMessage": "Échec de l'envoi de l'image.",
   "unexpectedErrorMessage": "Une erreur inattendue est survenue.",
   "unableToLoadDashboardMessage": "Impossible de charger votre tableau de bord.",
   "enableLocationToGoOnlineMessage": "Activez la localisation pour passer en service.",

@@ -16,7 +16,9 @@ enum ServiceCategory {
   construction,
   blacksmith,
   housekeeping,
-  homeTutoring;
+  homeTutoring,
+  taxi,
+  camion;
 
   String get label => switch (this) {
     ServiceCategory.plumber => 'Plombier',
@@ -34,7 +36,16 @@ enum ServiceCategory {
     ServiceCategory.blacksmith => 'Forgeron',
     ServiceCategory.housekeeping => 'Femme de ménage',
     ServiceCategory.homeTutoring => 'Cours à domicile',
+    ServiceCategory.taxi => 'Chauffeur taxi',
+    ServiceCategory.camion => 'Chauffeur camion',
   };
+
+  // A driver's license is a mandatory second KYC document for these two
+  // categories only (see registration_screen.dart's _LicensePicker and
+  // OnboardingState.isRegistrationComplete) — everywhere else, only the ID
+  // card is required.
+  bool get requiresDriverLicense =>
+      this == ServiceCategory.taxi || this == ServiceCategory.camion;
 
   // Matches the backend's service_category_enum string values.
   String get wireValue => switch (this) {
@@ -53,6 +64,8 @@ enum ServiceCategory {
     ServiceCategory.blacksmith => 'blacksmith',
     ServiceCategory.housekeeping => 'housekeeping',
     ServiceCategory.homeTutoring => 'home_tutoring',
+    ServiceCategory.taxi => 'taxi',
+    ServiceCategory.camion => 'camion',
   };
 
   String get description => switch (this) {
@@ -86,6 +99,10 @@ enum ServiceCategory {
       'Ménage à domicile, repassage et entretien courant du foyer.',
     ServiceCategory.homeTutoring =>
       'Cours particuliers à domicile pour tous niveaux et matières.',
+    ServiceCategory.taxi =>
+      'Transport de personnes à proximité, avec permis de conduire vérifié.',
+    ServiceCategory.camion =>
+      'Transport de marchandises et déménagement, avec permis de conduire vérifié.',
   };
 
   IconData get icon => switch (this) {
@@ -104,6 +121,8 @@ enum ServiceCategory {
     ServiceCategory.blacksmith => Icons.hardware_rounded,
     ServiceCategory.housekeeping => Icons.local_laundry_service_rounded,
     ServiceCategory.homeTutoring => Icons.school_rounded,
+    ServiceCategory.taxi => Icons.local_taxi_rounded,
+    ServiceCategory.camion => Icons.local_shipping_rounded,
   };
 }
 
@@ -131,6 +150,8 @@ extension ServiceCategoryLocalization on ServiceCategory {
     ServiceCategory.blacksmith => l10n.categoryBlacksmithLabel,
     ServiceCategory.housekeeping => l10n.categoryHousekeepingLabel,
     ServiceCategory.homeTutoring => l10n.categoryHomeTutoringLabel,
+    ServiceCategory.taxi => l10n.categoryTaxiLabel,
+    ServiceCategory.camion => l10n.categoryCamionLabel,
   };
 
   String localizedDescription(AppLocalizations l10n) => switch (this) {
@@ -151,5 +172,7 @@ extension ServiceCategoryLocalization on ServiceCategory {
     ServiceCategory.blacksmith => l10n.categoryBlacksmithDescription,
     ServiceCategory.housekeeping => l10n.categoryHousekeepingDescription,
     ServiceCategory.homeTutoring => l10n.categoryHomeTutoringDescription,
+    ServiceCategory.taxi => l10n.categoryTaxiDescription,
+    ServiceCategory.camion => l10n.categoryCamionDescription,
   };
 }

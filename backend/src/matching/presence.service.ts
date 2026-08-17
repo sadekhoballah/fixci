@@ -66,6 +66,20 @@ export class PresenceService {
       where: { userId: craftsmanId },
     });
     if (!profile?.isActive) return false;
+    // Taxi/camion carry a second mandatory KYC document (the driver's
+    // license — see licenseStorageKey/licenseVerified on CraftsmanProfile);
+    // unlike idVerified for every other category (informational only today,
+    // not enforced here), these two categories must have BOTH the ID card
+    // and the license approved by an admin before they can ever enter
+    // presence and become matchable. Returns false the same way the isActive
+    // check above does, so this reads to callers exactly like "can't go
+    // online yet" rather than a distinct error path.
+    if (
+      profile.serviceCategory === ServiceCategory.TAXI ||
+      profile.serviceCategory === ServiceCategory.CAMION
+    ) {
+      if (!profile.idVerified || !profile.licenseVerified) return false;
+    }
     if (
       !(await this.districtsService.isArtisanRegistrationActiveForUser(
         craftsmanId,

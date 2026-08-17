@@ -25,6 +25,7 @@ class AdminKycRepository {
             ? null
             : _parseCategory(json['serviceCategory'] as String),
         experienceDetails: json['experienceDetails'] as String?,
+        licenseVerified: json['licenseVerified'] as bool? ?? false,
         createdAt: DateTime.parse(json['createdAt'] as String),
       );
     }).toList();
@@ -52,6 +53,10 @@ class AdminKycRepository {
             ? '/admin/clients/$userId/id-card'
             : '/admin/craftsmen/$userId/id-card',
       );
+
+  // Craftsman-only — taxi/camion's second KYC document.
+  Future<Uint8List> getLicenseBytes(String userId) =>
+      _apiClient.getBytes('/admin/craftsmen/$userId/license');
 
   ServiceCategory _parseCategory(String wireValue) => ServiceCategory.values
       .firstWhere(

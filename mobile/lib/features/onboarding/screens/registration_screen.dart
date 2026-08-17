@@ -157,6 +157,12 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               ],
               const SizedBox(height: 16),
               _IdCardPicker(state: state, controller: controller),
+              if (isCraftsman &&
+                  (state.serviceCategory?.requiresDriverLicense ??
+                      false)) ...[
+                const SizedBox(height: 16),
+                _LicensePicker(state: state, controller: controller),
+              ],
               if (state.submissionError != null) ...[
                 const SizedBox(height: 16),
                 Text(
@@ -494,6 +500,116 @@ class _IdCardPicker extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             state.idCardUploadError!,
+            style: TextStyle(color: colorScheme.error, fontSize: 13),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// Second mandatory document, only rendered for taxi/camion — see the
+// requiresDriverLicense check in RegistrationScreen.build. Structurally
+// identical to _IdCardPicker above, just pointed at the license fields.
+class _LicensePicker extends StatelessWidget {
+  const _LicensePicker({required this.state, required this.controller});
+
+  final OnboardingState state;
+  final OnboardingController controller;
+
+  Future<void> _showSourceSheet(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (idCardCameraSupported)
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: Text(l10n.takePhotoLabel),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  controller.pickLicenseFromCamera();
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(l10n.chooseFromGalleryLabel),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                controller.pickLicenseFromGallery();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final attached = state.licenseAttached;
+    final uploading = state.isUploadingLicense;
+    final l10n = AppLocalizations.of(context)!;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: uploading ? null : () => _showSourceSheet(context),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border.all(color: colorScheme.outlineVariant),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (attached && state.licensePreviewBytes != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      state.licensePreviewBytes!,
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                else if (uploading)
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  Icon(
+                    Icons.badge_outlined,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    uploading
+                        ? l10n.licenseUploading
+                        : attached
+                        ? l10n.licenseAdded
+                        : l10n.licenseAddPrompt,
+                  ),
+                ),
+                if (attached && !uploading)
+                  const Icon(Icons.check_circle, color: Colors.green),
+              ],
+            ),
+          ),
+        ),
+        if (state.licenseUploadError != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            state.licenseUploadError!,
             style: TextStyle(color: colorScheme.error, fontSize: 13),
           ),
         ],
