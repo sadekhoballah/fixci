@@ -3,13 +3,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../admin_districts_controller.dart';
 import '../admin_districts_state.dart';
 
-class AdminDistrictsScreen extends ConsumerWidget {
+// Matches CreateDistrictDto's LAUNCHED_COUNTRY_CODES — kept in sync with the
+// dropdown in _showCreateDialog below.
+const _countryLabels = {'CI': "Côte d'Ivoire", 'LB': 'Liban'};
+
+class AdminDistrictsScreen extends ConsumerStatefulWidget {
   const AdminDistrictsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminDistrictsScreen> createState() =>
+      _AdminDistrictsScreenState();
+}
+
+class _AdminDistrictsScreenState extends ConsumerState<AdminDistrictsScreen> {
+  // null = no country filter, show every district.
+  String? _countryFilter;
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(adminDistrictsControllerProvider);
     final controller = ref.read(adminDistrictsControllerProvider.notifier);
+    final districts = _countryFilter == null
+        ? state.districts
+        : state.districts
+              .where((d) => d.countryCode == _countryFilter)
+              .toList();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Districts')),
@@ -25,6 +43,12 @@ class AdminDistrictsScreen extends ConsumerWidget {
                 child: ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
+                    _CountryFilterField(
+                      value: _countryFilter,
+                      onChanged: (value) =>
+                          setState(() => _countryFilter = value),
+                    ),
+                    const SizedBox(height: 16),
                     if (state.errorMessage != null) ...[
                       Text(
                         state.errorMessage!,
@@ -32,7 +56,7 @@ class AdminDistrictsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    ...state.districts.map(
+                    ...districts.map(
                       (district) => Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: _DistrictCard(
@@ -83,13 +107,14 @@ class AdminDistrictsScreen extends ConsumerWidget {
               DropdownButtonFormField<String>(
                 initialValue: countryCode,
                 decoration: const InputDecoration(labelText: 'Pays'),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'CI',
-                    child: Text("Côte d'Ivoire"),
-                  ),
-                  DropdownMenuItem(value: 'LB', child: Text('Liban')),
-                ],
+                items: _countryLabels.entries
+                    .map(
+                      (e) => DropdownMenuItem(
+                        value: e.key,
+                        child: Text(e.value),
+                      ),
+                    )
+                    .toList(),
                 onChanged: (value) {
                   if (value != null) setState(() => countryCode = value);
                 },
@@ -115,6 +140,33 @@ class AdminDistrictsScreen extends ConsumerWidget {
     if (result != null && result.$1.isNotEmpty) {
       await controller.createDistrict(result.$1, result.$2);
     }
+  }
+}
+
+// Country filter shown above the district list — value is null for "all
+// countries", matching the current (unfiltered) behavior.
+class _CountryFilterField extends StatelessWidget {
+  const _CountryFilterField({required this.value, required this.onChanged});
+
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<String?>(
+      initialValue: value,
+      decoration: const InputDecoration(
+        labelText: 'Filtrer par pays',
+        prefixIcon: Icon(Icons.search_rounded),
+      ),
+      items: [
+        const DropdownMenuItem(value: null, child: Text('Tous les pays')),
+        ..._countryLabels.entries.map(
+          (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
+        ),
+      ],
+      onChanged: onChanged,
+    );
   }
 }
 
