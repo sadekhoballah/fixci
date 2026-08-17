@@ -10,7 +10,10 @@ import '../live_requests_state.dart';
 // name/photo/price/description — the backend has no such data at this
 // stage (a request is only linked to a specific client-facing profile once
 // assigned; see ActiveJobCard for what's shown after acceptance), and this
-// screen only shows what's real.
+// screen only shows what's real — the one exception is taxi/camion's
+// destination/load details (event.destinationAddress/loadDetails), which
+// the client does type in upfront specifically so the craftsman can see it
+// here, before accepting or declining.
 class IncomingRequestCard extends StatefulWidget {
   const IncomingRequestCard({
     super.key,
@@ -118,6 +121,23 @@ class _IncomingRequestCardState extends State<IncomingRequestCard> {
               _CountdownRing(progress: progress, seconds: _remaining.inSeconds),
             ],
           ),
+          if (event.destinationAddress != null &&
+              event.destinationAddress!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _InfoRow(
+              icon: Icons.place_outlined,
+              label: l10n.destinationLabel,
+              value: event.destinationAddress!,
+            ),
+          ],
+          if (event.loadDetails != null && event.loadDetails!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _InfoRow(
+              icon: Icons.inventory_2_outlined,
+              label: l10n.loadDetailsLabel,
+              value: event.loadDetails!,
+            ),
+          ],
           const SizedBox(height: 14),
           Row(
             children: [
@@ -154,6 +174,46 @@ class _IncomingRequestCardState extends State<IncomingRequestCard> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// A single icon+label+value line — shared by the destination and load-details
+// rows above.
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
+        const SizedBox(width: 6),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
+              children: [
+                TextSpan(
+                  text: '$label : ',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                TextSpan(text: value),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

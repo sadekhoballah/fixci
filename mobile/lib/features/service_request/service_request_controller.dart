@@ -99,7 +99,11 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
     return position;
   }
 
-  Future<void> submit(ServiceCategory category) async {
+  Future<void> submit(
+    ServiceCategory category, {
+    String? destinationAddress,
+    String? loadDetails,
+  }) async {
     state = state.copyWith(
       status: ServiceRequestStatus.locating,
       clearError: true,
@@ -111,6 +115,8 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
       status: ServiceRequestStatus.submitting,
       myLatitude: position.latitude,
       myLongitude: position.longitude,
+      destinationAddress: destinationAddress,
+      loadDetails: loadDetails,
     );
 
     // Join the client's own socket room *before* creating the request.
@@ -130,6 +136,8 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
             category: category,
             latitude: position.latitude,
             longitude: position.longitude,
+            destinationAddress: destinationAddress,
+            loadDetails: loadDetails,
           );
       _requestId = requestId;
       state = state.copyWith(
@@ -231,13 +239,23 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
   }
 
   void retry(ServiceCategory category) {
+    // Captured before the reset below wipes them — taxi/camion's
+    // destination/load details should survive a retry, not silently vanish.
+    final destinationAddress = state.destinationAddress;
+    final loadDetails = state.loadDetails;
     _assignedSub?.cancel();
     _noCraftsmanSub?.cancel();
     _locationSub?.cancel();
     _startedSub?.cancel();
     _awaitingConfirmationSub?.cancel();
     state = const ServiceRequestState();
-    unawaited(submit(category));
+    unawaited(
+      submit(
+        category,
+        destinationAddress: destinationAddress,
+        loadDetails: loadDetails,
+      ),
+    );
   }
 
   void _listenForOutcome() {

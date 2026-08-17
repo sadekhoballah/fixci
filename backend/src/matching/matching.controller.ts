@@ -47,6 +47,8 @@ export class MatchingController {
       dto.serviceCategory,
       dto.latitude,
       dto.longitude,
+      dto.destinationAddress ?? null,
+      dto.loadDetails ?? null,
     );
     if (!request) {
       throw new ConflictException('You already have an active service request');

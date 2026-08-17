@@ -58,6 +58,16 @@ export class ServiceRequest {
   @Column({ name: 'search_radius_meters', type: 'integer', default: 5000 })
   searchRadiusMeters: number;
 
+  // Taxi/camion only (see CreateServiceRequestDto) — free text the client
+  // types in, shown to the craftsman before they accept/decline. Never a
+  // geography point: purely informational, not used for matching/radius.
+  @Column({ name: 'destination_address', type: 'text', nullable: true })
+  destinationAddress: string | null;
+
+  // Optional, taxi/camion only — e.g. "3 cartons, pas d'ascenseur".
+  @Column({ name: 'load_details', type: 'text', nullable: true })
+  loadDetails: string | null;
+
   @Column({ name: 'assigned_at', type: 'timestamptz', nullable: true })
   assignedAt: Date | null;
 

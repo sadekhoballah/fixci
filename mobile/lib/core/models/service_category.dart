@@ -47,6 +47,15 @@ enum ServiceCategory {
   bool get requiresDriverLicense =>
       this == ServiceCategory.taxi || this == ServiceCategory.camion;
 
+  // A destination is mandatory for these two categories only (see
+  // trade_detail_screen.dart) — a craftsman coming to the client's own
+  // location (plumber, electrician, ...) never needs one, but a taxi/camion
+  // craftsman needs to know where the client wants to go *before* deciding
+  // whether to accept. Same two categories as requiresDriverLicense today,
+  // kept as a separate getter since it's a distinct concern.
+  bool get requiresDestination =>
+      this == ServiceCategory.taxi || this == ServiceCategory.camion;
+
   // Matches the backend's service_category_enum string values.
   String get wireValue => switch (this) {
     ServiceCategory.plumber => 'plumber',

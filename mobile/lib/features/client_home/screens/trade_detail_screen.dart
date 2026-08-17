@@ -16,6 +16,14 @@ class TradeDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
+  // Taxi/camion only (see ServiceCategory.requiresDestination) — plain text
+  // rather than a map pin: there's no map integration anywhere in the app
+  // yet (google_maps_flutter is an unused dependency, no API key
+  // configured), so this is the fast, dependency-free first cut. The
+  // craftsman sees these on the incoming-request card before accepting.
+  final _destinationController = TextEditingController();
+  final _loadDetailsController = TextEditingController();
+
   ServiceCategory get category => widget.category;
 
   @override
@@ -27,6 +35,16 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
     Future.microtask(
       () => ref.read(serviceRequestControllerProvider.notifier).prewarmLocation(),
     );
+    // Rebuilds so the submit button's enabled state tracks the destination
+    // field for taxi/camion (see the button's onPressed below).
+    _destinationController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _destinationController.dispose();
+    _loadDetailsController.dispose();
+    super.dispose();
   }
 
   @override
@@ -52,6 +70,8 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
     final isBusy =
         requestState.status == ServiceRequestStatus.locating ||
         requestState.status == ServiceRequestStatus.submitting;
+    final destinationMissing =
+        category.requiresDestination && _destinationController.text.trim().isEmpty;
 
     return Scaffold(
       body: CustomScrollView(
@@ -124,6 +144,27 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
                       color: Colors.grey.shade700,
                     ),
                   ),
+                  if (category.requiresDestination) ...[
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: _destinationController,
+                      decoration: InputDecoration(
+                        labelText: l10n.destinationLabel,
+                        hintText: l10n.destinationHint,
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _loadDetailsController,
+                      decoration: InputDecoration(
+                        labelText: l10n.loadDetailsLabel,
+                        hintText: l10n.loadDetailsHint,
+                        border: const OutlineInputBorder(),
+                      ),
+                      maxLines: 2,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -136,11 +177,15 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: isBusy
+            onPressed: isBusy || destinationMissing
                 ? null
                 : () => ref
                       .read(serviceRequestControllerProvider.notifier)
-                      .submit(category),
+                      .submit(
+                        category,
+                        destinationAddress: _destinationController.text.trim(),
+                        loadDetails: _loadDetailsController.text.trim(),
+                      ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,

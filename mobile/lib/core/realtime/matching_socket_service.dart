@@ -13,6 +13,8 @@ class IncomingRequestEvent {
     required this.serviceCategory,
     required this.distanceMeters,
     required this.estimatedArrivalMinutes,
+    this.destinationAddress,
+    this.loadDetails,
   });
 
   factory IncomingRequestEvent.fromJson(Map<String, dynamic> json) {
@@ -21,6 +23,8 @@ class IncomingRequestEvent {
       serviceCategory: _parseCategory(json['serviceCategory'] as String),
       distanceMeters: (json['distanceMeters'] as num).toDouble(),
       estimatedArrivalMinutes: json['estimatedArrivalMinutes'] as int,
+      destinationAddress: json['destinationAddress'] as String?,
+      loadDetails: json['loadDetails'] as String?,
     );
   }
 
@@ -28,6 +32,9 @@ class IncomingRequestEvent {
   final ServiceCategory serviceCategory;
   final double distanceMeters;
   final int estimatedArrivalMinutes;
+  // Taxi/camion only — see ServiceCategory.requiresDestination.
+  final String? destinationAddress;
+  final String? loadDetails;
 }
 
 ServiceCategory _parseCategory(String wireValue) => ServiceCategory.values

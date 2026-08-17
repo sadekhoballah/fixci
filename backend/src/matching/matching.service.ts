@@ -19,6 +19,9 @@ export interface CreatedServiceRequest {
   serviceCategory: ServiceCategory;
   latitude: number;
   longitude: number;
+  // Taxi/camion only — see CreateServiceRequestDto.
+  destinationAddress: string | null;
+  loadDetails: string | null;
 }
 
 // All PostGIS-touching queries go through raw SQL rather than the entity API —
@@ -37,12 +40,14 @@ export class MatchingService {
     serviceCategory: ServiceCategory,
     latitude: number,
     longitude: number,
+    destinationAddress: string | null = null,
+    loadDetails: string | null = null,
   ): Promise<CreatedServiceRequest | null> {
     try {
       const rows: Array<{ id: string }> = await this.dataSource.query(
         `INSERT INTO "service_requests"
-           ("client_id", "service_category", "client_location", "search_radius_meters")
-         VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5)
+           ("client_id", "service_category", "client_location", "search_radius_meters", "destination_address", "load_details")
+         VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5, $6, $7)
          RETURNING "id"`,
         [
           clientId,
@@ -50,6 +55,8 @@ export class MatchingService {
           longitude,
           latitude,
           initialRadiusMetersFor(serviceCategory),
+          destinationAddress,
+          loadDetails,
         ],
       );
       return {
@@ -58,6 +65,8 @@ export class MatchingService {
         serviceCategory,
         latitude,
         longitude,
+        destinationAddress,
+        loadDetails,
       };
     } catch (error) {
       if ((error as { code?: string }).code === '23505') {
@@ -80,13 +89,23 @@ export class MatchingService {
     category: ServiceCategory,
     longitude: number,
     latitude: number,
-  ): Promise<Array<{ id: string; clientId: string; distanceMeters: number }>> {
+  ): Promise<
+    Array<{
+      id: string;
+      clientId: string;
+      distanceMeters: number;
+      destinationAddress: string | null;
+      loadDetails: string | null;
+    }>
+  > {
     const rows: Array<{
       id: string;
       client_id: string;
       distance_meters: string;
+      destination_address: string | null;
+      load_details: string | null;
     }> = await this.dataSource.query(
-      `SELECT "id", "client_id",
+      `SELECT "id", "client_id", "destination_address", "load_details",
               ST_Distance("client_location", ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS distance_meters
        FROM "service_requests"
        WHERE "status" = 'pending'
@@ -99,6 +118,8 @@ export class MatchingService {
       id: row.id,
       clientId: row.client_id,
       distanceMeters: Number(row.distance_meters),
+      destinationAddress: row.destination_address,
+      loadDetails: row.load_details,
     }));
   }
 

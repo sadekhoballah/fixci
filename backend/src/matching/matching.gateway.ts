@@ -235,6 +235,8 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
         serviceCategory: body.serviceCategory,
         distanceMeters: Math.round(request.distanceMeters),
         estimatedArrivalMinutes: estimateArrivalMinutes(request.distanceMeters),
+        destinationAddress: request.destinationAddress,
+        loadDetails: request.loadDetails,
       });
     }
   }
@@ -416,12 +418,16 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
             estimatedArrivalMinutes: estimateArrivalMinutes(
               candidate.distanceMeters,
             ),
+            destinationAddress: request.destinationAddress,
+            loadDetails: request.loadDetails,
           });
         void this.notificationsService.sendToUser(
           candidate.craftsmanId,
           {
             title: 'Nouvelle demande',
-            body: `Une demande de ${SERVICE_CATEGORY_LABELS_FR[request.serviceCategory]} à ${(candidate.distanceMeters / 1000).toFixed(1)} km de vous.`,
+            body: request.destinationAddress
+              ? `Une demande de ${SERVICE_CATEGORY_LABELS_FR[request.serviceCategory]} à ${(candidate.distanceMeters / 1000).toFixed(1)} km de vous → destination : ${request.destinationAddress}`
+              : `Une demande de ${SERVICE_CATEGORY_LABELS_FR[request.serviceCategory]} à ${(candidate.distanceMeters / 1000).toFixed(1)} km de vous.`,
           },
           { event: 'request:new', requestId: request.id },
         );

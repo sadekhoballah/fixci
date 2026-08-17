@@ -20,6 +20,8 @@ class ServiceRequestState {
     this.errorMessage,
     this.myLatitude,
     this.myLongitude,
+    this.destinationAddress,
+    this.loadDetails,
     this.craftsmanFullName,
     this.craftsmanPhone,
     this.craftsmanLatitude,
@@ -36,6 +38,11 @@ class ServiceRequestState {
   // compute a live distance/ETA readout against the craftsman's updates.
   final double? myLatitude;
   final double? myLongitude;
+  // Taxi/camion only — captured at submit time so retry() (which resets the
+  // rest of the state) can resubmit the same values instead of silently
+  // dropping them.
+  final String? destinationAddress;
+  final String? loadDetails;
   final String? craftsmanFullName;
   final String? craftsmanPhone;
   final double? craftsmanLatitude;
@@ -52,6 +59,8 @@ class ServiceRequestState {
     bool clearError = false,
     double? myLatitude,
     double? myLongitude,
+    String? destinationAddress,
+    String? loadDetails,
     String? craftsmanFullName,
     String? craftsmanPhone,
     double? craftsmanLatitude,
@@ -66,6 +75,8 @@ class ServiceRequestState {
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       myLatitude: myLatitude ?? this.myLatitude,
       myLongitude: myLongitude ?? this.myLongitude,
+      destinationAddress: destinationAddress ?? this.destinationAddress,
+      loadDetails: loadDetails ?? this.loadDetails,
       craftsmanFullName: craftsmanFullName ?? this.craftsmanFullName,
       craftsmanPhone: craftsmanPhone ?? this.craftsmanPhone,
       craftsmanLatitude: craftsmanLatitude ?? this.craftsmanLatitude,

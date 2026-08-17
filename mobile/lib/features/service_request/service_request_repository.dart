@@ -28,11 +28,17 @@ class ServiceRequestRepository {
     required ServiceCategory category,
     required double latitude,
     required double longitude,
+    String? destinationAddress,
+    String? loadDetails,
   }) async {
     final response = await _apiClient.post('/matching/requests', {
       'serviceCategory': category.wireValue,
       'latitude': latitude,
       'longitude': longitude,
+      if (destinationAddress != null && destinationAddress.isNotEmpty)
+        'destinationAddress': destinationAddress,
+      if (loadDetails != null && loadDetails.isNotEmpty)
+        'loadDetails': loadDetails,
     });
     return response['requestId'] as String;
   }
