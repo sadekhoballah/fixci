@@ -40,11 +40,16 @@ class StatsChipRow extends StatelessWidget {
       ),
     ];
 
+    // Fixed Row, not Wrap/Expanded columns — the three chips are compact
+    // enough now to sit on one line on a standard phone width without
+    // scrolling. SingleChildScrollView stays as a safety net: on a narrower
+    // device the row still scrolls horizontally instead of overflowing the
+    // screen.
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          for (final chip in chips) ...[chip, const SizedBox(width: 10)],
+          for (final chip in chips) ...[chip, const SizedBox(width: 6)],
         ],
       ),
     );
@@ -66,28 +71,28 @@ class _StatChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: colorScheme.primary),
-          const SizedBox(width: 8),
+          Icon(icon, size: 13, color: colorScheme.primary),
+          const SizedBox(width: 5),
           Text(
             value,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.w800,
               color: colorScheme.primary,
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
           ),
         ],
       ),

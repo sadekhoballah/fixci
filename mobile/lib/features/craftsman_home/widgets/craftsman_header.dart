@@ -90,25 +90,35 @@ class CraftsmanHeader extends StatelessWidget {
                     isToggling: isToggling,
                     onTap: () => onToggleAvailability(!isAvailable),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: badgeBg,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      tier.label,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: badgeFg,
+                  // Grouped as a single Wrap child (not two separate ones) so
+                  // the verified pill can never wrap onto its own line away
+                  // from the plan badge — it always breaks as one unit,
+                  // keeping the header to its usual line count.
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: badgeBg,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          tier.label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: badgeFg,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 6),
+                      _VerifiedPill(idVerified: idVerified),
+                    ],
                   ),
-                  _VerifiedPill(idVerified: idVerified),
                 ],
               ),
             ],
