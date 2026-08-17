@@ -73,19 +73,13 @@ class CraftsmanHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Name and the three status pills (online, plan, verified) all
-              // share one line, right after the name — not stacked below it.
-              // A horizontally-scrolling Row rather than Wrap: Wrap would
-              // drop pills onto a second line the moment they don't fit,
-              // which is exactly the "why isn't it all on one line" this
-              // replaces; scrolling degrades gracefully instead on a name
-              // long enough to crowd out the pills.
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
+              // First line: name, with the star rating right after it —
+              // nothing else shares this line.
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
                       fullName ??
                           AppLocalizations.of(context)!.defaultCraftsmanDisplayName,
                       style: const TextStyle(
@@ -93,8 +87,24 @@ class CraftsmanHeader extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                       maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(width: 10),
+                  ),
+                  const SizedBox(width: 8),
+                  _RatingStars(averageRating: averageRating),
+                ],
+              ),
+              const SizedBox(height: 4),
+              // Second line: the three status pills (online, plan, verified),
+              // kept off the name line so the header stays compact. A
+              // horizontally-scrolling Row rather than Wrap: Wrap would drop
+              // pills onto a third line the moment they don't fit, which
+              // eats even more vertical space than this replaces.
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
                     _AvailabilityPill(
                       isAvailable: isAvailable,
                       isToggling: isToggling,
@@ -127,8 +137,6 @@ class CraftsmanHeader extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: 8),
-        _RatingStars(averageRating: averageRating),
       ],
     );
   }
