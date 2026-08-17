@@ -245,6 +245,13 @@ class _DirectoryCard extends StatelessWidget {
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
+                // ratingsCount is only ever populated for craftsmen (see
+                // AdminDirectoryRepository._parseItems) — absent on the
+                // clients tab.
+                if (entry.ratingsCount != null) ...[
+                  const SizedBox(height: 6),
+                  _CraftsmanStats(entry: entry, colorScheme: colorScheme),
+                ],
               ],
             ),
           ),
@@ -334,6 +341,48 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
               child: const Text('Supprimer'),
             );
           },
+        ),
+      ],
+    );
+  }
+}
+
+class _CraftsmanStats extends StatelessWidget {
+  const _CraftsmanStats({required this.entry, required this.colorScheme});
+
+  final DirectoryEntry entry;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final rating = entry.averageRating;
+    final statStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+      color: colorScheme.onSurfaceVariant,
+    );
+    return Wrap(
+      spacing: 14,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.star_rounded, size: 16, color: Colors.amber[700]),
+            const SizedBox(width: 2),
+            Text(
+              rating != null
+                  ? '${rating.toStringAsFixed(1)} (${entry.ratingsCount})'
+                  : 'Pas encore noté',
+              style: statStyle,
+            ),
+          ],
+        ),
+        Text(
+          '${entry.completedCount ?? 0} terminées · '
+          '${entry.assignedCount ?? 0} assignées',
+          style: statStyle,
         ),
       ],
     );

@@ -63,6 +63,14 @@ class AdminDirectoryRepository {
         serviceCategory: includeCategory
             ? json['serviceCategory'] as String?
             : null,
+        averageRating: includeCategory
+            ? (json['averageRating'] as num?)?.toDouble()
+            : null,
+        ratingsCount: includeCategory ? json['ratingsCount'] as int? : null,
+        completedCount: includeCategory
+            ? json['completedCount'] as int?
+            : null,
+        assignedCount: includeCategory ? json['assignedCount'] as int? : null,
       );
     }).toList();
   }

@@ -6,6 +6,10 @@ class DirectoryEntry {
     required this.districtName,
     required this.isOnline,
     this.serviceCategory,
+    this.averageRating,
+    this.ratingsCount,
+    this.completedCount,
+    this.assignedCount,
   });
 
   final String userId;
@@ -13,8 +17,12 @@ class DirectoryEntry {
   final String phone;
   final String districtName;
   final bool isOnline;
-  // Craftsmen only — null for clients.
+  // Everything below is craftsmen-only — null for clients.
   final String? serviceCategory;
+  final double? averageRating;
+  final int? ratingsCount;
+  final int? completedCount;
+  final int? assignedCount;
 }
 
 enum DirectoryTab { clients, craftsmen }
