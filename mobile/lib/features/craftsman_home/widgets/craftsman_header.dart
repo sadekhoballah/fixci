@@ -73,53 +73,56 @@ class CraftsmanHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                fullName ?? AppLocalizations.of(context)!.defaultCraftsmanDisplayName,
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  _AvailabilityPill(
-                    isAvailable: isAvailable,
-                    isToggling: isToggling,
-                    onTap: () => onToggleAvailability(!isAvailable),
-                  ),
-                  // Grouped as a single Wrap child (not two separate ones) so
-                  // the verified pill can never wrap onto its own line away
-                  // from the plan badge — it always breaks as one unit,
-                  // keeping the header to its usual line count.
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: badgeBg,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          tier.label,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: badgeFg,
-                          ),
+              // Name and the three status pills (online, plan, verified) all
+              // share one line, right after the name — not stacked below it.
+              // A horizontally-scrolling Row rather than Wrap: Wrap would
+              // drop pills onto a second line the moment they don't fit,
+              // which is exactly the "why isn't it all on one line" this
+              // replaces; scrolling degrades gracefully instead on a name
+              // long enough to crowd out the pills.
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      fullName ??
+                          AppLocalizations.of(context)!.defaultCraftsmanDisplayName,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      maxLines: 1,
+                    ),
+                    const SizedBox(width: 10),
+                    _AvailabilityPill(
+                      isAvailable: isAvailable,
+                      isToggling: isToggling,
+                      onTap: () => onToggleAvailability(!isAvailable),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: badgeBg,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        tier.label,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: badgeFg,
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      _VerifiedPill(idVerified: idVerified),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(width: 6),
+                    _VerifiedPill(idVerified: idVerified),
+                  ],
+                ),
               ),
             ],
           ),
