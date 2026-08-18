@@ -109,7 +109,11 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          // Extra bottom padding clears the extended FAB ("Changer de
+          // forfait" floats bottom-end) so it never overlaps the last two
+          // buttons (privacy policy / delete account) — without this, on
+          // shorter screens the FAB sits directly on top of them.
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
           children: [
             Container(
               padding: const EdgeInsets.all(20),
@@ -162,7 +166,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             // Relocated from the old Stats tab (see artisan_shell_screen.dart —
             // that tab now points at Missions/Freelance instead) — same
             // widget, same craftsmanHomeControllerProvider data source, so
@@ -175,13 +179,13 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                 color: colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             RatingPerformanceCard(
               averageRating: home.averageRating,
               ratingsCount: home.ratingsCount,
               avgResponseSeconds: home.stats?.avgResponseSeconds,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             _VerificationStatusCard(
               idVerified: home.idVerified,
               isActive: home.isActive,
@@ -190,7 +194,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               onResubmitFromGallery: controller.resubmitIdCardFromGallery,
               onResubmitFromCamera: controller.resubmitIdCardFromCamera,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
             Center(
               child: TextButton(
                 onPressed: _openPrivacyPolicy,

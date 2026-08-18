@@ -27,7 +27,7 @@ class RatingPerformanceCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final rating = averageRating ?? 0;
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(18),
@@ -42,37 +42,37 @@ class RatingPerformanceCard extends StatelessWidget {
                 return Icon(
                   filled ? Icons.star_rounded : Icons.star_border_rounded,
                   color: filled ? const Color(0xFFFFC107) : Colors.grey,
-                  size: 22,
+                  size: 19,
                 );
               }),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Text(
                 rating > 0 ? rating.toStringAsFixed(1) : '—',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
               ),
               const SizedBox(width: 4),
               Text(
                 l10n.ratingsCountLabel(ratingsCount),
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             children: [
               Icon(
                 Icons.timer_outlined,
-                size: 18,
+                size: 16,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 5),
               Text(
                 l10n.avgResponseLabel(_responseLabel(l10n)),
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
