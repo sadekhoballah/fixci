@@ -31,6 +31,17 @@ export class CraftsmanProfile {
   @Column({ name: 'experience_details', type: 'text', nullable: true })
   experienceDetails: string | null;
 
+  // Only ever populated when serviceCategory === OTHER_TRADE — the free-text
+  // trade name typed at registration in place of a fixed category (see
+  // register-user.dto.ts). Null for every other category.
+  @Column({
+    name: 'free_trade_name',
+    type: 'varchar',
+    length: 120,
+    nullable: true,
+  })
+  freeTradeName: string | null;
+
   @Column({
     name: 'id_card_storage_key',
     type: 'varchar',

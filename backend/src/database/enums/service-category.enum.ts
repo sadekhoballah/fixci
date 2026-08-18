@@ -16,4 +16,9 @@ export enum ServiceCategory {
   HOME_TUTORING = 'home_tutoring',
   TAXI = 'taxi',
   CAMION = 'camion',
+  // Catch-all for a trade that doesn't fit any category above. Never shown
+  // as a client-facing tile and never queried by the real-time matching
+  // engine (see CraftsmanProfile.freeTradeName) — its only entry point into
+  // the app is the Missions/Freelance board.
+  OTHER_TRADE = 'other_trade',
 }
