@@ -80,3 +80,35 @@ Future<void> validateIdCardImage(List<int> bytes) async {
     throw ImageValidationException(ImageValidationError.wrongAspectRatio);
   }
 }
+
+// Mission/Freelance photo counterpart — same size/format/dimension floor as
+// validateIdCardImage, but deliberately no aspect-ratio cap: a repair/job
+// photo can be any shape, unlike an ID document. Kept in sync with
+// backend/src/uploads/uploads.controller.ts's assertLooksLikeGenericPhoto.
+Future<void> validateGenericPhotoImage(List<int> bytes) async {
+  if (bytes.isEmpty) {
+    throw ImageValidationException(ImageValidationError.emptyFile);
+  }
+  if (bytes.length > maxIdCardSizeBytes) {
+    throw ImageValidationException(ImageValidationError.fileTooLarge);
+  }
+  if (!_looksLikeJpegOrPng(bytes)) {
+    throw ImageValidationException(ImageValidationError.unsupportedFormat);
+  }
+
+  final ui.Codec codec;
+  try {
+    codec = await ui.instantiateImageCodec(Uint8List.fromList(bytes));
+  } catch (_) {
+    throw ImageValidationException(ImageValidationError.corruptedFile);
+  }
+  final frame = await codec.getNextFrame();
+  final width = frame.image.width;
+  final height = frame.image.height;
+  frame.image.dispose();
+
+  final shorter = width < height ? width : height;
+  if (shorter < minIdCardDimension) {
+    throw ImageValidationException(ImageValidationError.lowResolution);
+  }
+}

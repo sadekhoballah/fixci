@@ -7,6 +7,7 @@ import '../../../core/notifications/push_notification_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../client_account/screens/client_account_screen.dart';
 import '../../client_jobs/screens/client_jobs_screen.dart';
+import '../../missions/screens/missions_home_screen.dart';
 import '../../service_request/service_request_repository.dart';
 import 'client_home_screen.dart';
 
@@ -15,9 +16,9 @@ import 'client_home_screen.dart';
 // this exists alongside the resume-triggered invalidate.
 const _activeRequestPollInterval = Duration(seconds: 20);
 
-// The client side's app shell: Home (trade grid), Historique, Compte —
-// mirrors ArtisanShellScreen's IndexedStack + NavigationBar shape, minus the
-// Stats tab (craftsman-only concern).
+// The client side's app shell: Home (trade grid), Missions/Freelance,
+// Historique, Compte — mirrors ArtisanShellScreen's IndexedStack +
+// NavigationBar shape, minus the Stats tab (craftsman-only concern).
 class ClientShellScreen extends ConsumerStatefulWidget {
   const ClientShellScreen({super.key});
 
@@ -73,6 +74,7 @@ class _ClientShellScreenState extends ConsumerState<ClientShellScreen>
 
   static const _tabs = [
     ClientHomeScreen(),
+    MissionsHomeScreen(),
     ClientJobsScreen(),
     ClientAccountScreen(),
   ];
@@ -90,6 +92,11 @@ class _ClientShellScreenState extends ConsumerState<ClientShellScreen>
             icon: const Icon(Icons.home_outlined),
             selectedIcon: const Icon(Icons.home_rounded),
             label: l10n.homeTab,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.work_outline_rounded),
+            selectedIcon: const Icon(Icons.work_rounded),
+            label: l10n.missionsTab,
           ),
           NavigationDestination(
             icon: const Icon(Icons.history_outlined),
