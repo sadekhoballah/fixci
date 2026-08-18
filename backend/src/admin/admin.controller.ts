@@ -18,8 +18,14 @@ import { AdminService } from './admin.service';
 import { AdminJwtGuard } from '../auth/admin-jwt.guard';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 import { ClientProfile } from '../database/entities/client-profile.entity';
-import { ID_CARDS_DIR, LICENSES_DIR } from '../uploads/uploads.constants';
+import { Mission } from '../database/entities/mission.entity';
+import {
+  ID_CARDS_DIR,
+  LICENSES_DIR,
+  MISSION_PHOTOS_DIR,
+} from '../uploads/uploads.constants';
 import { DeactivateAccountDto } from './dto/deactivate-account.dto';
+import { RejectMissionDto } from './dto/reject-mission.dto';
 
 @Controller('admin')
 @UseGuards(AdminJwtGuard)
@@ -30,6 +36,8 @@ export class AdminController {
     private readonly craftsmanProfileRepository: Repository<CraftsmanProfile>,
     @InjectRepository(ClientProfile)
     private readonly clientProfileRepository: Repository<ClientProfile>,
+    @InjectRepository(Mission)
+    private readonly missionRepository: Repository<Mission>,
   ) {}
 
   @Get('verifications')
@@ -124,6 +132,52 @@ export class AdminController {
     const filePath = join(ID_CARDS_DIR, basename(profile.idCardStorageKey));
     if (!existsSync(filePath)) {
       throw new NotFoundException('ID card file not found');
+    }
+    res.sendFile(filePath);
+  }
+
+  @Get('missions/pending')
+  async getPendingMissions() {
+    return { items: await this.adminService.getPendingMissions() };
+  }
+
+  @Get('missions/:id')
+  async getMission(@Param('id', ParseUUIDPipe) id: string) {
+    return this.adminService.getMission(id);
+  }
+
+  @Patch('missions/:id/approve')
+  async approveMission(@Param('id', ParseUUIDPipe) id: string) {
+    await this.adminService.approveMission(id);
+    return { id, status: 'approved_published' };
+  }
+
+  @Patch('missions/:id/reject')
+  async rejectMission(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RejectMissionDto,
+  ) {
+    await this.adminService.rejectMission(id, dto.reason);
+    return { id, status: 'rejected' };
+  }
+
+  // Admin-only preview of a mission's attached photos, same ownership-free
+  // rationale as the id-card/license endpoints above (the admin isn't the
+  // document's owner by definition).
+  @Get('missions/:id/photo/:filename')
+  async getMissionPhoto(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('filename') filename: string,
+    @Res() res: Response,
+  ) {
+    const mission = await this.missionRepository.findOne({ where: { id } });
+    const storageKey = `mission-photos/${basename(filename)}`;
+    if (!mission?.photoStorageKeys?.includes(storageKey)) {
+      throw new NotFoundException('Photo not found for this mission');
+    }
+    const filePath = join(MISSION_PHOTOS_DIR, basename(filename));
+    if (!existsSync(filePath)) {
+      throw new NotFoundException('Photo file not found');
     }
     res.sendFile(filePath);
   }

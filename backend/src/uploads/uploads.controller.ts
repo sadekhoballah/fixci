@@ -22,14 +22,18 @@ import { extname, join } from 'path';
 import { imageSize } from 'image-size';
 import {
   ALLOWED_ID_CARD_MIME_TYPES,
+  ALLOWED_MISSION_PHOTO_MIME_TYPES,
   ID_CARDS_DIR,
   ID_CARDS_SUBDIR,
   LICENSES_DIR,
   LICENSES_SUBDIR,
   MAX_ID_CARD_ASPECT_RATIO,
   MAX_ID_CARD_SIZE_BYTES,
+  MAX_MISSION_PHOTO_SIZE_BYTES,
   MIN_ID_CARD_DIMENSION,
   MIN_ID_DOCUMENT_TEXT_CHARACTERS,
+  MISSION_PHOTOS_DIR,
+  MISSION_PHOTOS_SUBDIR,
 } from './uploads.constants';
 import { extractDocumentText } from './id-document-ocr';
 import { AuthGuard } from '../auth/auth.guard';
@@ -37,12 +41,17 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth-request';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 import { ClientProfile } from '../database/entities/client-profile.entity';
+import { Mission } from '../database/entities/mission.entity';
+import { MissionStatus } from '../database/enums/mission-status.enum';
 
 if (!existsSync(ID_CARDS_DIR)) {
   mkdirSync(ID_CARDS_DIR, { recursive: true });
 }
 if (!existsSync(LICENSES_DIR)) {
   mkdirSync(LICENSES_DIR, { recursive: true });
+}
+if (!existsSync(MISSION_PHOTOS_DIR)) {
+  mkdirSync(MISSION_PHOTOS_DIR, { recursive: true });
 }
 
 const ALLOWED_IMAGE_SIZE_TYPES = new Set(['jpg', 'png']);
@@ -54,6 +63,8 @@ export class UploadsController {
     private readonly craftsmanProfileRepository: Repository<CraftsmanProfile>,
     @InjectRepository(ClientProfile)
     private readonly clientProfileRepository: Repository<ClientProfile>,
+    @InjectRepository(Mission)
+    private readonly missionRepository: Repository<Mission>,
   ) {}
 
   // Deliberately NOT behind an auth guard: the registration screen lets a
@@ -132,6 +143,43 @@ export class UploadsController {
     return { storageKey: `${LICENSES_SUBDIR}/${file.filename}` };
   }
 
+  // Mission/Freelance board photo — unlike id-card/license above, this IS
+  // behind AuthGuard: posting a mission always happens post-registration, so
+  // there's no pre-account gap to accommodate here. Deliberately skips
+  // assertLooksLikeDocumentPhoto's OCR check (see uploads.constants.ts) —
+  // only the generic decode/size/dimension sanity check applies.
+  @Post('mission-photo')
+  @UseGuards(AuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: MISSION_PHOTOS_DIR,
+        filename: (_req, file, callback) => {
+          callback(null, `${randomUUID()}${extname(file.originalname)}`);
+        },
+      }),
+      limits: { fileSize: MAX_MISSION_PHOTO_SIZE_BYTES },
+      fileFilter: (_req, file, callback) => {
+        if (!ALLOWED_MISSION_PHOTO_MIME_TYPES.includes(file.mimetype)) {
+          callback(
+            new BadRequestException('Only JPEG or PNG images are allowed'),
+            false,
+          );
+          return;
+        }
+        callback(null, true);
+      },
+    }),
+  )
+  uploadMissionPhoto(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+    this.assertLooksLikeGenericPhoto(file.path);
+    return { storageKey: `${MISSION_PHOTOS_SUBDIR}/${file.filename}` };
+  }
+
   // The mimetype/extension filter on each FileInterceptor above only checks
   // what the client *claims* the file is. Decode it for real before trusting
   // it: this catches corrupt files, disguised non-images, and implausible
@@ -174,6 +222,37 @@ export class UploadsController {
       if (text.length < MIN_ID_DOCUMENT_TEXT_CHARACTERS) {
         throw new BadRequestException(
           'Le fichier téléchargé ne ressemble pas à un document officiel (CNI/Passeport/Permis). Veuillez réessayer avec une photo claire.',
+        );
+      }
+    } catch (error) {
+      unlinkSync(filePath);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Uploaded file is not a valid image');
+    }
+  }
+
+  // Mission photo counterpart to assertLooksLikeDocumentPhoto above — same
+  // decode/empty-file/dimension floor, but deliberately no aspect-ratio cap
+  // and no OCR pass: a repair/job photo can be any shape, and is the exact
+  // opposite of a text-dense document.
+  private assertLooksLikeGenericPhoto(filePath: string): void {
+    try {
+      const buffer = readFileSync(filePath);
+      if (buffer.length === 0) {
+        throw new BadRequestException('Uploaded file is empty');
+      }
+
+      const dimensions = imageSize(buffer);
+      if (!ALLOWED_IMAGE_SIZE_TYPES.has(dimensions.type ?? '')) {
+        throw new BadRequestException('Only JPEG or PNG images are allowed');
+      }
+
+      const { width, height } = dimensions;
+      if (Math.min(width, height) < MIN_ID_CARD_DIMENSION) {
+        throw new BadRequestException(
+          'Image resolution is too low to be readable',
         );
       }
     } catch (error) {
@@ -240,5 +319,42 @@ export class UploadsController {
     }
 
     res.sendFile(join(LICENSES_DIR, filename));
+  }
+
+  // Different ownership model from id-card/license (which are always
+  // private): a mission photo becomes visible to everyone once its mission
+  // is published, since that's the whole point of the board. Before/without
+  // publication, only the poster can preview their own pending/rejected
+  // mission's photos.
+  @Get('mission-photo/:filename')
+  @UseGuards(AuthGuard)
+  async getMissionPhoto(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('filename') filename: string,
+    @Res() res: Response,
+  ) {
+    if (filename.includes('/') || filename.includes('..')) {
+      throw new NotFoundException('No photo found');
+    }
+    const storageKey = `${MISSION_PHOTOS_SUBDIR}/${filename}`;
+
+    const mission = await this.missionRepository
+      .createQueryBuilder('m')
+      .where(':key = ANY(m.photoStorageKeys)', { key: storageKey })
+      .getOne();
+
+    if (!mission) {
+      throw new NotFoundException('No photo found');
+    }
+    const visible =
+      mission.status === MissionStatus.APPROVED_PUBLISHED ||
+      mission.status === MissionStatus.IN_PROGRESS ||
+      mission.status === MissionStatus.COMPLETED ||
+      mission.posterId === user.id;
+    if (!visible) {
+      throw new NotFoundException('No photo found');
+    }
+
+    res.sendFile(join(MISSION_PHOTOS_DIR, filename));
   }
 }

@@ -3,8 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, Not, Repository } from 'typeorm';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 import { ClientProfile } from '../database/entities/client-profile.entity';
+import { Mission } from '../database/entities/mission.entity';
+import { MissionStatus } from '../database/enums/mission-status.enum';
 import { ServiceCategory } from '../database/enums/service-category.enum';
 import { PresenceService } from '../matching/presence.service';
+import { MatchingGateway } from '../matching/matching.gateway';
 import { NotificationsService } from '../firebase/notifications.service';
 
 const LICENSE_REQUIRED_CATEGORIES = [
@@ -35,8 +38,11 @@ export class AdminService {
     private readonly craftsmanProfileRepository: Repository<CraftsmanProfile>,
     @InjectRepository(ClientProfile)
     private readonly clientProfileRepository: Repository<ClientProfile>,
+    @InjectRepository(Mission)
+    private readonly missionRepository: Repository<Mission>,
     private readonly presenceService: PresenceService,
     private readonly notificationsService: NotificationsService,
+    private readonly matchingGateway: MatchingGateway,
   ) {}
 
   // A single combined queue for both account types, oldest first — mirrors
@@ -193,5 +199,74 @@ export class AdminService {
       },
       { type: 'id_verification_rejected' },
     );
+  }
+
+  // Oldest first, mirrors getPendingVerifications — the queue an admin
+  // works through top to bottom.
+  async getPendingMissions(): Promise<Mission[]> {
+    return this.missionRepository.find({
+      where: { status: MissionStatus.PENDING_MODERATION },
+      relations: { poster: true },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  async getMission(id: string): Promise<Mission> {
+    const mission = await this.missionRepository.findOne({
+      where: { id },
+      relations: { poster: true },
+    });
+    if (!mission) {
+      throw new NotFoundException('Mission not found');
+    }
+    return mission;
+  }
+
+  async approveMission(id: string): Promise<void> {
+    const result = await this.missionRepository.update(
+      { id, status: MissionStatus.PENDING_MODERATION },
+      { status: MissionStatus.APPROVED_PUBLISHED, publishedAt: new Date() },
+    );
+    if (result.affected === 0) {
+      throw new NotFoundException(
+        'No pending mission with this id (already moderated, or missing)',
+      );
+    }
+    const mission = await this.missionRepository.findOne({ where: { id } });
+    if (mission) {
+      void this.matchingGateway.notifyUser(
+        mission.posterId,
+        'mission:approved',
+        { missionId: id },
+        {
+          title: 'Mission publiée',
+          body: 'Votre mission est maintenant visible par les candidats.',
+        },
+      );
+    }
+  }
+
+  async rejectMission(id: string, reason?: string): Promise<void> {
+    const result = await this.missionRepository.update(
+      { id, status: MissionStatus.PENDING_MODERATION },
+      { status: MissionStatus.REJECTED, rejectionReason: reason ?? null },
+    );
+    if (result.affected === 0) {
+      throw new NotFoundException(
+        'No pending mission with this id (already moderated, or missing)',
+      );
+    }
+    const mission = await this.missionRepository.findOne({ where: { id } });
+    if (mission) {
+      void this.matchingGateway.notifyUser(
+        mission.posterId,
+        'mission:rejected',
+        { missionId: id },
+        {
+          title: 'Mission refusée',
+          body: reason ?? 'Votre mission a été refusée par la modération.',
+        },
+      );
+    }
   }
 }
