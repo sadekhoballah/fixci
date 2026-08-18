@@ -134,7 +134,7 @@ class _IncomingRequestCardState extends State<IncomingRequestCard> {
             const SizedBox(height: 6),
             _InfoRow(
               icon: Icons.inventory_2_outlined,
-              label: l10n.loadDetailsLabel,
+              label: l10n.tonnageLabel,
               value: event.loadDetails!,
             ),
           ],

@@ -15,6 +15,12 @@ class TradeDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<TradeDetailScreen> createState() => _TradeDetailScreenState();
 }
 
+// Camion's only allowed tonnage brackets — a fixed, closed set rather than
+// free text so the value the craftsman sees on the incoming-request card is
+// always something they can actually judge their truck against (see
+// ServiceCategory.requiresTonnage).
+const _tonnageOptions = ['3 tonnes', '5 tonnes', '10 tonnes'];
+
 class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
   // Taxi/camion only (see ServiceCategory.requiresDestination) — plain text
   // rather than a map pin: there's no map integration anywhere in the app
@@ -22,7 +28,9 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
   // configured), so this is the fast, dependency-free first cut. The
   // craftsman sees these on the incoming-request card before accepting.
   final _destinationController = TextEditingController();
-  final _loadDetailsController = TextEditingController();
+  // Camion only — sent over the wire through the same loadDetails field a
+  // free-text version used to occupy; see ServiceCategory.requiresTonnage.
+  String? _selectedTonnage;
 
   ServiceCategory get category => widget.category;
 
@@ -43,7 +51,6 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
   @override
   void dispose() {
     _destinationController.dispose();
-    _loadDetailsController.dispose();
     super.dispose();
   }
 
@@ -72,6 +79,7 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
         requestState.status == ServiceRequestStatus.submitting;
     final destinationMissing =
         category.requiresDestination && _destinationController.text.trim().isEmpty;
+    final tonnageMissing = category.requiresTonnage && _selectedTonnage == null;
 
     return Scaffold(
       body: CustomScrollView(
@@ -154,15 +162,25 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
                         border: const OutlineInputBorder(),
                       ),
                     ),
+                  ],
+                  if (category.requiresTonnage) ...[
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: _loadDetailsController,
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedTonnage,
                       decoration: InputDecoration(
-                        labelText: l10n.loadDetailsLabel,
-                        hintText: l10n.loadDetailsHint,
+                        labelText: l10n.tonnageLabel,
                         border: const OutlineInputBorder(),
                       ),
-                      maxLines: 2,
+                      items: _tonnageOptions
+                          .map(
+                            (option) => DropdownMenuItem(
+                              value: option,
+                              child: Text(option),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) =>
+                          setState(() => _selectedTonnage = value),
                     ),
                   ],
                 ],
@@ -177,14 +195,14 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: isBusy || destinationMissing
+            onPressed: isBusy || destinationMissing || tonnageMissing
                 ? null
                 : () => ref
                       .read(serviceRequestControllerProvider.notifier)
                       .submit(
                         category,
                         destinationAddress: _destinationController.text.trim(),
-                        loadDetails: _loadDetailsController.text.trim(),
+                        loadDetails: _selectedTonnage,
                       ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
