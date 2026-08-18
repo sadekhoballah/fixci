@@ -397,9 +397,6 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
         radius,
         CANDIDATES_PER_ROUND,
       );
-      for (const candidate of candidates) {
-        triedCraftsmanIds.add(candidate.craftsmanId);
-      }
 
       // Deliberately not skipping the wait when candidates.length === 0:
       // this round's ACCEPT_TIMEOUT_MS is also the window during which a
@@ -421,16 +418,27 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
             destinationAddress: request.destinationAddress,
             loadDetails: request.loadDetails,
           });
-        void this.notificationsService.sendToUser(
-          candidate.craftsmanId,
-          {
-            title: 'Nouvelle demande',
-            body: request.destinationAddress
-              ? `Une demande de ${SERVICE_CATEGORY_LABELS_FR[request.serviceCategory]} à ${(candidate.distanceMeters / 1000).toFixed(1)} km de vous → destination : ${request.destinationAddress}`
-              : `Une demande de ${SERVICE_CATEGORY_LABELS_FR[request.serviceCategory]} à ${(candidate.distanceMeters / 1000).toFixed(1)} km de vous.`,
-          },
-          { event: 'request:new', requestId: request.id },
-        );
+        // OS push only on this candidate's first exposure to this request —
+        // re-sent every round (like the socket emit above) it would mean up
+        // to buildRadiusSequence(...).length pushes for the same craftsman
+        // (e.g. 5 for taxi/camion's tight-radius sequence, since a nearby
+        // candidate keeps getting rediscovered as the radius grows and
+        // nobody's accepted yet). The socket already keeps their in-app card
+        // fresh every round; the push only needs to happen once to serve its
+        // actual job — waking up a backgrounded/killed app.
+        if (!triedCraftsmanIds.has(candidate.craftsmanId)) {
+          void this.notificationsService.sendToUser(
+            candidate.craftsmanId,
+            {
+              title: 'Nouvelle demande',
+              body: request.destinationAddress
+                ? `Une demande de ${SERVICE_CATEGORY_LABELS_FR[request.serviceCategory]} à ${(candidate.distanceMeters / 1000).toFixed(1)} km de vous → destination : ${request.destinationAddress}`
+                : `Une demande de ${SERVICE_CATEGORY_LABELS_FR[request.serviceCategory]} à ${(candidate.distanceMeters / 1000).toFixed(1)} km de vous.`,
+            },
+            { event: 'request:new', requestId: request.id },
+          );
+        }
+        triedCraftsmanIds.add(candidate.craftsmanId);
       }
 
       const acceptedCraftsmanId = await this.waitForAccept(

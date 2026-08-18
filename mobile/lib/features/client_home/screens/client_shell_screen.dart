@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/user_role.dart';
@@ -7,6 +9,11 @@ import '../../client_account/screens/client_account_screen.dart';
 import '../../client_jobs/screens/client_jobs_screen.dart';
 import '../../service_request/service_request_repository.dart';
 import 'client_home_screen.dart';
+
+// How often the shell re-polls clientActiveRequestNoticeProvider while the
+// app sits open in the foreground — see the timer in initState below for why
+// this exists alongside the resume-triggered invalidate.
+const _activeRequestPollInterval = Duration(seconds: 20);
 
 // The client side's app shell: Home (trade grid), Historique, Compte —
 // mirrors ArtisanShellScreen's IndexedStack + NavigationBar shape, minus the
@@ -21,6 +28,7 @@ class ClientShellScreen extends ConsumerStatefulWidget {
 class _ClientShellScreenState extends ConsumerState<ClientShellScreen>
     with WidgetsBindingObserver {
   int _index = 0;
+  Timer? _activeRequestPollTimer;
 
   @override
   void initState() {
@@ -29,11 +37,25 @@ class _ClientShellScreenState extends ConsumerState<ClientShellScreen>
     // Every "already logged in as a client" path lands here — see
     // PushNotificationService.init for why this is the chosen choke point.
     ref.read(pushNotificationServiceProvider).init(role: UserRole.client);
+    // Covers the gap neither mount-fetch nor didChangeAppLifecycleState
+    // catches: a client who leaves the live-tracking screen (its socket
+    // subscription disconnects on dispose — see
+    // ServiceRequestController.build's onDispose) and then just sits on Home
+    // in the foreground the whole time. Without this, a craftsman completing
+    // the job mid-sit never updates the "mission en cours" banner — nothing
+    // here re-fetches until the app backgrounds/resumes or Home remounts.
+    // Cheap best-effort REST poll; a push notification / resume invalidate
+    // still wins the race whenever either fires first.
+    _activeRequestPollTimer = Timer.periodic(
+      _activeRequestPollInterval,
+      (_) => ref.invalidate(clientActiveRequestNoticeProvider),
+    );
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _activeRequestPollTimer?.cancel();
     super.dispose();
   }
 

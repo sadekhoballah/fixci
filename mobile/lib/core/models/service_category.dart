@@ -56,6 +56,14 @@ enum ServiceCategory {
   bool get requiresDestination =>
       this == ServiceCategory.taxi || this == ServiceCategory.camion;
 
+  // Camion only — the craftsman needs to know the load's tonnage *before*
+  // accepting, to judge whether their truck can actually take it (see
+  // trade_detail_screen.dart's tonnage dropdown and
+  // incoming_request_card.dart's display of it). Taxi has no equivalent
+  // concept, hence a separate getter from requiresDestination rather than
+  // folding it into the same one.
+  bool get requiresTonnage => this == ServiceCategory.camion;
+
   // Matches the backend's service_category_enum string values.
   String get wireValue => switch (this) {
     ServiceCategory.plumber => 'plumber',
