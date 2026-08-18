@@ -4,12 +4,13 @@ import 'admin_broadcast_screen.dart';
 import 'admin_directory_screen.dart';
 import 'admin_districts_screen.dart';
 import 'admin_kyc_screen.dart';
+import 'admin_missions_screen.dart';
 import 'admin_ops_screen.dart';
 
 // Minimal shell for the post-login admin dashboard. All 5 modules of the
-// founder's original spec are tabs here, plus the directory added after —
-// an IndexedStack + NavigationBar scales fine for a handful of tabs
-// without needing routing/GoRouter.
+// founder's original spec are tabs here, plus the directory and missions
+// moderation added after — an IndexedStack + NavigationBar scales fine for
+// a handful of tabs without needing routing/GoRouter.
 class AdminShellScreen extends StatefulWidget {
   const AdminShellScreen({super.key});
 
@@ -27,6 +28,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     AdminBlacklistScreen(),
     AdminBroadcastScreen(),
     AdminDirectoryScreen(),
+    AdminMissionsScreen(),
   ];
 
   @override
@@ -60,6 +62,10 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           NavigationDestination(
             icon: Icon(Icons.contacts_outlined),
             label: 'Annuaire',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.work_outline_rounded),
+            label: 'Missions',
           ),
         ],
       ),
