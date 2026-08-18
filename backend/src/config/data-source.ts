@@ -11,6 +11,8 @@ import { AdminUser } from '../database/entities/admin-user.entity';
 import { District } from '../database/entities/district.entity';
 import { BlacklistedPhone } from '../database/entities/blacklisted-phone.entity';
 import { BroadcastNotification } from '../database/entities/broadcast-notification.entity';
+import { Mission } from '../database/entities/mission.entity';
+import { MissionApplication } from '../database/entities/mission-application.entity';
 
 dotenv.config();
 
@@ -37,6 +39,8 @@ const baseOptions = {
     District,
     BlacklistedPhone,
     BroadcastNotification,
+    Mission,
+    MissionApplication,
   ],
   synchronize: false,
 };

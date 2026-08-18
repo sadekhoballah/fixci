@@ -75,9 +75,13 @@ export class AdminDirectoryController {
           this.matchingGateway.clearActiveAssignment(request.craftsmanId);
         }
       } else {
-        this.matchingGateway.notifyClient(request.clientId, 'request:cancelled', {
-          requestId: request.requestId,
-        });
+        this.matchingGateway.notifyClient(
+          request.clientId,
+          'request:cancelled',
+          {
+            requestId: request.requestId,
+          },
+        );
         this.matchingGateway.clearActiveAssignment(id);
       }
     }

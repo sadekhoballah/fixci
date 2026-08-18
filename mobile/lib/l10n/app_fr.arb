@@ -144,8 +144,70 @@
   "paymentConfirmedStatus": "Paiement confirmé, activation en cours...",
   "genericErrorMessage": "Une erreur est survenue.",
   "homeTab": "Accueil",
+  "missionsTab": "Missions",
   "historyTab": "Historique",
   "accountTab": "Compte",
+  "missionsBoardTitle": "Missions",
+  "postMissionButton": "Publier une mission",
+  "noMissionsYetMessage": "Aucune mission disponible pour le moment.",
+  "distanceAwayLabel": "à {distance}",
+  "@distanceAwayLabel": {
+    "placeholders": {
+      "distance": { "type": "String" }
+    }
+  },
+  "missionFormTitle": "Nouvelle mission",
+  "missionTitleLabel": "Titre",
+  "missionDescriptionLabel": "Description",
+  "missionCategoryLabel": "Catégorie (optionnel)",
+  "missionCategoryNoneLabel": "Aucune catégorie / autre",
+  "missionAddressLabel": "Adresse",
+  "missionAddressHint": "Où le travail doit-il être effectué ?",
+  "missionLocationHelpMessage": "Votre position actuelle sera aussi utilisée pour calculer la distance.",
+  "missionPhotosLabel": "Photos (optionnel)",
+  "publishMissionButton": "Publier la mission",
+  "missionDetailTitle": "Mission",
+  "missionStatusDraftLabel": "Brouillon",
+  "missionStatusPendingLabel": "En attente de modération",
+  "missionStatusPublishedLabel": "Publiée",
+  "missionStatusRejectedLabel": "Refusée",
+  "missionStatusInProgressLabel": "En cours",
+  "missionStatusCompletedLabel": "Terminée",
+  "missionStatusArchivedLabel": "Archivée",
+  "applyToMissionButton": "Je suis intéressé",
+  "applicationMessageLabel": "Message (optionnel)",
+  "applicationMessageHint": "Présentez-vous brièvement…",
+  "youAppliedPendingMessage": "Vous avez postulé à cette mission, en attente de réponse.",
+  "youWereNotSelectedMessage": "Un autre candidat a été retenu pour cette mission.",
+  "youWereSelectedMessage": "Vous avez été sélectionné pour cette mission !",
+  "missionNotAvailableMessage": "Cette mission n'est plus disponible.",
+  "missionsAnnouncesTabLabel": "Annonces",
+  "myMissionsTabLabel": "Mes missions",
+  "myMissionsEmptyMessage": "Vous n'avez encore aucune mission.",
+  "roleInMissionPosterLabel": "Votre annonce",
+  "roleInMissionApplicantLabel": "Candidature",
+  "viewApplicantsButton": "Voir les candidatures ({count})",
+  "@viewApplicantsButton": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "applicantsScreenTitle": "Candidatures",
+  "noApplicantsYetMessage": "Aucun candidat pour le moment.",
+  "selectApplicantButton": "Sélectionner",
+  "selectApplicantConfirmTitle": "Sélectionner ce candidat ?",
+  "selectApplicantConfirmContent": "{name} sera notifié(e) et les autres candidatures seront automatiquement clôturées.",
+  "@selectApplicantConfirmContent": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "withdrawMissionButton": "Retirer l'annonce",
+  "withdrawMissionConfirmTitle": "Retirer cette mission ?",
+  "withdrawMissionConfirmContent": "Elle ne sera plus visible et ne pourra plus recevoir de candidatures.",
+  "completeMissionButton": "Marquer terminée",
+  "completeMissionConfirmTitle": "Marquer cette mission comme terminée ?",
+  "completeMissionConfirmContent": "Elle passera dans vos missions archivées.",
   "clientHomeTitle": "De quoi avez-vous besoin ?",
   "activeJobBannerTitle": "Mission en cours",
   "jobAwaitingConfirmationMessage": "L'artisan a terminé — confirmez la fin de la mission pour la clôturer.",
@@ -277,7 +339,6 @@
   },
   "declineButton": "Ignorer",
   "acceptButton": "Accepter",
-  "statsTab": "Stats",
   "noNearbyRequestsMessage": "Aucune demande à proximité pour le moment",
   "goOnlineToReceiveRequestsMessage": "Passez en service pour recevoir des demandes",
   "defaultCraftsmanDisplayName": "Artisan",
@@ -364,8 +425,6 @@
       "count": { "type": "int" }
     }
   },
-  "statisticsTitle": "Statistiques",
-  "todayLabel": "Aujourd'hui",
   "performanceLabel": "Performance",
   "networkConnectionErrorMessage": "Impossible de contacter le serveur. Vérifiez votre connexion.",
   "genericErrorWithCode": "Une erreur est survenue ({code}).",

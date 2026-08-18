@@ -26,7 +26,10 @@ import { clientRoom, craftsmanRoom } from './matching.rooms';
 import { ServiceCategory } from '../database/enums/service-category.enum';
 import { User } from '../database/entities/user.entity';
 import { UserRole } from '../database/enums/user-role.enum';
-import { NotificationsService } from '../firebase/notifications.service';
+import {
+  NotificationsService,
+  PushNotificationContent,
+} from '../firebase/notifications.service';
 import { TokensService } from '../auth/tokens.service';
 import { resolveVerifiedAuth } from '../auth/resolve-verified-phone';
 
@@ -48,6 +51,7 @@ const SERVICE_CATEGORY_LABELS_FR: Record<ServiceCategory, string> = {
   [ServiceCategory.HOME_TUTORING]: 'soutien scolaire',
   [ServiceCategory.TAXI]: 'taxi',
   [ServiceCategory.CAMION]: 'camion',
+  [ServiceCategory.OTHER_TRADE]: 'autre métier',
 };
 
 // Generic copy for the lifecycle events relayed through notifyClient/
@@ -374,6 +378,34 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
       CRAFTSMAN_EVENT_COPY[event],
       { event, requestId: payload.requestId },
     );
+  }
+
+  // Generic counterpart to notifyClient/notifyCraftsman, for callers (e.g.
+  // MissionsService/AdminService) that only have a bare userId and must work
+  // for either role, since Missions/Freelance is symmetric — a client and a
+  // craftsman use the exact same notification path. Looks the role up once,
+  // then reuses the same mandatory dual-path (socket + push) pattern as
+  // every other notify* method here. Silently no-ops if the user doesn't
+  // exist (deleted between the triggering action and this call).
+  async notifyUser(
+    userId: string,
+    event: string,
+    payload: Record<string, unknown>,
+    push: PushNotificationContent,
+  ): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) return;
+    const room =
+      user.role === UserRole.CRAFTSMAN
+        ? craftsmanRoom(userId)
+        : clientRoom(userId);
+    this.server.to(room).emit(event, payload);
+    void this.notificationsService.sendToUser(userId, push, {
+      event,
+      ...Object.fromEntries(
+        Object.entries(payload).map(([key, value]) => [key, String(value)]),
+      ),
+    });
   }
 
   // Fire-and-forget from the controller: the HTTP response returns as soon as

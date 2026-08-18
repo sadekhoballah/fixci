@@ -22,6 +22,7 @@ import { BlacklistModule } from './blacklist/blacklist.module';
 import { BroadcastModule } from './broadcast/broadcast.module';
 import { DirectoryModule } from './directory/directory.module';
 import { AuthModule } from './auth/auth.module';
+import { MissionsModule } from './missions/missions.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { AuthModule } from './auth/auth.module';
     BlacklistModule,
     BroadcastModule,
     DirectoryModule,
+    MissionsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

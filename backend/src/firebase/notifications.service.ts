@@ -47,7 +47,10 @@ export class NotificationsService {
         token: user.fcmToken,
         notification: content,
         data,
-        android: { priority: 'high', notification: { channelId: 'job_updates_v2' } },
+        android: {
+          priority: 'high',
+          notification: { channelId: 'job_updates_v2' },
+        },
         apns: { payload: { aps: { sound: 'job_notification.caf' } } },
       });
     } catch (error) {

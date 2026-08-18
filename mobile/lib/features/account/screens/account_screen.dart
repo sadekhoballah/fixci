@@ -9,6 +9,7 @@ import '../../../core/models/subscription_tier.dart';
 import '../../../core/network/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../craftsman_home/craftsman_home_controller.dart';
+import '../../craftsman_home/widgets/rating_performance_card.dart';
 import '../../onboarding/screens/role_selection_screen.dart';
 import '../../onboarding/screens/tier_selection_screen.dart';
 
@@ -160,6 +161,25 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 16),
+            // Relocated from the old Stats tab (see artisan_shell_screen.dart —
+            // that tab now points at Missions/Freelance instead) — same
+            // widget, same craftsmanHomeControllerProvider data source, so
+            // nothing about this card's content changed, only where it lives.
+            Text(
+              l10n.performanceLabel,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 10),
+            RatingPerformanceCard(
+              averageRating: home.averageRating,
+              ratingsCount: home.ratingsCount,
+              avgResponseSeconds: home.stats?.avgResponseSeconds,
             ),
             const SizedBox(height: 16),
             _VerificationStatusCard(
