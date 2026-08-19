@@ -10,6 +10,7 @@ import {
 import { User } from './user.entity';
 import { ServiceCategory } from '../enums/service-category.enum';
 import { MissionStatus } from '../enums/mission-status.enum';
+import { MissionTimingPreference } from '../enums/mission-timing-preference.enum';
 
 // A Missions/Freelance board post. Generic user_id-keyed (posterId, not
 // clientId/craftsmanId) — either a client or a craftsman can post, per the
@@ -79,6 +80,41 @@ export class Mission {
     default: MissionStatus.PENDING_MODERATION,
   })
   status: MissionStatus;
+
+  // Coarse weekday + hour preference, not a real calendar date — see
+  // MissionTimingPreference. scheduledDayOfWeek/scheduledHour are only ever
+  // non-null together, and only when this is SCHEDULED.
+  @Column({
+    name: 'timing_preference',
+    type: 'enum',
+    enum: MissionTimingPreference,
+    enumName: 'mission_timing_preference_enum',
+    default: MissionTimingPreference.UNSPECIFIED,
+  })
+  timingPreference: MissionTimingPreference;
+
+  // 1 (Monday) .. 7 (Sunday) — Dart's DateTime.weekday convention, so the
+  // mobile side never has to translate.
+  @Column({ name: 'scheduled_day_of_week', type: 'smallint', nullable: true })
+  scheduledDayOfWeek: number | null;
+
+  @Column({ name: 'scheduled_hour', type: 'smallint', nullable: true })
+  scheduledHour: number | null;
+
+  // Poster's proposed opening figure for the job — a starting point for
+  // negotiation, not a binding price. No currency column: the app has no
+  // single launch currency (CFA countries vs Lebanon in USD — see
+  // SubscriptionTier.priceLabel), so this is shown as a plain number and the
+  // two sides settle currency the same way they already settle everything
+  // else about the job, by talking directly.
+  @Column({
+    name: 'starting_price',
+    type: 'numeric',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+  })
+  startingPrice: string | null;
 
   // Set by AdminService.rejectMission — shown back to the poster alongside
   // the "rejected, please edit and resubmit" state.

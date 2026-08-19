@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../l10n/app_localizations.dart';
+import '../mission_price_format.dart';
+import '../mission_timing_format.dart';
 import '../missions_board_controller.dart';
 import '../missions_models.dart';
+import '../widgets/mission_visuals.dart';
 import 'mission_detail_screen.dart';
 
 String _formatDistance(double? meters) {
@@ -81,6 +84,11 @@ class _MissionsBoardScreenState extends ConsumerState<MissionsBoardScreen> {
   }
 }
 
+// A photo (or category-themed placeholder) up top, title + reverse-geocoded
+// address below, then a row of badges for whatever the poster actually
+// filled in (distance, timing preference, starting price) — badges that
+// don't apply (no position yet, unspecified timing, no price) just don't
+// render rather than showing an empty/placeholder chip.
 class _MissionTile extends StatelessWidget {
   const _MissionTile({required this.mission});
 
@@ -90,46 +98,52 @@ class _MissionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final localeName = Localizations.localeOf(context).languageCode;
+    final timingLabel = missionTimingDisplayLabel(
+      l10n,
+      localeName,
+      mission.timingPreference,
+      mission.scheduledDayOfWeek,
+      mission.scheduledHour,
+    );
 
     return InkWell(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => MissionDetailScreen(missionId: mission.id),
         ),
       ),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: 16),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                mission.category?.icon ?? Icons.handyman_rounded,
-                size: 20,
-                color: colorScheme.onPrimaryContainer,
+            SizedBox(
+              height: 140,
+              width: double.infinity,
+              child: MissionPhotoOrPlaceholder(
+                storageKey: mission.photoStorageKeys.isEmpty
+                    ? null
+                    : mission.photoStorageKeys.first,
+                category: mission.category,
+                borderRadius: BorderRadius.zero,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
+            Padding(
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -138,48 +152,114 @@ class _MissionTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 15,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    mission.locationAddress,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_outlined,
+                        size: 14,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: MissionResolvedAddress(
+                          latitude: mission.latitude,
+                          longitude: mission.longitude,
+                          fallback: mission.locationAddress,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      if (mission.distanceMeters != null)
+                        _Badge(
+                          label: l10n.distanceAwayLabel(
+                            _formatDistance(mission.distanceMeters),
+                          ),
+                          color: colorScheme.secondaryContainer,
+                          onColor: colorScheme.onSecondaryContainer,
+                        ),
+                      if (timingLabel != null)
+                        _Badge(
+                          label: timingLabel,
+                          icon: Icons.schedule_rounded,
+                          color: colorScheme.tertiaryContainer,
+                          onColor: colorScheme.onTertiaryContainer,
+                        ),
+                      if (mission.startingPrice != null)
+                        _Badge(
+                          label: missionPriceDisplayLabel(
+                            l10n,
+                            localeName,
+                            mission.startingPrice!,
+                          ),
+                          icon: Icons.sell_outlined,
+                          color: colorScheme.primaryContainer,
+                          onColor: colorScheme.onPrimaryContainer,
+                        ),
+                    ],
                   ),
                 ],
               ),
             ),
-            if (mission.distanceMeters != null) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: colorScheme.secondaryContainer,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  l10n.distanceAwayLabel(
-                    _formatDistance(mission.distanceMeters),
-                  ),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.onSecondaryContainer,
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  const _Badge({
+    required this.label,
+    required this.color,
+    required this.onColor,
+    this.icon,
+  });
+
+  final String label;
+  final Color color;
+  final Color onColor;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: onColor),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: onColor,
+            ),
+          ),
+        ],
       ),
     );
   }

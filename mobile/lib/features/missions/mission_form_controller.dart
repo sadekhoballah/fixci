@@ -9,6 +9,7 @@ import '../../core/media/image_validation.dart';
 import '../../core/models/service_category.dart';
 import '../../core/network/api_client.dart';
 import 'mission_form_state.dart';
+import 'missions_models.dart';
 import 'missions_repository.dart';
 
 // Scoped to the create-mission screen (autoDispose) — a fresh attempt starts
@@ -128,6 +129,11 @@ class MissionFormController extends Notifier<MissionFormState> {
     required String description,
     required String locationAddress,
     ServiceCategory? category,
+    MissionTimingPreference timingPreference =
+        MissionTimingPreference.unspecified,
+    int? scheduledDayOfWeek,
+    int? scheduledHour,
+    double? startingPrice,
   }) async {
     state = state.copyWith(status: MissionFormStatus.locating, clearError: true);
     final position = await _resolvePosition();
@@ -145,6 +151,10 @@ class MissionFormController extends Notifier<MissionFormState> {
             longitude: position.longitude,
             category: category,
             photoStorageKeys: state.photos.map((p) => p.storageKey).toList(),
+            timingPreference: timingPreference,
+            scheduledDayOfWeek: scheduledDayOfWeek,
+            scheduledHour: scheduledHour,
+            startingPrice: startingPrice,
           );
       state = state.copyWith(
         status: MissionFormStatus.success,

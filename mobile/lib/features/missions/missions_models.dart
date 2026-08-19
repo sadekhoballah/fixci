@@ -21,6 +21,26 @@ MissionStatus parseMissionStatus(String wireValue) => switch (wireValue) {
   _ => MissionStatus.pendingModeration,
 };
 
+// When the poster wants the mission done. A coarse weekday + hour
+// preference, not a real calendar date — mirrors the rest of the board's
+// "no date/map picker" minimalism. UNSPECIFIED is the default; only
+// SCHEDULED ever carries a non-null scheduledDayOfWeek/scheduledHour.
+enum MissionTimingPreference { unspecified, immediate, scheduled }
+
+MissionTimingPreference parseMissionTimingPreference(String? wireValue) =>
+    switch (wireValue) {
+      'immediate' => MissionTimingPreference.immediate,
+      'scheduled' => MissionTimingPreference.scheduled,
+      _ => MissionTimingPreference.unspecified,
+    };
+
+String missionTimingPreferenceWireValue(MissionTimingPreference value) =>
+    switch (value) {
+      MissionTimingPreference.unspecified => 'unspecified',
+      MissionTimingPreference.immediate => 'immediate',
+      MissionTimingPreference.scheduled => 'scheduled',
+    };
+
 // A candidature's own status — separate from MissionStatus (the mission
 // itself). 'withdrawn' never actually reaches the client: the backend's
 // GET /missions/:id only ever reports the caller's latest non-withdrawn
@@ -55,9 +75,15 @@ class MissionSummary {
     required this.description,
     required this.category,
     required this.locationAddress,
+    required this.latitude,
+    required this.longitude,
     required this.photoStorageKeys,
     required this.status,
     required this.rejectionReason,
+    required this.timingPreference,
+    required this.scheduledDayOfWeek,
+    required this.scheduledHour,
+    required this.startingPrice,
     required this.distanceMeters,
     required this.createdAt,
     required this.updatedAt,
@@ -69,9 +95,21 @@ class MissionSummary {
   final String description;
   final ServiceCategory? category;
   final String locationAddress;
+  // Raw point behind locationAddress — used to reverse-geocode a nicer
+  // display address client-side (see ReverseGeocodingService), never shown
+  // as-is.
+  final double latitude;
+  final double longitude;
   final List<String> photoStorageKeys;
   final MissionStatus status;
   final String? rejectionReason;
+  final MissionTimingPreference timingPreference;
+  // Only non-null together, and only when timingPreference is scheduled.
+  // 1 (Monday) .. 7 (Sunday) — matches DateTime.weekday.
+  final int? scheduledDayOfWeek;
+  final int? scheduledHour;
+  // Poster's opening figure — currency-agnostic, see the backend entity.
+  final double? startingPrice;
   // Null when the caller didn't supply a position — see
   // MissionsBoardController's best-effort GPS fetch.
   final double? distanceMeters;
@@ -86,10 +124,20 @@ class MissionSummary {
         description: json['description'] as String,
         category: _parseCategory(json['category'] as String?),
         locationAddress: json['locationAddress'] as String,
+        latitude: (json['latitude'] as num).toDouble(),
+        longitude: (json['longitude'] as num).toDouble(),
         photoStorageKeys:
             (json['photoStorageKeys'] as List?)?.cast<String>() ?? const [],
         status: parseMissionStatus(json['status'] as String),
         rejectionReason: json['rejectionReason'] as String?,
+        timingPreference: parseMissionTimingPreference(
+          json['timingPreference'] as String?,
+        ),
+        scheduledDayOfWeek: (json['scheduledDayOfWeek'] as num?)?.toInt(),
+        scheduledHour: (json['scheduledHour'] as num?)?.toInt(),
+        startingPrice: json['startingPrice'] == null
+            ? null
+            : double.parse(json['startingPrice'] as String),
         distanceMeters: (json['distanceMeters'] as num?)?.toDouble(),
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
@@ -109,9 +157,15 @@ class MissionDetail {
     required this.description,
     required this.category,
     required this.locationAddress,
+    required this.latitude,
+    required this.longitude,
     required this.photoStorageKeys,
     required this.status,
     required this.rejectionReason,
+    required this.timingPreference,
+    required this.scheduledDayOfWeek,
+    required this.scheduledHour,
+    required this.startingPrice,
     required this.distanceMeters,
     required this.createdAt,
     required this.updatedAt,
@@ -128,9 +182,15 @@ class MissionDetail {
   final String description;
   final ServiceCategory? category;
   final String locationAddress;
+  final double latitude;
+  final double longitude;
   final List<String> photoStorageKeys;
   final MissionStatus status;
   final String? rejectionReason;
+  final MissionTimingPreference timingPreference;
+  final int? scheduledDayOfWeek;
+  final int? scheduledHour;
+  final double? startingPrice;
   final double? distanceMeters;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -148,10 +208,20 @@ class MissionDetail {
     description: json['description'] as String,
     category: _parseCategory(json['category'] as String?),
     locationAddress: json['locationAddress'] as String,
+    latitude: (json['latitude'] as num).toDouble(),
+    longitude: (json['longitude'] as num).toDouble(),
     photoStorageKeys:
         (json['photoStorageKeys'] as List?)?.cast<String>() ?? const [],
     status: parseMissionStatus(json['status'] as String),
     rejectionReason: json['rejectionReason'] as String?,
+    timingPreference: parseMissionTimingPreference(
+      json['timingPreference'] as String?,
+    ),
+    scheduledDayOfWeek: (json['scheduledDayOfWeek'] as num?)?.toInt(),
+    scheduledHour: (json['scheduledHour'] as num?)?.toInt(),
+    startingPrice: json['startingPrice'] == null
+        ? null
+        : double.parse(json['startingPrice'] as String),
     distanceMeters: (json['distanceMeters'] as num?)?.toDouble(),
     createdAt: DateTime.parse(json['createdAt'] as String),
     updatedAt: DateTime.parse(json['updatedAt'] as String),

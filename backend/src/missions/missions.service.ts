@@ -8,15 +8,17 @@ import { DataSource } from 'typeorm';
 import { MissionStatus } from '../database/enums/mission-status.enum';
 import { MissionApplicationStatus } from '../database/enums/mission-application-status.enum';
 import { ServiceCategory } from '../database/enums/service-category.enum';
+import { MissionTimingPreference } from '../database/enums/mission-timing-preference.enum';
 import { CreateMissionDto } from './dto/create-mission.dto';
 import { UpdateMissionDto } from './dto/update-mission.dto';
 import { BrowseMissionsQueryDto } from './dto/browse-missions-query.dto';
 import { ApplyToMissionDto } from './dto/apply-to-mission.dto';
 
 // Row shape shared by browse/detail/mine — never includes the raw geography
-// column (see Mission.location's EWKB round-trip caveat); locationAddress is
-// the only location field that ever leaves this service in text form,
-// alongside a computed distanceMeters when the caller supplied a position.
+// column itself (see Mission.location's EWKB round-trip caveat), only its
+// ST_X/ST_Y-extracted latitude/longitude; locationAddress remains the
+// human-facing location field, alongside a computed distanceMeters when the
+// caller supplied a position.
 export interface MissionListItem {
   id: string;
   posterId: string;
@@ -24,9 +26,22 @@ export interface MissionListItem {
   description: string;
   category: ServiceCategory | null;
   locationAddress: string;
+  // Raw point, extracted from the geography column — see the ST_X/ST_Y note
+  // on SELECT_COLUMNS below. Exists purely so the mobile client can reverse-
+  // geocode a human-readable address client-side (no Maps API key
+  // configured — see the CreateMissionDto note); never fed back into a
+  // write, unlike locationAddress.
+  latitude: number;
+  longitude: number;
   photoStorageKeys: string[] | null;
   status: MissionStatus;
   rejectionReason: string | null;
+  timingPreference: MissionTimingPreference;
+  scheduledDayOfWeek: number | null;
+  scheduledHour: number | null;
+  // Numeric — kept as a string (never Number()'d) so the amount round-trips
+  // exactly, same convention as MissionApplicant.averageRating.
+  startingPrice: string | null;
   distanceMeters: number | null;
   createdAt: Date;
   updatedAt: Date;
@@ -69,7 +84,10 @@ export interface MissionApplicant {
 
 const SELECT_COLUMNS = `
   "id", "poster_id", "title", "description", "category", "location_address",
-  "photo_storage_keys", "status", "rejection_reason", "created_at", "updated_at"
+  ST_Y("location"::geometry) AS latitude, ST_X("location"::geometry) AS longitude,
+  "photo_storage_keys", "status", "rejection_reason", "timing_preference",
+  "scheduled_day_of_week", "scheduled_hour", "starting_price",
+  "created_at", "updated_at"
 `;
 
 function mapRow(row: Record<string, unknown>): MissionListItem {
@@ -80,9 +98,15 @@ function mapRow(row: Record<string, unknown>): MissionListItem {
     description: row.description as string,
     category: row.category as ServiceCategory | null,
     locationAddress: row.location_address as string,
+    latitude: Number(row.latitude),
+    longitude: Number(row.longitude),
     photoStorageKeys: row.photo_storage_keys as string[] | null,
     status: row.status as MissionStatus,
     rejectionReason: row.rejection_reason as string | null,
+    timingPreference: row.timing_preference as MissionTimingPreference,
+    scheduledDayOfWeek: row.scheduled_day_of_week as number | null,
+    scheduledHour: row.scheduled_hour as number | null,
+    startingPrice: row.starting_price as string | null,
     distanceMeters:
       row.distance_meters == null ? null : Number(row.distance_meters),
     createdAt: row.created_at as Date,
@@ -109,8 +133,9 @@ export class MissionsService {
       await this.dataSource.query(
         `INSERT INTO "missions"
            ("poster_id", "title", "description", "category", "location_address",
-            "location", "photo_storage_keys")
-         VALUES ($1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326)::geography, $8)
+            "location", "photo_storage_keys", "timing_preference",
+            "scheduled_day_of_week", "scheduled_hour", "starting_price")
+         VALUES ($1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326)::geography, $8, $9, $10, $11, $12)
          RETURNING "id", "status"`,
         [
           posterId,
@@ -121,6 +146,10 @@ export class MissionsService {
           dto.longitude,
           dto.latitude,
           dto.photoStorageKeys ?? null,
+          dto.timingPreference ?? MissionTimingPreference.UNSPECIFIED,
+          dto.scheduledDayOfWeek ?? null,
+          dto.scheduledHour ?? null,
+          dto.startingPrice ?? null,
         ],
       );
     return { id: rows[0].id, status: rows[0].status };
@@ -316,6 +345,22 @@ export class MissionsService {
     if (dto.photoStorageKeys !== undefined) {
       params.push(dto.photoStorageKeys);
       setClauses.push(`"photo_storage_keys" = $${params.length}`);
+    }
+    // Set as a trio whenever timingPreference is touched at all — an edit
+    // that moves away from SCHEDULED must also null out the now-stale
+    // day/hour, not just leave them behind (the DTO only requires
+    // scheduledDayOfWeek/scheduledHour when timingPreference IS SCHEDULED).
+    if (dto.timingPreference !== undefined) {
+      params.push(dto.timingPreference);
+      setClauses.push(`"timing_preference" = $${params.length}`);
+      params.push(dto.scheduledDayOfWeek ?? null);
+      setClauses.push(`"scheduled_day_of_week" = $${params.length}`);
+      params.push(dto.scheduledHour ?? null);
+      setClauses.push(`"scheduled_hour" = $${params.length}`);
+    }
+    if (dto.startingPrice !== undefined) {
+      params.push(dto.startingPrice);
+      setClauses.push(`"starting_price" = $${params.length}`);
     }
 
     params.push(missionId, posterId);
