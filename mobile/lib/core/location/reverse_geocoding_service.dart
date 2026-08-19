@@ -15,6 +15,10 @@ import 'package:geocoding/geocoding.dart';
 // that's fine, it's purely an optimization, not correctness-bearing.
 class ReverseGeocodingService {
   final Map<String, String?> _cache = {};
+  // geocoding 5.x dropped the old top-level placemarkFromCoordinates()
+  // function in favor of this instance-based API — same native
+  // Android Geocoder / iOS CLGeocoder backend, just a different entry point.
+  final Geocoding _geocoding = Geocoding();
 
   static const _timeLimit = Duration(seconds: 8);
 
@@ -25,10 +29,9 @@ class ReverseGeocodingService {
 
     String? address;
     try {
-      final placemarks = await placemarkFromCoordinates(
-        latitude,
-        longitude,
-      ).timeout(_timeLimit);
+      final placemarks = await _geocoding
+          .placemarkFromCoordinates(latitude, longitude)
+          .timeout(_timeLimit);
       if (placemarks.isNotEmpty) {
         address = _format(placemarks.first);
       }
