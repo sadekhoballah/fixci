@@ -138,6 +138,14 @@ class MissionsRepository {
     });
   }
 
+  // Missions bottom-nav badge — see users.missions_unseen_count.
+  Future<int> getUnseenCount() async {
+    final response = await _apiClient.get('/missions/unseen-count');
+    return response['count'] as int;
+  }
+
+  Future<void> markSeen() => _apiClient.post('/missions/mark-seen', const {});
+
   Future<String> uploadMissionPhoto(PickedImage image) async {
     final response = await _apiClient.postMultipart(
       '/uploads/mission-photo',

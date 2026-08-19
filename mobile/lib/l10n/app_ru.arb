@@ -101,13 +101,14 @@
     }
   },
   "missionStartingPriceLabel": "Начальная цена (необязательно)",
-  "missionStartingPriceHint": "Сумма, предложенная за эту работу",
+  "missionStartingPriceHint": "Минимум 5000 CFA, если не указано",
   "missionStartingPriceDisplayLabel": "Начальная цена: {price}",
   "@missionStartingPriceDisplayLabel": {
     "placeholders": {
       "price": { "type": "String" }
     }
   },
+  "missionStartingPriceUnspecifiedLabel": "Начальная цена: Не указана",
   "missionPhotosLabel": "Фото (необязательно)",
   "publishMissionButton": "Опубликовать",
   "missionDetailTitle": "Задание",

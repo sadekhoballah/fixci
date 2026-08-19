@@ -46,6 +46,12 @@ export class User {
   @Column({ name: 'fcm_token', type: 'varchar', length: 255, nullable: true })
   fcmToken: string | null;
 
+  // Backs the Missions bottom-nav badge — incremented once per mission:*
+  // notifyUser call targeting this user (see MissionsController), zeroed by
+  // MissionsService.markMissionsSeen when they open the Missions tab.
+  @Column({ name: 'missions_unseen_count', type: 'integer', default: 0 })
+  missionsUnseenCount: number;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

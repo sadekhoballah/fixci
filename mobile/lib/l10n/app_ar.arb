@@ -101,13 +101,14 @@
     }
   },
   "missionStartingPriceLabel": "السعر المبدئي (اختياري)",
-  "missionStartingPriceHint": "المبلغ المقترح لهذا العمل",
+  "missionStartingPriceHint": "الحد الأدنى 5000 فرنك أفريقي إذا لم يُحدَّد",
   "missionStartingPriceDisplayLabel": "السعر المبدئي: {price}",
   "@missionStartingPriceDisplayLabel": {
     "placeholders": {
       "price": { "type": "String" }
     }
   },
+  "missionStartingPriceUnspecifiedLabel": "السعر المبدئي: غير محدد",
   "missionPhotosLabel": "الصور (اختياري)",
   "publishMissionButton": "نشر المهمة",
   "missionDetailTitle": "المهمة",

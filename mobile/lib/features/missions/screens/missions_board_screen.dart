@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/models/current_user_country.dart';
 import '../../../core/models/district.dart';
 import '../../../core/models/service_category.dart';
 import '../../../l10n/app_localizations.dart';
@@ -136,9 +137,13 @@ class _EmptyBoardMessage extends StatelessWidget {
   }
 }
 
-// Category chips (horizontal scroll) + a district picker chip, pinned above
-// the list — founder's ask: let people narrow a crowded board down to a
-// trade and an area before it gets confusing to scroll through.
+// District picker chip + trade (métier) picker chip, side by side, pinned
+// above the list — founder's ask: let people narrow a crowded board down to
+// a trade and an area before it gets confusing to scroll through. Both open
+// the same style of modal bottom sheet rather than one being a chip row and
+// the other a chip+dropdown — a horizontally-scrolling trade chip row grew
+// unreadable once "Tous les métiers" + all 17 trades didn't fit on screen
+// (see the "Élec…" chip getting cut off at the edge before this).
 class _FilterBar extends ConsumerWidget {
   const _FilterBar({required this.state, required this.controller});
 
@@ -147,7 +152,6 @@ class _FilterBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
       decoration: BoxDecoration(
@@ -156,34 +160,96 @@ class _FilterBar extends ConsumerWidget {
           bottom: BorderSide(color: Theme.of(context).dividerColor),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          _DistrictFilterChip(state: state, controller: controller),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 34,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                ChoiceChip(
-                  label: const Text('Tous les métiers'),
-                  selected: state.category == null,
-                  onSelected: (_) => controller.setCategory(null),
-                ),
-                for (final category in ServiceCategory.values) ...[
-                  const SizedBox(width: 6),
-                  ChoiceChip(
-                    avatar: Icon(category.icon, size: 16),
-                    label: Text(category.localizedLabel(l10n)),
-                    selected: state.category == category,
-                    onSelected: (_) => controller.setCategory(category),
-                  ),
-                ],
-              ],
-            ),
+          Flexible(
+            child: _DistrictFilterChip(state: state, controller: controller),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: _CategoryFilterChip(state: state, controller: controller),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CategoryFilterChip extends ConsumerWidget {
+  const _CategoryFilterChip({required this.state, required this.controller});
+
+  final MissionsBoardState state;
+  final MissionsBoardController controller;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final label = state.category?.localizedLabel(l10n) ?? 'Tous les métiers';
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: () => _openCategoryPicker(context),
+      child: Chip(
+        avatar: Icon(state.category?.icon ?? Icons.handyman_rounded, size: 16),
+        label: Text(label, overflow: TextOverflow.ellipsis),
+        deleteIcon: const Icon(Icons.expand_more_rounded, size: 18),
+        onDeleted: () => _openCategoryPicker(context),
+      ),
+    );
+  }
+
+  Future<void> _openCategoryPicker(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) =>
+          _CategoryPickerSheet(state: state, controller: controller),
+    );
+  }
+}
+
+class _CategoryPickerSheet extends StatelessWidget {
+  const _CategoryPickerSheet({required this.state, required this.controller});
+
+  final MissionsBoardState state;
+  final MissionsBoardController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.6,
+        ),
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.apps_rounded),
+              title: const Text('Tous les métiers'),
+              trailing: state.category == null
+                  ? const Icon(Icons.check_rounded)
+                  : null,
+              onTap: () {
+                controller.setCategory(null);
+                Navigator.of(context).pop();
+              },
+            ),
+            const Divider(height: 1),
+            for (final category in ServiceCategory.values)
+              ListTile(
+                leading: Icon(category.icon),
+                title: Text(category.localizedLabel(l10n)),
+                trailing: state.category == category
+                    ? const Icon(Icons.check_rounded)
+                    : null,
+                onTap: () {
+                  controller.setCategory(category);
+                  Navigator.of(context).pop();
+                },
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -205,7 +271,7 @@ class _DistrictFilterChip extends ConsumerWidget {
       onTap: () => _openDistrictPicker(context, ref),
       child: Chip(
         avatar: const Icon(Icons.place_outlined, size: 16),
-        label: Text(label),
+        label: Text(label, overflow: TextOverflow.ellipsis),
         deleteIcon: const Icon(Icons.expand_more_rounded, size: 18),
         onDeleted: () => _openDistrictPicker(context, ref),
       ),
@@ -229,6 +295,13 @@ class _DistrictPickerSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final districtsAsync = ref.watch(districtsProvider);
+    // Own-country only — a client/craftsman only ever operates in the
+    // country they registered in (see District.countryCode), so every other
+    // country's districts are just noise here. Falls back to the full list
+    // whenever the country lookup itself hasn't resolved yet or failed
+    // (never a dead end — see currentUserCountryCodeProvider).
+    final countryCodeAsync = ref.watch(currentUserCountryCodeProvider);
+    final countryCode = countryCodeAsync.asData?.value;
     return SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -266,7 +339,12 @@ class _DistrictPickerSheet extends ConsumerWidget {
                   child: Text('Impossible de charger les districts.'),
                 ),
                 data: (districts) {
-                  final sorted = [...districts]
+                  final scoped = countryCode == null
+                      ? districts
+                      : districts
+                            .where((d) => d.countryCode == countryCode)
+                            .toList();
+                  final sorted = [...scoped]
                     ..sort((a, b) => a.name.compareTo(b.name));
                   return ListView.builder(
                     shrinkWrap: true,
@@ -307,13 +385,23 @@ class _MissionTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final localeName = Localizations.localeOf(context).languageCode;
-    final timingLabel = missionTimingDisplayLabel(
-      l10n,
-      localeName,
-      mission.timingPreference,
-      mission.scheduledDayOfWeek,
-      mission.scheduledHour,
-    );
+    // Always a badge, never omitted — founder's call: even the defaults
+    // ("Non précisé") are useful information on a card the applicant only
+    // glances at, unlike missionTimingDisplayLabel's original "omit rather
+    // than show a not-specified chip" contract.
+    final timingLabel =
+        missionTimingDisplayLabel(
+          l10n,
+          localeName,
+          mission.timingPreference,
+          mission.scheduledDayOfWeek,
+          mission.scheduledHour,
+        ) ??
+        l10n.missionTimingUnspecifiedLabel;
+    final priceLabel = mission.startingPrice != null
+        ? missionPriceDisplayLabel(l10n, localeName, mission.startingPrice!)
+        : l10n.missionStartingPriceUnspecifiedLabel;
+    final accentColor = mission.category?.accentColor ?? colorScheme.outline;
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),
@@ -328,6 +416,10 @@ class _MissionTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: colorScheme.surface,
           borderRadius: BorderRadius.circular(18),
+          // Full-perimeter frame in the trade's own color, not just the
+          // left accent bar — founder's ask: make each card's trade legible
+          // as a color even from the card's outline alone.
+          border: Border.all(color: accentColor.withValues(alpha: 0.55)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.06),
@@ -400,24 +492,18 @@ class _MissionTile extends StatelessWidget {
                               color: colorScheme.secondaryContainer,
                               onColor: colorScheme.onSecondaryContainer,
                             ),
-                          if (timingLabel != null)
-                            _Badge(
-                              label: timingLabel,
-                              icon: Icons.schedule_rounded,
-                              color: colorScheme.tertiaryContainer,
-                              onColor: colorScheme.onTertiaryContainer,
-                            ),
-                          if (mission.startingPrice != null)
-                            _Badge(
-                              label: missionPriceDisplayLabel(
-                                l10n,
-                                localeName,
-                                mission.startingPrice!,
-                              ),
-                              icon: Icons.sell_outlined,
-                              color: colorScheme.primaryContainer,
-                              onColor: colorScheme.onPrimaryContainer,
-                            ),
+                          _Badge(
+                            label: timingLabel,
+                            icon: Icons.schedule_rounded,
+                            color: colorScheme.tertiaryContainer,
+                            onColor: colorScheme.onTertiaryContainer,
+                          ),
+                          _Badge(
+                            label: priceLabel,
+                            icon: Icons.sell_outlined,
+                            color: colorScheme.primaryContainer,
+                            onColor: colorScheme.onPrimaryContainer,
+                          ),
                         ],
                       ),
                     ],

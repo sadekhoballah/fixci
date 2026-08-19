@@ -642,4 +642,35 @@ export class MissionsService {
       );
     return { selectedApplicantId: applications[0]?.applicant_id ?? null };
   }
+
+  // Fire-and-forget counter bump — called by the controller right alongside
+  // each mission:* notifyUser push, never awaited on the request's critical
+  // path. See users.missions_unseen_count for why this is a plain counter
+  // rather than a last-seen timestamp.
+  async incrementUnseenCount(userId: string): Promise<void> {
+    await this.dataSource.query(
+      `UPDATE "users" SET "missions_unseen_count" = "missions_unseen_count" + 1
+       WHERE "id" = $1`,
+      [userId],
+    );
+  }
+
+  async getUnseenCount(userId: string): Promise<number> {
+    const rows: Array<{ missions_unseen_count: number }> =
+      await this.dataSource.query(
+        `SELECT "missions_unseen_count" FROM "users" WHERE "id" = $1`,
+        [userId],
+      );
+    return rows[0]?.missions_unseen_count ?? 0;
+  }
+
+  // Called when the caller opens the Missions tab (see
+  // missions_home_screen.dart) — resets the badge to zero regardless of its
+  // current value.
+  async markMissionsSeen(userId: string): Promise<void> {
+    await this.dataSource.query(
+      `UPDATE "users" SET "missions_unseen_count" = 0 WHERE "id" = $1`,
+      [userId],
+    );
+  }
 }

@@ -152,18 +152,24 @@ class _MissionDetailScreenState extends ConsumerState<MissionDetailScreen> {
     final state = ref.watch(missionDetailControllerProvider);
     final mission = state.mission;
     final localeName = Localizations.localeOf(context).languageCode;
+    // Always a value once the mission has loaded, never omitted — mirrors
+    // missions_board_screen.dart's _MissionTile so a mission doesn't show
+    // "Non précisé" on the board and then show nothing at all once opened.
     final timingLabel = mission == null
         ? null
         : missionTimingDisplayLabel(
-            l10n,
-            localeName,
-            mission.timingPreference,
-            mission.scheduledDayOfWeek,
-            mission.scheduledHour,
-          );
-    final priceLabel = mission == null || mission.startingPrice == null
+                l10n,
+                localeName,
+                mission.timingPreference,
+                mission.scheduledDayOfWeek,
+                mission.scheduledHour,
+              ) ??
+              l10n.missionTimingUnspecifiedLabel;
+    final priceLabel = mission == null
         ? null
-        : missionPriceDisplayLabel(l10n, localeName, mission.startingPrice!);
+        : mission.startingPrice != null
+        ? missionPriceDisplayLabel(l10n, localeName, mission.startingPrice!)
+        : l10n.missionStartingPriceUnspecifiedLabel;
 
     return Scaffold(
       appBar: AppBar(title: Text(mission?.title ?? l10n.missionDetailTitle)),

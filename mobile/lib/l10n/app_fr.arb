@@ -178,13 +178,14 @@
     }
   },
   "missionStartingPriceLabel": "Prix de départ (optionnel)",
-  "missionStartingPriceHint": "Montant proposé pour ce travail",
+  "missionStartingPriceHint": "5 000 CFA minimum si non précisé",
   "missionStartingPriceDisplayLabel": "Prix de départ : {price}",
   "@missionStartingPriceDisplayLabel": {
     "placeholders": {
       "price": { "type": "String" }
     }
   },
+  "missionStartingPriceUnspecifiedLabel": "Prix de départ : Non précisé",
   "missionPhotosLabel": "Photos (optionnel)",
   "publishMissionButton": "Publier la mission",
   "missionDetailTitle": "Mission",

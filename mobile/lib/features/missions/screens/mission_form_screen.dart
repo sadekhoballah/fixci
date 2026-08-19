@@ -5,6 +5,7 @@ import '../../../core/models/service_category.dart';
 import '../../../l10n/app_localizations.dart';
 import '../mission_form_controller.dart';
 import '../mission_form_state.dart';
+import '../mission_price_format.dart';
 import '../mission_timing_format.dart';
 import '../missions_models.dart';
 import 'mission_detail_screen.dart';
@@ -27,10 +28,12 @@ class _MissionFormScreenState extends ConsumerState<MissionFormScreen> {
   final _addressController = TextEditingController();
   final _priceController = TextEditingController();
   ServiceCategory? _category;
-  // Non précisé by default — matches the entity's own column default, so a
-  // poster who never touches this section gets exactly what the backend
-  // would have assumed anyway.
-  MissionTimingPreference _timingPreference = MissionTimingPreference.unspecified;
+  // Immédiat by default — "Non précisé" was removed as a choosable option
+  // (founder's call: nobody was actually picking it, and it read as a
+  // pointless third click on a form that already defaults to something
+  // sensible). The enum value itself stays — see MissionTimingPreference —
+  // for missions posted before this change.
+  MissionTimingPreference _timingPreference = MissionTimingPreference.immediate;
   int _scheduledDayOfWeek = DateTime.monday;
   int _scheduledHour = 8;
 
@@ -191,19 +194,8 @@ class _MissionFormScreenState extends ConsumerState<MissionFormScreen> {
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            Row(
               children: [
-                ChoiceChip(
-                  label: Text(l10n.missionTimingUnspecifiedLabel),
-                  selected:
-                      _timingPreference == MissionTimingPreference.unspecified,
-                  onSelected: (_) => setState(
-                    () => _timingPreference =
-                        MissionTimingPreference.unspecified,
-                  ),
-                ),
                 ChoiceChip(
                   label: Text(l10n.missionTimingImmediateLabel),
                   selected:
@@ -213,6 +205,7 @@ class _MissionFormScreenState extends ConsumerState<MissionFormScreen> {
                         MissionTimingPreference.immediate,
                   ),
                 ),
+                const SizedBox(width: 8),
                 ChoiceChip(
                   label: Text(l10n.missionTimingScheduledLabel),
                   selected:
@@ -327,9 +320,13 @@ class _MissionFormScreenState extends ConsumerState<MissionFormScreen> {
                         _timingPreference == MissionTimingPreference.scheduled
                         ? _scheduledHour
                         : null,
-                    startingPrice: double.tryParse(
-                      _priceController.text.trim().replaceAll(',', '.'),
-                    ),
+                    // 5000 (CFA) minimum when the poster leaves this blank —
+                    // founder's call, matches missionStartingPriceHint below.
+                    startingPrice:
+                        double.tryParse(
+                          _priceController.text.trim().replaceAll(',', '.'),
+                        ) ??
+                        kDefaultMissionStartingPrice,
                   ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,

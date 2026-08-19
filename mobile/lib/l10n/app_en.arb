@@ -101,13 +101,14 @@
     }
   },
   "missionStartingPriceLabel": "Starting price (optional)",
-  "missionStartingPriceHint": "Amount you're offering for this job",
+  "missionStartingPriceHint": "5,000 CFA minimum if not specified",
   "missionStartingPriceDisplayLabel": "Starting price: {price}",
   "@missionStartingPriceDisplayLabel": {
     "placeholders": {
       "price": { "type": "String" }
     }
   },
+  "missionStartingPriceUnspecifiedLabel": "Starting price: Not specified",
   "missionPhotosLabel": "Photos (optional)",
   "publishMissionButton": "Publish mission",
   "missionDetailTitle": "Mission",
