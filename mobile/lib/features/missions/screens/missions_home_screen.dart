@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../l10n/app_localizations.dart';
 import '../missions_board_controller.dart';
+import '../missions_unseen_count_controller.dart';
 import '../my_missions_controller.dart';
 import 'mission_form_screen.dart';
 import 'missions_board_screen.dart';
@@ -27,6 +28,11 @@ class _MissionsHomeScreenState extends ConsumerState<MissionsHomeScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    // Opening the tab is what "seeing" the Missions badge means — see
+    // MissionsUnseenCountController.markSeen.
+    Future.microtask(
+      () => ref.read(missionsUnseenCountControllerProvider.notifier).markSeen(),
+    );
   }
 
   @override

@@ -56,6 +56,19 @@ export class MissionsController {
     return { items, hasMore: items.length === limit };
   }
 
+  // Missions bottom-nav badge — see users.missions_unseen_count.
+  @Get('unseen-count')
+  async unseenCount(@CurrentUser() user: AuthenticatedUser) {
+    const count = await this.missionsService.getUnseenCount(user.id);
+    return { count };
+  }
+
+  @Post('mark-seen')
+  async markSeen(@CurrentUser() user: AuthenticatedUser) {
+    await this.missionsService.markMissionsSeen(user.id);
+    return { count: 0 };
+  }
+
   @Get('mine')
   async mine(
     @CurrentUser() user: AuthenticatedUser,
@@ -120,6 +133,7 @@ export class MissionsController {
         body: 'Quelqu’un s’est proposé pour votre mission.',
       },
     );
+    void this.missionsService.incrementUnseenCount(result.posterId);
     return { applicationId: result.applicationId, status: 'pending' };
   }
 
@@ -154,6 +168,7 @@ export class MissionsController {
         body: 'Le propriétaire de la mission vous a choisi.',
       },
     );
+    void this.missionsService.incrementUnseenCount(result.applicantId);
     return { id, status: 'in_progress' };
   }
 
@@ -172,6 +187,9 @@ export class MissionsController {
           title: 'Mission terminée',
           body: 'La mission a été marquée comme terminée.',
         },
+      );
+      void this.missionsService.incrementUnseenCount(
+        result.selectedApplicantId,
       );
     }
     return { id, status: 'completed' };

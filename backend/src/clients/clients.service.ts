@@ -13,6 +13,11 @@ export interface ClientMe {
   // AdminService.deactivateClient) — every account starts true.
   isActive: boolean;
   completedMissionsCount: number;
+  // The client's district's country — mirrors CraftsmanMe.countryCode
+  // (see CraftsmenService.getMe). Lets the mobile Missions board filter the
+  // district picker down to the caller's own country instead of listing
+  // every country's districts in one list (see MissionsBoardScreen).
+  countryCode: string;
 }
 
 export interface ActiveRequest {
@@ -87,6 +92,7 @@ export class ClientsService {
       idVerified: profile.idVerified,
       isActive: profile.isActive,
       completedMissionsCount: Number(count),
+      countryCode: user.district.countryCode,
     };
   }
 
@@ -182,7 +188,10 @@ export class ClientsService {
   private async findClientByUserId(
     userId: string,
   ): Promise<{ user: User; profile: ClientProfile }> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: { district: true },
+    });
     if (!user || user.role !== UserRole.CLIENT) {
       throw new NotFoundException('No client account for this user');
     }

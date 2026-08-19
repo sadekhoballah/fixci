@@ -7,6 +7,7 @@ import '../../../core/notifications/push_notification_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../client_account/screens/client_account_screen.dart';
 import '../../client_jobs/screens/client_jobs_screen.dart';
+import '../../missions/missions_unseen_count_controller.dart';
 import '../../missions/screens/missions_home_screen.dart';
 import '../../service_request/service_request_repository.dart';
 import 'client_home_screen.dart';
@@ -47,10 +48,10 @@ class _ClientShellScreenState extends ConsumerState<ClientShellScreen>
     // here re-fetches until the app backgrounds/resumes or Home remounts.
     // Cheap best-effort REST poll; a push notification / resume invalidate
     // still wins the race whenever either fires first.
-    _activeRequestPollTimer = Timer.periodic(
-      _activeRequestPollInterval,
-      (_) => ref.invalidate(clientActiveRequestNoticeProvider),
-    );
+    _activeRequestPollTimer = Timer.periodic(_activeRequestPollInterval, (_) {
+      ref.invalidate(clientActiveRequestNoticeProvider);
+      ref.read(missionsUnseenCountControllerProvider.notifier).refresh();
+    });
   }
 
   @override
@@ -69,6 +70,7 @@ class _ClientShellScreenState extends ConsumerState<ClientShellScreen>
     // first mounts. See client_home_screen.dart's _ActiveRequestBanner.
     if (appState == AppLifecycleState.resumed) {
       ref.invalidate(clientActiveRequestNoticeProvider);
+      ref.read(missionsUnseenCountControllerProvider.notifier).refresh();
     }
   }
 
@@ -82,6 +84,7 @@ class _ClientShellScreenState extends ConsumerState<ClientShellScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final unseenMissionsCount = ref.watch(missionsUnseenCountControllerProvider);
     return Scaffold(
       body: IndexedStack(index: _index, children: _tabs),
       bottomNavigationBar: NavigationBar(
@@ -94,8 +97,16 @@ class _ClientShellScreenState extends ConsumerState<ClientShellScreen>
             label: l10n.homeTab,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.work_outline_rounded),
-            selectedIcon: const Icon(Icons.work_rounded),
+            icon: Badge.count(
+              count: unseenMissionsCount,
+              isLabelVisible: unseenMissionsCount > 0,
+              child: const Icon(Icons.work_outline_rounded),
+            ),
+            selectedIcon: Badge.count(
+              count: unseenMissionsCount,
+              isLabelVisible: unseenMissionsCount > 0,
+              child: const Icon(Icons.work_rounded),
+            ),
             label: l10n.missionsTab,
           ),
           NavigationDestination(
