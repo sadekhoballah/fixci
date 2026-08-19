@@ -17,6 +17,11 @@ class MissionsRepository {
     required double longitude,
     ServiceCategory? category,
     List<String> photoStorageKeys = const [],
+    MissionTimingPreference timingPreference =
+        MissionTimingPreference.unspecified,
+    int? scheduledDayOfWeek,
+    int? scheduledHour,
+    double? startingPrice,
   }) async {
     final response = await _apiClient.post('/missions', {
       'title': title,
@@ -26,6 +31,10 @@ class MissionsRepository {
       'longitude': longitude,
       if (category != null) 'category': category.wireValue,
       if (photoStorageKeys.isNotEmpty) 'photoStorageKeys': photoStorageKeys,
+      'timingPreference': missionTimingPreferenceWireValue(timingPreference),
+      if (scheduledDayOfWeek != null) 'scheduledDayOfWeek': scheduledDayOfWeek,
+      if (scheduledHour != null) 'scheduledHour': scheduledHour,
+      if (startingPrice != null) 'startingPrice': startingPrice,
     });
     return CreatedMission(
       id: response['id'] as String,

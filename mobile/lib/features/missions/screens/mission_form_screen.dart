@@ -5,6 +5,8 @@ import '../../../core/models/service_category.dart';
 import '../../../l10n/app_localizations.dart';
 import '../mission_form_controller.dart';
 import '../mission_form_state.dart';
+import '../mission_timing_format.dart';
+import '../missions_models.dart';
 import 'mission_detail_screen.dart';
 
 // Create-mission form — calqué sur trade_detail_screen.dart's shape: plain
@@ -23,7 +25,14 @@ class _MissionFormScreenState extends ConsumerState<MissionFormScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _addressController = TextEditingController();
+  final _priceController = TextEditingController();
   ServiceCategory? _category;
+  // Non précisé by default — matches the entity's own column default, so a
+  // poster who never touches this section gets exactly what the backend
+  // would have assumed anyway.
+  MissionTimingPreference _timingPreference = MissionTimingPreference.unspecified;
+  int _scheduledDayOfWeek = DateTime.monday;
+  int _scheduledHour = 8;
 
   @override
   void initState() {
@@ -34,6 +43,7 @@ class _MissionFormScreenState extends ConsumerState<MissionFormScreen> {
       _titleController,
       _descriptionController,
       _addressController,
+      _priceController,
     ]) {
       controller.addListener(() => setState(() {}));
     }
@@ -44,6 +54,7 @@ class _MissionFormScreenState extends ConsumerState<MissionFormScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     _addressController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
 
@@ -176,6 +187,111 @@ class _MissionFormScreenState extends ConsumerState<MissionFormScreen> {
             ),
             const SizedBox(height: 20),
             Text(
+              l10n.missionWhenLabel,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: Text(l10n.missionTimingUnspecifiedLabel),
+                  selected:
+                      _timingPreference == MissionTimingPreference.unspecified,
+                  onSelected: (_) => setState(
+                    () => _timingPreference =
+                        MissionTimingPreference.unspecified,
+                  ),
+                ),
+                ChoiceChip(
+                  label: Text(l10n.missionTimingImmediateLabel),
+                  selected:
+                      _timingPreference == MissionTimingPreference.immediate,
+                  onSelected: (_) => setState(
+                    () => _timingPreference =
+                        MissionTimingPreference.immediate,
+                  ),
+                ),
+                ChoiceChip(
+                  label: Text(l10n.missionTimingScheduledLabel),
+                  selected:
+                      _timingPreference == MissionTimingPreference.scheduled,
+                  onSelected: (_) => setState(
+                    () => _timingPreference =
+                        MissionTimingPreference.scheduled,
+                  ),
+                ),
+              ],
+            ),
+            if (_timingPreference == MissionTimingPreference.scheduled) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      initialValue: _scheduledDayOfWeek,
+                      decoration: InputDecoration(
+                        labelText: l10n.missionDayOfWeekLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      items: [
+                        for (var day = DateTime.monday;
+                            day <= DateTime.sunday;
+                            day++)
+                          DropdownMenuItem(
+                            value: day,
+                            child: Text(
+                              missionWeekdayLabel(
+                                day,
+                                Localizations.localeOf(context).languageCode,
+                              ),
+                            ),
+                          ),
+                      ],
+                      onChanged: (value) => setState(
+                        () => _scheduledDayOfWeek =
+                            value ?? _scheduledDayOfWeek,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      initialValue: _scheduledHour,
+                      decoration: InputDecoration(
+                        labelText: l10n.missionScheduledHourLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      items: [
+                        for (var hour = 0; hour < 24; hour++)
+                          DropdownMenuItem(
+                            value: hour,
+                            child: Text(missionHourLabel(hour)),
+                          ),
+                      ],
+                      onChanged: (value) => setState(
+                        () => _scheduledHour = value ?? _scheduledHour,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 12),
+            TextField(
+              controller: _priceController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: InputDecoration(
+                labelText: l10n.missionStartingPriceLabel,
+                hintText: l10n.missionStartingPriceHint,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
               l10n.missionPhotosLabel,
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
@@ -202,6 +318,18 @@ class _MissionFormScreenState extends ConsumerState<MissionFormScreen> {
                     description: _descriptionController.text.trim(),
                     locationAddress: _addressController.text.trim(),
                     category: _category,
+                    timingPreference: _timingPreference,
+                    scheduledDayOfWeek:
+                        _timingPreference == MissionTimingPreference.scheduled
+                        ? _scheduledDayOfWeek
+                        : null,
+                    scheduledHour:
+                        _timingPreference == MissionTimingPreference.scheduled
+                        ? _scheduledHour
+                        : null,
+                    startingPrice: double.tryParse(
+                      _priceController.text.trim().replaceAll(',', '.'),
+                    ),
                   ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,

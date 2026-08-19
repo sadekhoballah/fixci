@@ -87,6 +87,27 @@
   "missionAddressLabel": "Address",
   "missionAddressHint": "Where does the work need to be done?",
   "missionLocationHelpMessage": "Your current location will also be used to compute distance.",
+  "missionWhenLabel": "When?",
+  "missionTimingUnspecifiedLabel": "Not specified",
+  "missionTimingImmediateLabel": "Right away",
+  "missionTimingScheduledLabel": "Day of the week",
+  "missionDayOfWeekLabel": "Day",
+  "missionScheduledHourLabel": "Time",
+  "missionScheduledForLabel": "{day} at {hour}",
+  "@missionScheduledForLabel": {
+    "placeholders": {
+      "day": { "type": "String" },
+      "hour": { "type": "String" }
+    }
+  },
+  "missionStartingPriceLabel": "Starting price (optional)",
+  "missionStartingPriceHint": "Amount you're offering for this job",
+  "missionStartingPriceDisplayLabel": "Starting price: {price}",
+  "@missionStartingPriceDisplayLabel": {
+    "placeholders": {
+      "price": { "type": "String" }
+    }
+  },
   "missionPhotosLabel": "Photos (optional)",
   "publishMissionButton": "Publish mission",
   "missionDetailTitle": "Mission",

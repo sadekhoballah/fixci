@@ -87,6 +87,27 @@
   "missionAddressLabel": "Адрес",
   "missionAddressHint": "Где нужно выполнить работу?",
   "missionLocationHelpMessage": "Ваше текущее местоположение также будет использовано для расчёта расстояния.",
+  "missionWhenLabel": "Когда?",
+  "missionTimingUnspecifiedLabel": "Не указано",
+  "missionTimingImmediateLabel": "Срочно",
+  "missionTimingScheduledLabel": "День недели",
+  "missionDayOfWeekLabel": "День",
+  "missionScheduledHourLabel": "Время",
+  "missionScheduledForLabel": "{day} в {hour}",
+  "@missionScheduledForLabel": {
+    "placeholders": {
+      "day": { "type": "String" },
+      "hour": { "type": "String" }
+    }
+  },
+  "missionStartingPriceLabel": "Начальная цена (необязательно)",
+  "missionStartingPriceHint": "Сумма, предложенная за эту работу",
+  "missionStartingPriceDisplayLabel": "Начальная цена: {price}",
+  "@missionStartingPriceDisplayLabel": {
+    "placeholders": {
+      "price": { "type": "String" }
+    }
+  },
   "missionPhotosLabel": "Фото (необязательно)",
   "publishMissionButton": "Опубликовать",
   "missionDetailTitle": "Задание",

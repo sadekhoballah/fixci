@@ -87,6 +87,27 @@
   "missionAddressLabel": "عنوان الموقع",
   "missionAddressHint": "أين يجب إنجاز العمل؟",
   "missionLocationHelpMessage": "سيتم أيضًا استخدام موقعك الحالي لحساب المسافة.",
+  "missionWhenLabel": "متى؟",
+  "missionTimingUnspecifiedLabel": "غير محدد",
+  "missionTimingImmediateLabel": "فورًا",
+  "missionTimingScheduledLabel": "يوم من الأسبوع",
+  "missionDayOfWeekLabel": "اليوم",
+  "missionScheduledHourLabel": "الساعة",
+  "missionScheduledForLabel": "{day} الساعة {hour}",
+  "@missionScheduledForLabel": {
+    "placeholders": {
+      "day": { "type": "String" },
+      "hour": { "type": "String" }
+    }
+  },
+  "missionStartingPriceLabel": "السعر المبدئي (اختياري)",
+  "missionStartingPriceHint": "المبلغ المقترح لهذا العمل",
+  "missionStartingPriceDisplayLabel": "السعر المبدئي: {price}",
+  "@missionStartingPriceDisplayLabel": {
+    "placeholders": {
+      "price": { "type": "String" }
+    }
+  },
   "missionPhotosLabel": "الصور (اختياري)",
   "publishMissionButton": "نشر المهمة",
   "missionDetailTitle": "المهمة",

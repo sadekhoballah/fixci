@@ -13,21 +13,28 @@ const _pageSize = 20;
 class MissionsBoardController extends Notifier<MissionsBoardState> {
   @override
   MissionsBoardState build() {
+    // Fired in parallel, not chained — the list must render as soon as the
+    // server answers, regardless of how long (or whether) the GPS fix ever
+    // resolves. Previously refresh() only ran *after* the position fetch,
+    // so a stuck/slow permission request (see location_service.dart) left
+    // the board spinning forever instead of just falling back to
+    // most-recent-first.
+    Future.microtask(refresh);
     Future.microtask(_loadPositionThenRefresh);
     return const MissionsBoardState();
   }
 
   // Best-effort only — a denied/unavailable position just means the board
-  // falls back to most-recent-first server-side, never blocks the list from
-  // loading.
+  // stays sorted most-recent-first (server-side default), never blocks the
+  // list from loading. If a position does resolve, re-run refresh() so the
+  // board re-sorts by distance.
   Future<void> _loadPositionThenRefresh() async {
     final position = await location_service.getCurrentPosition();
-    if (position != null) {
-      state = state.copyWith(
-        latitude: position.latitude,
-        longitude: position.longitude,
-      );
-    }
+    if (position == null) return;
+    state = state.copyWith(
+      latitude: position.latitude,
+      longitude: position.longitude,
+    );
     await refresh();
   }
 

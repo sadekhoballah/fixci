@@ -1,15 +1,22 @@
+import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
   IsEnum,
+  IsInt,
   IsLatitude,
   IsLongitude,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
+  ValidateIf,
 } from 'class-validator';
 import { ServiceCategory } from '../../database/enums/service-category.enum';
+import { MissionTimingPreference } from '../../database/enums/mission-timing-preference.enum';
 
 export class CreateMissionDto {
   @IsNotEmpty()
@@ -47,4 +54,41 @@ export class CreateMissionDto {
   @IsString({ each: true })
   @MaxLength(255, { each: true })
   photoStorageKeys?: string[];
+
+  // Defaults to UNSPECIFIED server-side when omitted (see
+  // MissionsService.createMission) — mirrors the entity's own column
+  // default, so an old client that never sends this field still works.
+  @IsOptional()
+  @IsEnum(MissionTimingPreference)
+  timingPreference?: MissionTimingPreference;
+
+  // Required together, and only meaningful, when timingPreference is
+  // SCHEDULED — enforced here rather than by a DB constraint, same trust
+  // boundary as latitude/longitude above.
+  @ValidateIf(
+    (dto: CreateMissionDto) =>
+      dto.timingPreference === MissionTimingPreference.SCHEDULED,
+  )
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(7)
+  scheduledDayOfWeek?: number;
+
+  @ValidateIf(
+    (dto: CreateMissionDto) =>
+      dto.timingPreference === MissionTimingPreference.SCHEDULED,
+  )
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(23)
+  scheduledHour?: number;
+
+  // Poster's opening figure, currency-agnostic — see Mission.startingPrice.
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  startingPrice?: number;
 }

@@ -1,14 +1,21 @@
+import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
   IsEnum,
+  IsInt,
   IsLatitude,
   IsLongitude,
+  IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
+  ValidateIf,
 } from 'class-validator';
 import { ServiceCategory } from '../../database/enums/service-category.enum';
+import { MissionTimingPreference } from '../../database/enums/mission-timing-preference.enum';
 
 // Used only for the "edit and resubmit after rejection" flow
 // (MissionsService.updateMission) — every field optional, unlike
@@ -49,4 +56,36 @@ export class UpdateMissionDto {
   @IsString({ each: true })
   @MaxLength(255, { each: true })
   photoStorageKeys?: string[];
+
+  @IsOptional()
+  @IsEnum(MissionTimingPreference)
+  timingPreference?: MissionTimingPreference;
+
+  // Required together, and only meaningful, when timingPreference is being
+  // set to SCHEDULED in this same request — mirrors CreateMissionDto.
+  @ValidateIf(
+    (dto: UpdateMissionDto) =>
+      dto.timingPreference === MissionTimingPreference.SCHEDULED,
+  )
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(7)
+  scheduledDayOfWeek?: number;
+
+  @ValidateIf(
+    (dto: UpdateMissionDto) =>
+      dto.timingPreference === MissionTimingPreference.SCHEDULED,
+  )
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(23)
+  scheduledHour?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  startingPrice?: number;
 }

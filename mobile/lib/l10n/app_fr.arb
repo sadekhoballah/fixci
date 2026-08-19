@@ -164,6 +164,27 @@
   "missionAddressLabel": "Adresse",
   "missionAddressHint": "Où le travail doit-il être effectué ?",
   "missionLocationHelpMessage": "Votre position actuelle sera aussi utilisée pour calculer la distance.",
+  "missionWhenLabel": "Quand ?",
+  "missionTimingUnspecifiedLabel": "Non précisé",
+  "missionTimingImmediateLabel": "Immédiat",
+  "missionTimingScheduledLabel": "Jour de la semaine",
+  "missionDayOfWeekLabel": "Jour",
+  "missionScheduledHourLabel": "Heure",
+  "missionScheduledForLabel": "{day} à {hour}",
+  "@missionScheduledForLabel": {
+    "placeholders": {
+      "day": { "type": "String" },
+      "hour": { "type": "String" }
+    }
+  },
+  "missionStartingPriceLabel": "Prix de départ (optionnel)",
+  "missionStartingPriceHint": "Montant proposé pour ce travail",
+  "missionStartingPriceDisplayLabel": "Prix de départ : {price}",
+  "@missionStartingPriceDisplayLabel": {
+    "placeholders": {
+      "price": { "type": "String" }
+    }
+  },
   "missionPhotosLabel": "Photos (optionnel)",
   "publishMissionButton": "Publier la mission",
   "missionDetailTitle": "Mission",

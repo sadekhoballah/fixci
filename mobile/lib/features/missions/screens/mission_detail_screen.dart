@@ -6,8 +6,11 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/network/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../mission_detail_controller.dart';
+import '../mission_price_format.dart';
 import '../mission_status_style.dart';
+import '../mission_timing_format.dart';
 import '../missions_models.dart';
+import '../widgets/mission_visuals.dart';
 import 'mission_applicants_screen.dart';
 
 String _formatDistance(double? meters) {
@@ -148,6 +151,19 @@ class _MissionDetailScreenState extends ConsumerState<MissionDetailScreen> {
     });
     final state = ref.watch(missionDetailControllerProvider);
     final mission = state.mission;
+    final localeName = Localizations.localeOf(context).languageCode;
+    final timingLabel = mission == null
+        ? null
+        : missionTimingDisplayLabel(
+            l10n,
+            localeName,
+            mission.timingPreference,
+            mission.scheduledDayOfWeek,
+            mission.scheduledHour,
+          );
+    final priceLabel = mission == null || mission.startingPrice == null
+        ? null
+        : missionPriceDisplayLabel(l10n, localeName, mission.startingPrice!);
 
     return Scaffold(
       appBar: AppBar(title: Text(mission?.title ?? l10n.missionDetailTitle)),
@@ -192,25 +208,65 @@ class _MissionDetailScreenState extends ConsumerState<MissionDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: SizedBox(
+                      height: 180,
+                      width: double.infinity,
+                      child: MissionPhotoOrPlaceholder(
+                        storageKey: mission.photoStorageKeys.isEmpty
+                            ? null
+                            : mission.photoStorageKeys.first,
+                        category: mission.category,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Text(
                     mission.description,
                     style: const TextStyle(fontSize: 15, height: 1.5),
                   ),
                   const SizedBox(height: 20),
                   _LocationRow(
+                    latitude: mission.latitude,
+                    longitude: mission.longitude,
                     address: mission.locationAddress,
                     distanceMeters: mission.distanceMeters,
                   ),
-                  if (mission.photoStorageKeys.isNotEmpty) ...[
+                  if (timingLabel != null || priceLabel != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (timingLabel != null)
+                            _InfoRow(
+                              icon: Icons.schedule_rounded,
+                              label: timingLabel,
+                            ),
+                          if (priceLabel != null) ...[
+                            if (timingLabel != null) const SizedBox(height: 6),
+                            _InfoRow(
+                              icon: Icons.sell_outlined,
+                              label: priceLabel,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  // The hero image above already shows the first photo — the
+                  // strip below only needs the rest, and only if there are
+                  // any.
+                  if (mission.photoStorageKeys.length > 1) ...[
                     const SizedBox(height: 20),
                     SizedBox(
                       height: 90,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
-                        itemCount: mission.photoStorageKeys.length,
+                        itemCount: mission.photoStorageKeys.length - 1,
                         separatorBuilder: (_, _) => const SizedBox(width: 10),
                         itemBuilder: (context, index) => _MissionPhoto(
-                          storageKey: mission.photoStorageKeys[index],
+                          storageKey: mission.photoStorageKeys[index + 1],
                         ),
                       ),
                     ),
@@ -233,8 +289,15 @@ class _MissionDetailScreenState extends ConsumerState<MissionDetailScreen> {
 }
 
 class _LocationRow extends StatelessWidget {
-  const _LocationRow({required this.address, required this.distanceMeters});
+  const _LocationRow({
+    required this.latitude,
+    required this.longitude,
+    required this.address,
+    required this.distanceMeters,
+  });
 
+  final double latitude;
+  final double longitude;
   final String address;
   final double? distanceMeters;
 
@@ -252,7 +315,12 @@ class _LocationRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(address, style: const TextStyle(fontSize: 14)),
+          child: MissionResolvedAddress(
+            latitude: latitude,
+            longitude: longitude,
+            fallback: address,
+            style: const TextStyle(fontSize: 14),
+          ),
         ),
         if (distanceMeters != null) ...[
           const SizedBox(width: 8),
@@ -265,6 +333,27 @@ class _LocationRow extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: colorScheme.onSurfaceVariant),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(label, style: const TextStyle(fontSize: 14)),
+        ),
       ],
     );
   }
