@@ -42,9 +42,13 @@ export class MissionsController {
   }
 
   @Get()
-  async browse(@Query() query: BrowseMissionsQueryDto) {
+  async browse(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: BrowseMissionsQueryDto,
+  ) {
     const limit = query.limit ?? DEFAULT_LIMIT;
     const items = await this.missionsService.browseMissions(
+      user.id,
       query,
       limit,
       query.offset ?? 0,

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/localization/locale_controller.dart';
 import '../../core/location/location_service.dart' as location_service;
+import '../../core/models/service_category.dart';
 import '../../core/network/api_client.dart';
 import 'missions_board_state.dart';
 import 'missions_repository.dart';
@@ -38,6 +39,32 @@ class MissionsBoardController extends Notifier<MissionsBoardState> {
     await refresh();
   }
 
+  void setCategory(ServiceCategory? category) {
+    state = category == null
+        ? state.copyWith(clearCategory: true)
+        : state.copyWith(category: category);
+    refresh();
+  }
+
+  // Explicit district — any district the caller wants, not just their own
+  // (founder's call). Passing null id resets to the default "my district"
+  // behavior (see MissionsBoardState.isDefaultLocationFilter).
+  void setDistrict(String? districtId, String? districtName) {
+    state = districtId == null
+        ? state.copyWith(clearDistrict: true)
+        : state.copyWith(
+            districtId: districtId,
+            districtName: districtName,
+            allDistricts: false,
+          );
+    refresh();
+  }
+
+  void setAllDistricts() {
+    state = state.copyWith(clearDistrict: true, allDistricts: true);
+    refresh();
+  }
+
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
@@ -48,6 +75,16 @@ class MissionsBoardController extends Notifier<MissionsBoardState> {
             offset: 0,
             latitude: state.latitude,
             longitude: state.longitude,
+            category: state.category,
+            districtId: state.districtId,
+            allDistricts: state.allDistricts,
+            // The 5km cap only makes sense for the default "near me" view —
+            // once the caller explicitly picked a district (their own
+            // re-selected doesn't count, that's still the default), they're
+            // deliberately browsing away from their own position.
+            maxDistanceKm: state.isDefaultLocationFilter
+                ? kDefaultBoardRadiusKm
+                : null,
           );
       state = state.copyWith(
         isLoading: false,
@@ -75,6 +112,12 @@ class MissionsBoardController extends Notifier<MissionsBoardState> {
             offset: state.items.length,
             latitude: state.latitude,
             longitude: state.longitude,
+            category: state.category,
+            districtId: state.districtId,
+            allDistricts: state.allDistricts,
+            maxDistanceKm: state.isDefaultLocationFilter
+                ? kDefaultBoardRadiusKm
+                : null,
           );
       state = state.copyWith(
         isLoadingMore: false,

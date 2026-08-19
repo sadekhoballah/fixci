@@ -47,12 +47,20 @@ class MissionsRepository {
     required int offset,
     double? latitude,
     double? longitude,
+    ServiceCategory? category,
+    String? districtId,
+    bool allDistricts = false,
+    int? maxDistanceKm,
   }) async {
     final query = {
       'limit': '$limit',
       'offset': '$offset',
       if (latitude != null) 'latitude': '$latitude',
       if (longitude != null) 'longitude': '$longitude',
+      if (category != null) 'category': category.wireValue,
+      if (districtId != null) 'districtId': districtId,
+      if (allDistricts) 'allDistricts': 'true',
+      if (maxDistanceKm != null) 'maxDistanceKm': '$maxDistanceKm',
     };
     final response = await _apiClient.get(
       '/missions?${Uri(queryParameters: query).query}',

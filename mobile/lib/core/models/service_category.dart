@@ -141,6 +141,31 @@ enum ServiceCategory {
     ServiceCategory.taxi => Icons.local_taxi_rounded,
     ServiceCategory.camion => Icons.local_shipping_rounded,
   };
+
+  // Used by the Missions board to make a scrolling list of cards scannable
+  // at a glance (accent stripe + category badge) — see
+  // mission_visuals.dart's CategoryBadge. Deliberately a handful of hues
+  // shared across related trades rather than 17 unique colors, which would
+  // read as noise instead of a signal.
+  Color get accentColor => switch (this) {
+    ServiceCategory.plumber => Colors.blue,
+    ServiceCategory.acRepair => Colors.lightBlue,
+    ServiceCategory.electrician => Colors.amber,
+    ServiceCategory.cameraInstallation => Colors.deepPurple,
+    ServiceCategory.tvInstallation => Colors.deepPurple,
+    ServiceCategory.satelliteInstallation => Colors.deepPurple,
+    ServiceCategory.cleaning => Colors.teal,
+    ServiceCategory.housekeeping => Colors.teal,
+    ServiceCategory.carpenter => Colors.brown,
+    ServiceCategory.blacksmith => Colors.brown,
+    ServiceCategory.aluminumWork => Colors.blueGrey,
+    ServiceCategory.construction => Colors.deepOrange,
+    ServiceCategory.painter => Colors.green,
+    ServiceCategory.mechanic => Colors.indigo,
+    ServiceCategory.taxi => Colors.indigo,
+    ServiceCategory.camion => Colors.indigo,
+    ServiceCategory.homeTutoring => Colors.pink,
+  };
 }
 
 // Localized counterparts to .label/.description above — kept as a separate

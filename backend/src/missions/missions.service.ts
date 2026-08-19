@@ -157,7 +157,16 @@ export class MissionsService {
 
   // Public board — approved_published only. Sorted by distance when the
   // caller supplied a position, otherwise most-recent-first.
+  //
+  // District defaults to the caller's own the instant the page opens
+  // (founder's call — no empty board while the user figures out filters),
+  // but is never sticky server-side: pass districtId to browse anywhere, or
+  // allDistricts to drop the filter entirely. maxDistanceKm only makes
+  // sense alongside a position and is meant for the default "near me" load
+  // — the mobile client omits it once the caller explicitly browses a
+  // district other than their own.
   async browseMissions(
+    callerId: string,
     query: BrowseMissionsQueryDto,
     limit: number,
     offset: number,
@@ -172,6 +181,22 @@ export class MissionsService {
     if (query.category) {
       params.push(query.category);
       conditions.push(`"category" = $${params.length}`);
+    }
+    if (hasPosition && query.maxDistanceKm != null) {
+      params.push(query.maxDistanceKm * 1000);
+      conditions.push(
+        `ST_DWithin("location", ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $${params.length})`,
+      );
+    }
+    if (!query.allDistricts) {
+      const districtId =
+        query.districtId ?? (await this.getCallerDistrictId(callerId));
+      if (districtId) {
+        params.push(districtId);
+        conditions.push(
+          `"poster_id" IN (SELECT "id" FROM "users" WHERE "district_id" = $${params.length})`,
+        );
+      }
     }
     params.push(limit, offset);
 
@@ -189,6 +214,19 @@ export class MissionsService {
       params,
     );
     return rows.map(mapRow);
+  }
+
+  // Only ever consulted for the browseMissions default (no explicit
+  // districtId/allDistricts on the request) — a plain lookup rather than a
+  // join into browseMissions' own query, since it's needed at most once per
+  // request and keeps that query's param numbering simple.
+  private async getCallerDistrictId(callerId: string): Promise<string | null> {
+    const rows: Array<{ district_id: string | null }> =
+      await this.dataSource.query(
+        `SELECT "district_id" FROM "users" WHERE "id" = $1`,
+        [callerId],
+      );
+    return rows[0]?.district_id ?? null;
   }
 
   // Privacy rule: the poster's name/phone are only ever included when the
@@ -269,8 +307,10 @@ export class MissionsService {
 
   // Feeds the "Mes missions" tab: everything the caller posted, union
   // everything they applied to (excluding withdrawn applications), deduped,
-  // most-recently-updated first. This is also where completed/archived
-  // missions live for both parties — there is no separate archive endpoint.
+  // most-recently-updated first. Completed/archived missions only stay
+  // visible to the poster — founder's call: once a mission is done, an
+  // applicant (selected or not) no longer needs it cluttering their list,
+  // only the poster who might still reference it.
   async getMyMissions(
     callerId: string,
     limit: number,
@@ -290,6 +330,7 @@ export class MissionsService {
          FROM "missions" m
          JOIN "mission_applications" ma ON ma."mission_id" = m."id"
          WHERE ma."applicant_id" = $1 AND ma."status" != 'withdrawn'
+           AND m."status" NOT IN ('completed', 'archived')
        )
        SELECT ${SELECT_COLUMNS}, NULL::numeric AS distance_meters,
               c."role_in_mission", c."my_application_status"

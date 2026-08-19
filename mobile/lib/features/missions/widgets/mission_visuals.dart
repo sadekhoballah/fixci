@@ -70,6 +70,12 @@ class _Placeholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    // A category's own accent color (see ServiceCategory.accentColor) when
+    // known, so a photo-less mission is still visually sorted by trade at a
+    // glance on the board — falls back to the theme's primary for "Autre
+    // métier" (no category), same neutral fallback missions_board_screen.dart
+    // uses elsewhere.
+    final base = category?.accentColor ?? colorScheme.primary;
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -77,28 +83,90 @@ class _Placeholder extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            colorScheme.primaryContainer,
-            colorScheme.primary.withValues(alpha: 0.55),
-          ],
+          colors: [base.withValues(alpha: 0.85), base],
         ),
       ),
       child: Center(
         child: loading
-            ? SizedBox(
+            ? const SizedBox(
                 width: 22,
                 height: 22,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: colorScheme.onPrimaryContainer,
+                  color: Colors.white,
                 ),
               )
             : Icon(
                 category?.icon ?? Icons.handyman_rounded,
                 size: 40,
-                color: colorScheme.onPrimaryContainer,
+                color: Colors.white,
               ),
       ),
+    );
+  }
+}
+
+// The board's "this is what trade it is" signal — a small colored pill
+// (icon + label) using the category's own accentColor, meant to be paired
+// with CategoryAccentBar so a scrolling list of cards sorts by trade at a
+// glance without reading any text. Falls back to a neutral outline color
+// for "Autre métier" (no category), same as _Placeholder above.
+class CategoryBadge extends StatelessWidget {
+  const CategoryBadge({super.key, required this.category, this.dense = false});
+
+  final ServiceCategory? category;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final color = category?.accentColor ?? colorScheme.outline;
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: dense ? 6 : 10,
+        vertical: dense ? 3 : 5,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            category?.icon ?? Icons.handyman_rounded,
+            size: dense ? 12 : 14,
+            color: color,
+          ),
+          SizedBox(width: dense ? 3 : 5),
+          Text(
+            category?.label ?? 'Autre métier',
+            style: TextStyle(
+              fontSize: dense ? 11 : 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// The board's per-card left-edge accent — same color as CategoryBadge,
+// meant to be the very first thing in the card's Row so the trade reads as
+// a color even out of the corner of the eye while scrolling.
+class CategoryAccentBar extends StatelessWidget {
+  const CategoryAccentBar({super.key, required this.category});
+
+  final ServiceCategory? category;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 4,
+      color: category?.accentColor ?? colorScheme.outline,
     );
   }
 }
