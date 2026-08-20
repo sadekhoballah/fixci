@@ -8,6 +8,7 @@ import '../../../core/media/image_validation.dart';
 import '../../../core/network/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../onboarding/screens/role_selection_screen.dart';
+import '../../safety/screens/blocked_users_screen.dart';
 
 class _ClientMe {
   const _ClientMe({
@@ -43,6 +44,17 @@ class _ClientAccountScreenState extends ConsumerState<ClientAccountScreen> {
   Future<void> _openPrivacyPolicy() async {
     final uri = Uri.parse('https://fix-pro.app/privacy/');
     if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
+  Future<void> _openTermsOfService() async {
+    final uri = Uri.parse('https://fix-pro.app/terms/');
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
+  void _openBlockedUsers() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const BlockedUsersScreen()));
   }
 
   Future<void> _confirmAndDeleteAccount() async {
@@ -280,6 +292,18 @@ class _ClientAccountScreenState extends ConsumerState<ClientAccountScreen> {
                     child: TextButton(
                       onPressed: _openPrivacyPolicy,
                       child: Text(l10n.privacyPolicyButton),
+                    ),
+                  ),
+                  Center(
+                    child: TextButton(
+                      onPressed: _openTermsOfService,
+                      child: Text(l10n.termsOfServiceButton),
+                    ),
+                  ),
+                  Center(
+                    child: TextButton(
+                      onPressed: _openBlockedUsers,
+                      child: Text(l10n.blockedUsersScreenTitle),
                     ),
                   ),
                   TextButton.icon(

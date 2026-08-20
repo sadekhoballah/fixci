@@ -32,6 +32,7 @@ import {
 } from '../firebase/notifications.service';
 import { TokensService } from '../auth/tokens.service';
 import { resolveVerifiedAuth } from '../auth/resolve-verified-phone';
+import { SafetyService } from '../safety/safety.service';
 
 const SERVICE_CATEGORY_LABELS_FR: Record<ServiceCategory, string> = {
   [ServiceCategory.PLUMBER]: 'plomberie',
@@ -155,6 +156,7 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     private readonly presenceService: PresenceService,
     private readonly tokensService: TokensService,
     private readonly notificationsService: NotificationsService,
+    private readonly safetyService: SafetyService,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
 
@@ -417,18 +419,29 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     // (and either declined or went quiet) gets double-pushed.
     const triedCraftsmanIds = new Set<string>();
 
+    // Fetched once per request, not per round — a block can't change
+    // mid-loop, and this keeps every round's findNearest call itself
+    // untouched (PresenceService/Redis stay generic, filtering happens
+    // here). See UserBlock's class-level comment for why this is
+    // bidirectional regardless of who blocked whom.
+    const blockedCraftsmanIds = await this.safetyService.getBlockedCounterpartIds(
+      request.clientId,
+    );
+
     for (const radius of buildRadiusSequence(request.serviceCategory)) {
       if (this.cancelledRequestIds.delete(request.id)) return;
 
       await this.matchingService.updateSearchRadius(request.id, radius);
 
-      const candidates = await this.presenceService.findNearest(
-        request.serviceCategory,
-        request.longitude,
-        request.latitude,
-        radius,
-        CANDIDATES_PER_ROUND,
-      );
+      const candidates = (
+        await this.presenceService.findNearest(
+          request.serviceCategory,
+          request.longitude,
+          request.latitude,
+          radius,
+          CANDIDATES_PER_ROUND,
+        )
+      ).filter((candidate) => !blockedCraftsmanIds.has(candidate.craftsmanId));
 
       // Deliberately not skipping the wait when candidates.length === 0:
       // this round's ACCEPT_TIMEOUT_MS is also the window during which a
@@ -521,7 +534,7 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
         request.serviceCategory,
         request.longitude,
         request.latitude,
-        Array.from(triedCraftsmanIds),
+        [...triedCraftsmanIds, ...blockedCraftsmanIds],
         WAKEUP_CANDIDATES,
       );
 

@@ -25,6 +25,10 @@ export interface ActiveRequest {
   serviceCategory: string;
   status:
     'pending' | 'assigned' | 'in_progress' | 'awaiting_client_confirmation';
+  // Null until a craftsman is actually assigned — same nullability as
+  // craftsmanFullName/craftsmanPhone, and the reason the mobile Report/Block
+  // action only shows once there's someone to report/block.
+  craftsmanId: string | null;
   craftsmanFullName: string | null;
   craftsmanPhone: string | null;
 }
@@ -34,6 +38,7 @@ interface ActiveRequestRow {
   service_category: string;
   status:
     'pending' | 'assigned' | 'in_progress' | 'awaiting_client_confirmation';
+  craftsman_id: string | null;
   craftsman_full_name: string | null;
   craftsman_phone: string | null;
 }
@@ -125,7 +130,7 @@ export class ClientsService {
     await this.findClientByUserId(userId);
 
     const rows: ActiveRequestRow[] = await this.dataSource.query(
-      `SELECT sr."id", sr."service_category", sr."status",
+      `SELECT sr."id", sr."service_category", sr."status", sr."craftsman_id",
               u."full_name" AS craftsman_full_name, u."phone" AS craftsman_phone
        FROM "service_requests" sr
        LEFT JOIN "users" u ON u."id" = sr."craftsman_id"
@@ -142,6 +147,7 @@ export class ClientsService {
       requestId: row.id,
       serviceCategory: row.service_category,
       status: row.status,
+      craftsmanId: row.craftsman_id,
       craftsmanFullName: row.craftsman_full_name,
       craftsmanPhone: row.craftsman_phone,
     };

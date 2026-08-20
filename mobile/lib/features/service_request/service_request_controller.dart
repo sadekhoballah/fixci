@@ -169,6 +169,7 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
     state = state.copyWith(
       status: active.status,
       requestId: active.requestId,
+      craftsmanId: active.craftsmanId,
       craftsmanFullName: active.craftsmanFullName,
       craftsmanPhone: active.craftsmanPhone,
     );
@@ -197,6 +198,7 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
       if (active != null && active.requestId == state.requestId) {
         state = state.copyWith(
           status: active.status,
+          craftsmanId: active.craftsmanId,
           craftsmanFullName: active.craftsmanFullName,
           craftsmanPhone: active.craftsmanPhone,
         );
@@ -267,6 +269,7 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
       if (event.requestId != _requestId) return;
       state = state.copyWith(
         status: ServiceRequestStatus.assigned,
+        craftsmanId: event.craftsmanId,
         craftsmanFullName: event.craftsmanFullName,
         craftsmanPhone: event.craftsmanPhone,
       );

@@ -8,6 +8,7 @@ class ActiveRequest {
     required this.requestId,
     required this.serviceCategory,
     required this.status,
+    required this.craftsmanId,
     required this.craftsmanFullName,
     required this.craftsmanPhone,
   });
@@ -15,6 +16,9 @@ class ActiveRequest {
   final String requestId;
   final ServiceCategory serviceCategory;
   final ServiceRequestStatus status;
+  // Backs the Report/Block action once a craftsman is assigned — see
+  // ReportBlockMenu.
+  final String? craftsmanId;
   final String? craftsmanFullName;
   final String? craftsmanPhone;
 }
@@ -66,6 +70,7 @@ class ServiceRequestRepository {
           ServiceRequestStatus.awaitingClientConfirmation,
         _ => ServiceRequestStatus.searching,
       },
+      craftsmanId: response['craftsmanId'] as String?,
       craftsmanFullName: response['craftsmanFullName'] as String?,
       craftsmanPhone: response['craftsmanPhone'] as String?,
     );

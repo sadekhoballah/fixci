@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../safety/widgets/report_block_menu.dart';
 import '../mission_applicants_controller.dart';
 import '../missions_models.dart';
 
@@ -101,6 +102,7 @@ class _MissionApplicantsScreenState
                 itemCount: state.applicants.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, index) => _ApplicantCard(
+                  missionId: widget.missionId,
                   applicant: state.applicants[index],
                   isProcessing: state.processingApplicationIds.contains(
                     state.applicants[index].applicationId,
@@ -115,11 +117,13 @@ class _MissionApplicantsScreenState
 
 class _ApplicantCard extends StatelessWidget {
   const _ApplicantCard({
+    required this.missionId,
     required this.applicant,
     required this.isProcessing,
     required this.onSelect,
   });
 
+  final String missionId;
   final MissionApplicant applicant;
   final bool isProcessing;
   final VoidCallback onSelect;
@@ -179,6 +183,11 @@ class _ApplicantCard extends StatelessWidget {
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                 ),
               ],
+              ReportBlockMenu(
+                targetUserId: applicant.applicantId,
+                contextType: 'mission',
+                contextId: missionId,
+              ),
             ],
           ),
           const SizedBox(height: 6),

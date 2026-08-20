@@ -8,6 +8,7 @@ class ActiveJob {
     required this.requestId,
     required this.serviceCategory,
     required this.status,
+    required this.clientId,
     required this.clientFullName,
     required this.clientPhone,
     required this.clientLatitude,
@@ -19,6 +20,8 @@ class ActiveJob {
   final String requestId;
   final ServiceCategory serviceCategory;
   final ActiveJobStatus status;
+  // Backs ActiveJobCard's Report/Block action — see ReportBlockMenu.
+  final String clientId;
   final String? clientFullName;
   final String clientPhone;
   final double clientLatitude;
@@ -31,6 +34,7 @@ class ActiveJob {
       requestId: requestId,
       serviceCategory: serviceCategory,
       status: status ?? this.status,
+      clientId: clientId,
       clientFullName: clientFullName,
       clientPhone: clientPhone,
       clientLatitude: clientLatitude,

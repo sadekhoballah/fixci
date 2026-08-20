@@ -11,6 +11,7 @@ import '../mission_status_style.dart';
 import '../mission_timing_format.dart';
 import '../missions_models.dart';
 import '../widgets/mission_visuals.dart';
+import '../../safety/widgets/report_block_menu.dart';
 import 'mission_applicants_screen.dart';
 
 String _formatDistance(double? meters) {
@@ -172,7 +173,20 @@ class _MissionDetailScreenState extends ConsumerState<MissionDetailScreen> {
         : l10n.missionStartingPriceUnspecifiedLabel;
 
     return Scaffold(
-      appBar: AppBar(title: Text(mission?.title ?? l10n.missionDetailTitle)),
+      appBar: AppBar(
+        title: Text(mission?.title ?? l10n.missionDetailTitle),
+        // Only ever the poster to report/block — a poster reporting/
+        // blocking a specific applicant instead happens per-row on
+        // MissionApplicantsScreen.
+        actions: [
+          if (mission != null && !mission.isOwnMission)
+            ReportBlockMenu(
+              targetUserId: mission.posterId,
+              contextType: 'mission',
+              contextId: mission.id,
+            ),
+        ],
+      ),
       body: SafeArea(
         child: state.isLoading
             ? const Center(child: CircularProgressIndicator())

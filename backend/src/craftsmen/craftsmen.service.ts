@@ -45,6 +45,7 @@ export interface ActiveJob {
   requestId: string;
   serviceCategory: string;
   status: 'assigned' | 'in_progress' | 'awaiting_client_confirmation';
+  clientId: string;
   clientFullName: string | null;
   clientPhone: string;
   clientLatitude: number;
@@ -71,6 +72,7 @@ interface ActiveJobRow {
   id: string;
   service_category: string;
   status: 'assigned' | 'in_progress' | 'awaiting_client_confirmation';
+  client_id: string;
   client_full_name: string | null;
   client_phone: string;
   latitude: string;
@@ -222,7 +224,7 @@ export class CraftsmenService {
     await this.findCraftsmanByUserId(userId);
 
     const rows: ActiveJobRow[] = await this.dataSource.query(
-      `SELECT sr."id", sr."service_category", sr."status",
+      `SELECT sr."id", sr."service_category", sr."status", sr."client_id",
               sr."assigned_at", sr."started_at",
               u."full_name" AS client_full_name, u."phone" AS client_phone,
               ST_Y(sr."client_location"::geometry) AS latitude,
@@ -242,6 +244,7 @@ export class CraftsmenService {
       requestId: row.id,
       serviceCategory: row.service_category,
       status: row.status,
+      clientId: row.client_id,
       clientFullName: row.client_full_name,
       clientPhone: row.client_phone,
       clientLatitude: Number(row.latitude),

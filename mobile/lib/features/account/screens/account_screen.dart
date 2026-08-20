@@ -12,6 +12,7 @@ import '../../craftsman_home/craftsman_home_controller.dart';
 import '../../craftsman_home/widgets/rating_performance_card.dart';
 import '../../onboarding/screens/role_selection_screen.dart';
 import '../../onboarding/screens/tier_selection_screen.dart';
+import '../../safety/screens/blocked_users_screen.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
@@ -35,6 +36,17 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   Future<void> _openPrivacyPolicy() async {
     final uri = Uri.parse('https://fix-pro.app/privacy/');
     if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
+  Future<void> _openTermsOfService() async {
+    final uri = Uri.parse('https://fix-pro.app/terms/');
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
+  void _openBlockedUsers() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const BlockedUsersScreen()));
   }
 
   Future<void> _confirmAndDeleteAccount() async {
@@ -199,6 +211,18 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               child: TextButton(
                 onPressed: _openPrivacyPolicy,
                 child: Text(l10n.privacyPolicyButton),
+              ),
+            ),
+            Center(
+              child: TextButton(
+                onPressed: _openTermsOfService,
+                child: Text(l10n.termsOfServiceButton),
+              ),
+            ),
+            Center(
+              child: TextButton(
+                onPressed: _openBlockedUsers,
+                child: Text(l10n.blockedUsersScreenTitle),
               ),
             ),
             TextButton.icon(

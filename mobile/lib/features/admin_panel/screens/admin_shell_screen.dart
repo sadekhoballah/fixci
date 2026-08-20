@@ -6,6 +6,7 @@ import 'admin_districts_screen.dart';
 import 'admin_kyc_screen.dart';
 import 'admin_missions_screen.dart';
 import 'admin_ops_screen.dart';
+import 'admin_reports_screen.dart';
 
 // Minimal shell for the post-login admin dashboard. All 5 modules of the
 // founder's original spec are tabs here, plus the directory and missions
@@ -29,6 +30,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     AdminBroadcastScreen(),
     AdminDirectoryScreen(),
     AdminMissionsScreen(),
+    AdminReportsScreen(),
   ];
 
   @override
@@ -66,6 +68,10 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           NavigationDestination(
             icon: Icon(Icons.work_outline_rounded),
             label: 'Missions',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.flag_outlined),
+            label: 'Signalements',
           ),
         ],
       ),

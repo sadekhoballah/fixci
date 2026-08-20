@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/service_category.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../safety/widgets/report_block_menu.dart';
 import '../live_requests_state.dart';
 
 // Shown instead of the incoming-request feed once a job is assigned — a
@@ -111,6 +112,11 @@ class ActiveJobCard extends StatelessWidget {
               Text(
                 job.serviceCategory.localizedLabel(l10n),
                 style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+              ),
+              ReportBlockMenu(
+                targetUserId: job.clientId,
+                contextType: 'service_request',
+                contextId: job.requestId,
               ),
             ],
           ),

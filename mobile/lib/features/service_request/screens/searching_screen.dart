@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/service_category.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../safety/widgets/report_block_menu.dart';
 import '../service_request_controller.dart';
 import '../service_request_repository.dart' show ActiveRequest;
 import '../service_request_state.dart';
@@ -402,6 +403,11 @@ class _AssignedCard extends StatelessWidget {
                   icon: const Icon(Icons.chat_rounded, size: 18),
                   label: const Text('WhatsApp'),
                 ),
+              ),
+              ReportBlockMenu(
+                targetUserId: state.craftsmanId,
+                contextType: 'service_request',
+                contextId: state.requestId,
               ),
             ],
           ),

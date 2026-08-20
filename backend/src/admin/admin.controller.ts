@@ -26,6 +26,7 @@ import {
 } from '../uploads/uploads.constants';
 import { DeactivateAccountDto } from './dto/deactivate-account.dto';
 import { RejectMissionDto } from './dto/reject-mission.dto';
+import { ResolveReportDto } from './dto/resolve-report.dto';
 
 @Controller('admin')
 @UseGuards(AdminJwtGuard)
@@ -180,5 +181,21 @@ export class AdminController {
       throw new NotFoundException('Photo file not found');
     }
     res.sendFile(filePath);
+  }
+
+  // Signalements queue — see SafetyController for the user-facing report/
+  // block endpoints these read from.
+  @Get('reports')
+  async getPendingReports() {
+    return { items: await this.adminService.getPendingReports() };
+  }
+
+  @Patch('reports/:id/resolve')
+  async resolveReport(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ResolveReportDto,
+  ) {
+    await this.adminService.resolveReport(id, dto);
+    return { id, action: dto.action };
   }
 }

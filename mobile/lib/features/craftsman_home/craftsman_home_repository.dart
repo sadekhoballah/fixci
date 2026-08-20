@@ -107,6 +107,7 @@ class CraftsmanHomeRepository {
           ActiveJobStatus.awaitingClientConfirmation,
         _ => ActiveJobStatus.assigned,
       },
+      clientId: response['clientId'] as String,
       clientFullName: response['clientFullName'] as String?,
       clientPhone: response['clientPhone'] as String,
       clientLatitude: (response['clientLatitude'] as num).toDouble(),

@@ -13,6 +13,7 @@ import { CreateMissionDto } from './dto/create-mission.dto';
 import { UpdateMissionDto } from './dto/update-mission.dto';
 import { BrowseMissionsQueryDto } from './dto/browse-missions-query.dto';
 import { ApplyToMissionDto } from './dto/apply-to-mission.dto';
+import { SafetyService } from '../safety/safety.service';
 
 // Row shape shared by browse/detail/mine — never includes the raw geography
 // column itself (see Mission.location's EWKB round-trip caveat), only its
@@ -123,7 +124,10 @@ function mapRow(row: Record<string, unknown>): MissionListItem {
 // compare-and-swap WHERE clause anyway (mirrors MatchingService.tryAssign).
 @Injectable()
 export class MissionsService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly safetyService: SafetyService,
+  ) {}
 
   async createMission(
     posterId: string,
@@ -197,6 +201,16 @@ export class MissionsService {
           `"poster_id" IN (SELECT "id" FROM "users" WHERE "district_id" = $${params.length})`,
         );
       }
+    }
+    // Bidirectional — see UserBlock's class-level comment. A blocked
+    // poster's missions never show up on either side's board, regardless of
+    // who blocked whom.
+    const blockedIds = await this.safetyService.getBlockedCounterpartIds(
+      callerId,
+    );
+    if (blockedIds.size > 0) {
+      params.push(Array.from(blockedIds));
+      conditions.push(`NOT ("poster_id" = ANY($${params.length}::uuid[]))`);
     }
     params.push(limit, offset);
 
@@ -468,6 +482,12 @@ export class MissionsService {
     if (mission.status !== MissionStatus.APPROVED_PUBLISHED) {
       throw new ConflictException('This mission is not open for applications');
     }
+    // Defensive, alongside browseMissions already hiding this mission from
+    // a blocked pair — a block created after an application already exists
+    // (or a stale client screen) shouldn't still let a new one through.
+    if (await this.safetyService.isBlockedEitherWay(applicantId, mission.poster_id)) {
+      throw new ForbiddenException('You cannot apply to this mission');
+    }
 
     try {
       const rows: Array<{ id: string }> = await this.dataSource.query(
@@ -584,6 +604,15 @@ export class MissionsService {
       }
       if (applications[0].status !== MissionApplicationStatus.PENDING) {
         throw new ConflictException('This application is no longer pending');
+      }
+      // Same defensive rationale as applyToMission's check.
+      if (
+        await this.safetyService.isBlockedEitherWay(
+          ownerId,
+          applications[0].applicant_id,
+        )
+      ) {
+        throw new ForbiddenException('You cannot select this applicant');
       }
 
       await manager.query(

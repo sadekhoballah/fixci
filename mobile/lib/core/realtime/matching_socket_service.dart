@@ -55,6 +55,7 @@ class RequestOutcomeEvent {
 class RequestAssignedEvent {
   const RequestAssignedEvent({
     required this.requestId,
+    this.craftsmanId,
     this.craftsmanFullName,
     this.craftsmanPhone,
   });
@@ -62,12 +63,14 @@ class RequestAssignedEvent {
   factory RequestAssignedEvent.fromJson(Map<String, dynamic> json) {
     return RequestAssignedEvent(
       requestId: json['requestId'] as String,
+      craftsmanId: json['craftsmanId'] as String?,
       craftsmanFullName: json['craftsmanFullName'] as String?,
       craftsmanPhone: json['craftsmanPhone'] as String?,
     );
   }
 
   final String requestId;
+  final String? craftsmanId;
   final String? craftsmanFullName;
   final String? craftsmanPhone;
 }

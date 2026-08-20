@@ -9,6 +9,9 @@ import { ServiceCategory } from '../database/enums/service-category.enum';
 import { PresenceService } from '../matching/presence.service';
 import { MatchingGateway } from '../matching/matching.gateway';
 import { NotificationsService } from '../firebase/notifications.service';
+import { SafetyService, PendingReport } from '../safety/safety.service';
+import { ReportStatus } from '../database/enums/report-status.enum';
+import { ResolveReportDto } from './dto/resolve-report.dto';
 
 const LICENSE_REQUIRED_CATEGORIES = [
   ServiceCategory.TAXI,
@@ -43,6 +46,7 @@ export class AdminService {
     private readonly presenceService: PresenceService,
     private readonly notificationsService: NotificationsService,
     private readonly matchingGateway: MatchingGateway,
+    private readonly safetyService: SafetyService,
   ) {}
 
   // A single combined queue for both account types, oldest first — mirrors
@@ -268,5 +272,61 @@ export class AdminService {
         },
       );
     }
+  }
+
+  // Pending-only, oldest first — see SafetyService.getPendingReports.
+  async getPendingReports(): Promise<PendingReport[]> {
+    return this.safetyService.getPendingReports();
+  }
+
+  async resolveReport(reportId: string, dto: ResolveReportDto): Promise<void> {
+    if (dto.action === 'deactivate_reported') {
+      const reportedUserId = await this.safetyService.getReportedUserId(
+        reportId,
+      );
+      await this.suspendReportedUser(reportedUserId, dto.note);
+    }
+    await this.safetyService.markReportResolved(
+      reportId,
+      dto.action === 'dismiss' ? ReportStatus.DISMISSED : ReportStatus.RESOLVED,
+      dto.note,
+    );
+  }
+
+  // Role-agnostic isActive flip for a reported account — deliberately NOT
+  // deactivateCraftsman/deactivateClient above: those two exist for the KYC
+  // review flow and their push copy ("votre document a été refusé...")
+  // would be actively misleading here. Tries the craftsman profile first,
+  // falls back to the client one; a User row is always exactly one or the
+  // other (see User.role), so exactly one of these two updates ever matches.
+  private async suspendReportedUser(
+    userId: string,
+    reason?: string,
+  ): Promise<void> {
+    const craftsmanResult = await this.craftsmanProfileRepository.update(
+      { userId },
+      { isActive: false, isAvailable: false },
+    );
+    if ((craftsmanResult.affected ?? 0) > 0) {
+      await this.presenceService.setOffline(userId);
+    } else {
+      const clientResult = await this.clientProfileRepository.update(
+        { userId },
+        { isActive: false },
+      );
+      if ((clientResult.affected ?? 0) === 0) {
+        throw new NotFoundException('No profile for this account');
+      }
+    }
+    void this.notificationsService.sendToUser(
+      userId,
+      {
+        title: 'Compte suspendu',
+        body:
+          reason ??
+          'Votre compte a été suspendu suite à un signalement. Contactez-nous si vous pensez qu’il s’agit d’une erreur.',
+      },
+      { type: 'account_suspended_report' },
+    );
   }
 }

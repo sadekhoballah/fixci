@@ -23,6 +23,7 @@ import { BroadcastModule } from './broadcast/broadcast.module';
 import { DirectoryModule } from './directory/directory.module';
 import { AuthModule } from './auth/auth.module';
 import { MissionsModule } from './missions/missions.module';
+import { SafetyModule } from './safety/safety.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { MissionsModule } from './missions/missions.module';
     BroadcastModule,
     DirectoryModule,
     MissionsModule,
+    SafetyModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

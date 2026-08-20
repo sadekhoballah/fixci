@@ -22,6 +22,7 @@ class ServiceRequestState {
     this.myLongitude,
     this.destinationAddress,
     this.loadDetails,
+    this.craftsmanId,
     this.craftsmanFullName,
     this.craftsmanPhone,
     this.craftsmanLatitude,
@@ -43,6 +44,9 @@ class ServiceRequestState {
   // dropping them.
   final String? destinationAddress;
   final String? loadDetails;
+  // Backs the Report/Block action once a craftsman is assigned — see
+  // ReportBlockMenu.
+  final String? craftsmanId;
   final String? craftsmanFullName;
   final String? craftsmanPhone;
   final double? craftsmanLatitude;
@@ -61,6 +65,7 @@ class ServiceRequestState {
     double? myLongitude,
     String? destinationAddress,
     String? loadDetails,
+    String? craftsmanId,
     String? craftsmanFullName,
     String? craftsmanPhone,
     double? craftsmanLatitude,
@@ -77,6 +82,7 @@ class ServiceRequestState {
       myLongitude: myLongitude ?? this.myLongitude,
       destinationAddress: destinationAddress ?? this.destinationAddress,
       loadDetails: loadDetails ?? this.loadDetails,
+      craftsmanId: craftsmanId ?? this.craftsmanId,
       craftsmanFullName: craftsmanFullName ?? this.craftsmanFullName,
       craftsmanPhone: craftsmanPhone ?? this.craftsmanPhone,
       craftsmanLatitude: craftsmanLatitude ?? this.craftsmanLatitude,
