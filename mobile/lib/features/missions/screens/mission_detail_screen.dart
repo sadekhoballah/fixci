@@ -447,6 +447,16 @@ class _MissionActionArea extends StatelessWidget {
     if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
+  // Mirrors ActiveJobCard._navigate — the applicant knows the mission's
+  // address as text already (see _LocationRow above), but not the actual
+  // route to get there once they've been picked for the job.
+  Future<void> _navigate(double latitude, double longitude) async {
+    final uri = Uri.parse(
+      'geo:$latitude,$longitude?q=$latitude,$longitude',
+    );
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
   Future<void> _whatsapp(String phone) async {
     final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
     final uri = Uri.parse('https://wa.me/$digits');
@@ -588,6 +598,15 @@ class _MissionActionArea extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _navigate(mission.latitude, mission.longitude),
+                  icon: const Icon(Icons.directions_rounded, size: 18),
+                  label: Text(l10n.directionsButton),
+                ),
               ),
             ],
           ],

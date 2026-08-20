@@ -542,17 +542,26 @@ class _MissionTile extends ConsumerWidget {
               ),
               Padding(
                 padding: const EdgeInsets.all(10),
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: SizedBox(
-                    width: 76,
-                    child: MissionPhotoOrPlaceholder(
-                      storageKey: mission.photoStorageKeys.isEmpty
-                          ? null
-                          : mission.photoStorageKeys.first,
-                      category: mission.category,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                child: SizedBox(
+                  // A bare fixed box, not AspectRatio(aspectRatio: 1,
+                  // child: SizedBox(width: 76, ...)) — that combination let
+                  // AspectRatio inflate to the Row's whole intrinsic height
+                  // (unbounded width inside a Row, so it grew to match
+                  // whatever height the IntrinsicHeight row settled on),
+                  // then handed the inner SizedBox's width: 76 request
+                  // tight constraints it couldn't override. The thumbnail
+                  // rendered far larger than intended — a big near-empty
+                  // frame whenever the text column was short (see the
+                  // founder's screenshot: an "Autre métier" card with a
+                  // one-letter title).
+                  width: 76,
+                  height: 76,
+                  child: MissionPhotoOrPlaceholder(
+                    storageKey: mission.photoStorageKeys.isEmpty
+                        ? null
+                        : mission.photoStorageKeys.first,
+                    category: mission.category,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
