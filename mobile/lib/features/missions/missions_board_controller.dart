@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/localization/locale_controller.dart';
 import '../../core/location/location_service.dart' as location_service;
@@ -8,10 +10,19 @@ import 'missions_repository.dart';
 
 const _pageSize = 20;
 
+// New postings from other people are the whole point of a browsable board —
+// unlike "Mes missions" (autoDispose, refetches fresh every time it opens),
+// nothing here tells the caller "someone just posted" the way a push
+// notification would for a candidature, so the board polls for itself.
+// Mirrors AdminOpsController's Timer.periodic + onDispose pattern.
+const _pollInterval = Duration(seconds: 30);
+
 // Persistent tab controller (not autoDispose) — mirrors ClientJobsController:
 // state survives switching away to another bottom-nav tab and back, rather
 // than refetching every time.
 class MissionsBoardController extends Notifier<MissionsBoardState> {
+  Timer? _pollTimer;
+
   @override
   MissionsBoardState build() {
     // Fired in parallel, not chained — the list must render as soon as the
@@ -22,7 +33,43 @@ class MissionsBoardController extends Notifier<MissionsBoardState> {
     // most-recent-first.
     Future.microtask(refresh);
     Future.microtask(_loadPositionThenRefresh);
+    _pollTimer = Timer.periodic(_pollInterval, (_) => _pollRefresh());
+    ref.onDispose(() => _pollTimer?.cancel());
     return const MissionsBoardState();
+  }
+
+  // The periodic tick — same query as refresh(), but never flips isLoading
+  // (no spinner slamming over a list the caller might be mid-scroll on) and
+  // never surfaces an error (a background poll failing is invisible; the
+  // next tick or a manual pull-to-refresh will retry). Skipped outright
+  // while an explicit refresh/loadMore is already in flight, to avoid two
+  // requests racing to write state.items.
+  Future<void> _pollRefresh() async {
+    if (state.isLoading || state.isLoadingMore) return;
+    try {
+      final page = await ref
+          .read(missionsRepositoryProvider)
+          .browseMissions(
+            // At least a full page, but never fewer than what's already
+            // loaded — otherwise a poll tick would truncate away items the
+            // caller reached via loadMore.
+            limit: state.items.length < _pageSize
+                ? _pageSize
+                : state.items.length,
+            offset: 0,
+            latitude: state.latitude,
+            longitude: state.longitude,
+            category: state.category,
+            districtId: state.districtId,
+            allDistricts: state.allDistricts,
+            maxDistanceKm: state.isDefaultLocationFilter
+                ? kDefaultBoardRadiusKm
+                : null,
+          );
+      state = state.copyWith(items: page.items, hasMore: page.hasMore);
+    } catch (_) {
+      // See method comment — silent.
+    }
   }
 
   // Best-effort only — a denied/unavailable position just means the board
