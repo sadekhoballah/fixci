@@ -13,6 +13,7 @@ import '../platform/firebase_support.dart';
 import 'push_token_repository.dart';
 import '../../features/client_home/screens/client_shell_screen.dart';
 import '../../features/craftsman_home/screens/artisan_shell_screen.dart';
+import '../../features/missions/screens/mission_detail_screen.dart';
 
 // Matches AndroidManifest.xml's default_notification_channel_id — must stay
 // in sync, since a mismatch means Android silently drops the channel
@@ -152,13 +153,22 @@ class PushNotificationService {
   Map<String, String> _stringifyData(Map<String, dynamic> data) =>
       data.map((key, value) => MapEntry(key, '$value'));
 
-  // MVP scope: every event just brings the user back to their role's Home
-  // shell (which already re-fetches live/active-request state on its own —
-  // see LiveRequestsController.loadActiveJob and
+  // MVP scope for every other event: brings the user back to their role's
+  // Home shell (which already re-fetches live/active-request state on its
+  // own — see LiveRequestsController.loadActiveJob and
   // ServiceRequestController.handleAppResumed) rather than deep-linking to
   // a specific sub-screen. Good enough for "I got a push, let me open the
-  // app and see what's going on"; a future pass could route more precisely
-  // per event type.
+  // app and see what's going on".
+  //
+  // Missions/Freelance events (mission:application:new, mission:selected,
+  // mission:completed — see MissionsController) are the one exception: the
+  // whole point of tapping "someone applied to your mission" is to land on
+  // that mission, not just the Home shell. The backend already includes
+  // missionId in every mission:* push's data (MissionsController), so once
+  // the shell is up, push the mission's detail screen on top of it — covers
+  // a tap from background (onMessageOpenedApp), a cold start
+  // (getInitialMessage), and a foreground local-notification tap
+  // (_handleTapPayload) alike, since all three funnel through here.
   void _navigateForEvent(Map<String, String> data, UserRole role) {
     final navigator = rootNavigatorKey.currentState;
     if (navigator == null) return;
@@ -169,6 +179,14 @@ class PushNotificationService {
       MaterialPageRoute(builder: (_) => destination),
       (route) => false,
     );
+    final missionId = data['missionId'];
+    if (missionId != null && (data['event'] ?? '').startsWith('mission:')) {
+      navigator.push(
+        MaterialPageRoute(
+          builder: (_) => MissionDetailScreen(missionId: missionId),
+        ),
+      );
+    }
   }
 }
 

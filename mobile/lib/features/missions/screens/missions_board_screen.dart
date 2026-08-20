@@ -297,11 +297,13 @@ class _DistrictPickerSheet extends ConsumerWidget {
     final districtsAsync = ref.watch(districtsProvider);
     // Own-country only — a client/craftsman only ever operates in the
     // country they registered in (see District.countryCode), so every other
-    // country's districts are just noise here. Falls back to the full list
-    // whenever the country lookup itself hasn't resolved yet or failed
-    // (never a dead end — see currentUserCountryCodeProvider).
+    // country's districts are just noise here (and, per the founder,
+    // genuinely wrong to show — never both countries at once, not even
+    // transiently). countryCodeAsync races districtsAsync independently, so
+    // while it's still resolving we hold the loading spinner rather than
+    // falling back to the unscoped list; only a genuine lookup failure
+    // (asData null after an error) falls back, to avoid a true dead end.
     final countryCodeAsync = ref.watch(currentUserCountryCodeProvider);
-    final countryCode = countryCodeAsync.asData?.value;
     return SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -338,29 +340,23 @@ class _DistrictPickerSheet extends ConsumerWidget {
                   padding: EdgeInsets.all(24),
                   child: Text('Impossible de charger les districts.'),
                 ),
-                data: (districts) {
-                  final scoped = countryCode == null
-                      ? districts
-                      : districts
-                            .where((d) => d.countryCode == countryCode)
-                            .toList();
-                  final sorted = [...scoped]
-                    ..sort((a, b) => a.name.compareTo(b.name));
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: sorted.length,
-                    itemBuilder: (context, index) {
-                      final District district = sorted[index];
-                      return ListTile(
-                        title: Text(district.name),
-                        onTap: () {
-                          controller.setDistrict(district.id, district.name);
-                          Navigator.of(context).pop();
-                        },
-                      );
-                    },
-                  );
-                },
+                data: (districts) => countryCodeAsync.isLoading
+                    ? const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    : _DistrictList(
+                        districts: countryCodeAsync.asData?.value == null
+                            ? districts
+                            : districts
+                                  .where(
+                                    (d) =>
+                                        d.countryCode ==
+                                        countryCodeAsync.asData!.value,
+                                  )
+                                  .toList(),
+                        controller: controller,
+                      ),
               ),
             ),
           ],
@@ -370,18 +366,44 @@ class _DistrictPickerSheet extends ConsumerWidget {
   }
 }
 
+class _DistrictList extends StatelessWidget {
+  const _DistrictList({required this.districts, required this.controller});
+
+  final List<District> districts;
+  final MissionsBoardController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final sorted = [...districts]..sort((a, b) => a.name.compareTo(b.name));
+    return ListView.builder(
+      shrinkWrap: true,
+      itemCount: sorted.length,
+      itemBuilder: (context, index) {
+        final District district = sorted[index];
+        return ListTile(
+          title: Text(district.name),
+          onTap: () {
+            controller.setDistrict(district.id, district.name);
+            Navigator.of(context).pop();
+          },
+        );
+      },
+    );
+  }
+}
+
 // A photo (or category-themed placeholder) up top, title + reverse-geocoded
 // address below, then a row of badges for whatever the poster actually
 // filled in (distance, timing preference, starting price) — badges that
 // don't apply (no position yet, unspecified timing, no price) just don't
 // render rather than showing an empty/placeholder chip.
-class _MissionTile extends StatelessWidget {
+class _MissionTile extends ConsumerWidget {
   const _MissionTile({required this.mission});
 
   final MissionSummary mission;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final localeName = Localizations.localeOf(context).languageCode;
@@ -405,11 +427,19 @@ class _MissionTile extends StatelessWidget {
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => MissionDetailScreen(missionId: mission.id),
-        ),
-      ),
+      onTap: () async {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => MissionDetailScreen(missionId: mission.id),
+          ),
+        );
+        // Status may have changed while the detail screen was open (the
+        // poster completing/withdrawing their own mission opened straight
+        // from the board) — without this the stale approved_published item
+        // lingers in the board's persistent (non-autoDispose) cache until a
+        // manual pull-to-refresh. Mirrors MyMissionsScreen._openDetail.
+        ref.read(missionsBoardControllerProvider.notifier).refresh();
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         clipBehavior: Clip.antiAlias,
