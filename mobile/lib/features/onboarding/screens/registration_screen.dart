@@ -15,6 +15,7 @@ import '../allowed_countries.dart';
 import '../onboarding_controller.dart';
 import '../onboarding_repository.dart';
 import '../onboarding_state.dart';
+import 'otp_verification_screen.dart';
 import 'registration_success_screen.dart';
 import 'tier_selection_screen.dart';
 
@@ -49,7 +50,17 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     OnboardingState state,
     OnboardingController controller,
   ) async {
-    final succeeded = await controller.completeRegistration();
+    // Verify the phone first: fill the form, then Twilio Verify on the OTP
+    // screen, which completes registration itself once the code checks out.
+    if (!state.isPhoneVerified) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => OtpVerificationScreen(phone: state.phone),
+        ),
+      );
+      return;
+    }
+    final succeeded = await controller.completeAfterVerification();
     if (!context.mounted || !succeeded) return;
 
     final latest = ref.read(onboardingControllerProvider);

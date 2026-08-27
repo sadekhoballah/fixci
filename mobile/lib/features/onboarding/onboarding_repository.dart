@@ -15,22 +15,6 @@ class RegisteredTokens {
   final String refreshToken;
 }
 
-class ExistingAccountSession {
-  const ExistingAccountSession({
-    required this.accessToken,
-    required this.refreshToken,
-    required this.role,
-    required this.fullName,
-    required this.subscriptionTier,
-  });
-
-  final String accessToken;
-  final String refreshToken;
-  final UserRole role;
-  final String? fullName;
-  final SubscriptionTier? subscriptionTier;
-}
-
 class OnboardingRepository {
   OnboardingRepository(this._apiClient, this._l10n);
 
@@ -78,6 +62,7 @@ class OnboardingRepository {
       'role': role.wireValue,
       'districtId': state.district!.id,
       'idCardStorageKey': state.idCardStorageKey,
+      'registrationToken': state.registrationToken,
       if (role == UserRole.craftsman && state.serviceCategory != null)
         'serviceCategory': state.serviceCategory!.wireValue,
       if (role == UserRole.craftsman)
@@ -89,35 +74,6 @@ class OnboardingRepository {
     return RegisteredTokens(
       accessToken: response['accessToken'] as String,
       refreshToken: response['refreshToken'] as String,
-    );
-  }
-
-  // Called only after POST /users/register 409s AND the phone came from the
-  // Phone Number Hint API (see PhoneSource) — logs straight into the
-  // existing account behind that number. See
-  // backend/src/auth/auth.controller.ts for why this is safe to do
-  // without any further proof for a device-sourced number, and why a
-  // manually-typed one never reaches this call.
-  Future<ExistingAccountSession> reconnect(String phone) async {
-    final response = await _apiClient.post('/auth/reconnect', {
-      'phone': phone,
-    });
-    final user = response['user'] as Map<String, dynamic>;
-    return ExistingAccountSession(
-      accessToken: response['accessToken'] as String,
-      refreshToken: response['refreshToken'] as String,
-      role: switch (user['role'] as String) {
-        'craftsman' => UserRole.craftsman,
-        _ => UserRole.client,
-      },
-      fullName: user['fullName'] as String?,
-      subscriptionTier: switch (user['subscriptionTier'] as String?) {
-        'bronze' => SubscriptionTier.bronze,
-        'silver' => SubscriptionTier.silver,
-        'gold' => SubscriptionTier.gold,
-        'free' => SubscriptionTier.free,
-        _ => null,
-      },
     );
   }
 

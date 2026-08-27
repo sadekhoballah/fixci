@@ -14,6 +14,20 @@ import 'package:mobile/core/models/user_role.dart';
 import 'package:mobile/core/network/api_client.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 
+const _correctOtpCode = '123456';
+
+// Phone OTP via Twilio Verify is plain HTTP (POST /auth/otp/start,
+// POST /auth/otp/check — see _FakeApiClient below), no platform SDK: every
+// platform (including this Linux runner) drives the OTP screen the same
+// way — type the code, tap Vérifier.
+Future<void> _verifyPhoneViaOtp(WidgetTester tester) async {
+  expect(find.text('Vérification du numéro'), findsOneWidget);
+  await tester.enterText(find.byType(TextField), _correctOtpCode);
+  await tester.pump();
+  await tester.tap(find.text('Vérifier'));
+  await tester.pumpAndSettle();
+}
+
 // A real 1x1 PNG — decodable, but far below the minimum ID-card dimension,
 // so it exercises the "image too small" client-side validation path.
 const _tinyPngBase64 =
@@ -71,7 +85,7 @@ class _FakeTokenStorage implements TokenStorage {
 }
 
 // Fakes only the true I/O boundary (network transport), so every layer above
-// it — OtpAuthService/OnboardingRepository's field/enum-wire-value mapping,
+// it — VerifyService/OnboardingRepository's field/enum-wire-value mapping,
 // the controllers, the widgets — runs for real. The actual backend contract
 // (field names, status codes, response shapes) is separately verified
 // against the live NestJS server, not re-asserted here.
@@ -141,6 +155,17 @@ class _FakeApiClient extends ApiClient {
     String path,
     Map<String, dynamic> body,
   ) async {
+    if (path == '/auth/otp/start') {
+      return {'status': 'sent', 'channel': body['channel'] ?? 'whatsapp'};
+    }
+    if (path == '/auth/otp/check') {
+      if (body['code'] != _correctOtpCode) {
+        throw ApiException('Incorrect code', statusCode: 401);
+      }
+      // No account exists yet for any phone in these tests — every test
+      // exercises the "new user, falls through to registration" path.
+      return {'status': 'new', 'registrationToken': 'fake-registration-token'};
+    }
     if (path == '/users/register') {
       if (failRegister) {
         throw ApiException(
@@ -367,6 +392,8 @@ void main() {
       await tester.tap(find.text("S'inscrire"));
       await tester.pumpAndSettle();
 
+      await _verifyPhoneViaOtp(tester);
+
       expect(find.text('Bienvenue, Aya Kone !'), findsOneWidget);
 
       await tester.tap(find.text('Continuer'));
@@ -453,6 +480,8 @@ void main() {
       await tester.ensureVisible(find.text("S'inscrire"));
       await tester.tap(find.text("S'inscrire"));
       await tester.pumpAndSettle();
+
+      await _verifyPhoneViaOtp(tester);
 
       expect(find.text('Bienvenue, Aya Kone !'), findsOneWidget);
 
@@ -545,14 +574,11 @@ void main() {
   );
 
   testWidgets(
-    // failRegister makes POST /users/register 409 ("already registered") —
-    // this test runs on the host platform, where PhoneHintService.isSupported
-    // is false (see registration_flow_test.dart), so the phone here is
-    // always PhoneSource.manual: a manually-typed number that turns out to
-    // already have an account shows the contact-support copy rather than
-    // logging the caller in — see reconnect.controller.ts's doc comment for
-    // why that's a deliberate asymmetry with the device-hint path.
-    'registration failure shows the contact-support message and stays on the form',
+    // Phone verification succeeds (POST /auth/otp/check -> status "new"),
+    // then failRegister makes POST /users/register 409 — the error surfaces
+    // on the verification screen and the flow stays there rather than
+    // advancing to the welcome screen.
+    'a registration failure after OTP shows an inline error on the verification screen',
     (tester) async {
       await tester.pumpWidget(buildApp(failRegister: true));
       await tester.pumpAndSettle(const Duration(seconds: 4));
@@ -569,13 +595,11 @@ void main() {
       await tester.tap(find.text("S'inscrire"));
       await tester.pumpAndSettle();
 
-      expect(find.text('Inscription'), findsOneWidget);
-      expect(
-        find.text(
-          'Ce numéro est déjà associé à un compte. Contactez le support pour récupérer votre accès.',
-        ),
-        findsOneWidget,
-      );
+      await _verifyPhoneViaOtp(tester);
+
+      expect(find.text('Vérification du numéro'), findsOneWidget);
+      expect(find.text('Phone number already registered'), findsOneWidget);
+      expect(find.text('Bienvenue, Aya Kone !'), findsNothing);
     },
   );
 }

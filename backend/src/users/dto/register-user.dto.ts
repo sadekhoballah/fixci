@@ -43,6 +43,14 @@ export class RegisterUserDto {
   @MaxLength(255)
   idCardStorageKey: string;
 
+  // Proof this phone was actually OTP-verified — issued by
+  // POST /auth/otp/check when no account exists yet for the phone (see
+  // TokensService.issueRegistrationToken). Required: registration can no
+  // longer happen without having verified the phone first.
+  @IsNotEmpty()
+  @IsString()
+  registrationToken: string;
+
   // Second mandatory document, taxi/camion craftsmen only — see
   // CraftsmanProfile.licenseStorageKey.
   @ValidateIf(

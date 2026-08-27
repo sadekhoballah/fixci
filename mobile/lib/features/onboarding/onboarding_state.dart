@@ -4,16 +4,6 @@ import '../../core/models/service_category.dart';
 import '../../core/models/subscription_tier.dart';
 import '../../core/models/user_role.dart';
 
-// Where OnboardingState.phone came from — decides how OnboardingController
-// reacts to a "phone already registered" conflict from POST /users/register
-// (see completeRegistration): a device-sourced number gets a best-effort
-// reconnect via POST /auth/reconnect, a manually-typed one doesn't, because
-// there's no possession signal at all behind it. See
-// backend/src/auth/auth.controller.ts's doc comment for the full
-// rationale — this is the one enum value that phase 2's real verification
-// will need to touch.
-enum PhoneSource { deviceHint, manual }
-
 class OnboardingState {
   const OnboardingState({
     this.role,
@@ -22,7 +12,6 @@ class OnboardingState {
     this.phone = '',
     this.phoneCountryCode = 'CI',
     this.phoneLocked = false,
-    this.phoneSource = PhoneSource.manual,
     this.isRequestingPhoneHint = false,
     this.district,
     this.serviceCategory,
@@ -35,6 +24,8 @@ class OnboardingState {
     this.licensePreviewBytes,
     this.isUploadingLicense = false,
     this.licenseUploadError,
+    this.verifiedPhone,
+    this.registrationToken,
     this.isSubmitting = false,
     this.submissionError,
     this.registrationSucceeded = false,
@@ -56,9 +47,9 @@ class OnboardingState {
   // been applied — the phone field goes read-only and the country selector
   // stops accepting manual taps while this is true (see
   // registration_screen.dart's _PhoneField). Never true on iOS or after the
-  // "no numbers on this device" fallback.
+  // "no numbers on this device" fallback. Purely a prefill convenience now:
+  // ownership is proven by OTP, not by where the number came from.
   final bool phoneLocked;
-  final PhoneSource phoneSource;
   // Drives the phone field's loading state while the system picker is being
   // requested/shown — separate from phoneLocked since this is true only
   // during the request itself.
@@ -78,25 +69,35 @@ class OnboardingState {
   final Uint8List? licensePreviewBytes;
   final bool isUploadingLicense;
   final String? licenseUploadError;
+  // The phone number that Twilio Verify approved a code for, and the
+  // short-lived proof of that for a brand-new phone (null once
+  // loggedIntoExistingAccount is true — /auth/otp/check already logged that
+  // case straight in, see OnboardingController.setVerifiedPhone).
+  // setPhone() clears both if the user edits the number after verifying it.
+  final String? verifiedPhone;
+  final String? registrationToken;
   final bool isSubmitting;
   final String? submissionError;
   final bool registrationSucceeded;
   // Set once the artisan picks a plan on TierSelectionScreen, or (for a
-  // returning craftsman) straight from POST /auth/reconnect's response —
+  // returning craftsman) straight from POST /auth/otp/check's response —
   // persisted via OnboardingController.confirmActiveTier() once it's
   // actually active (free tiers immediately, paid tiers after
   // PaymentCheckoutScreen).
   final SubscriptionTier? selectedTier;
-  // True when phone turned out to already have an account and
-  // OnboardingController.completeRegistration() logged the caller straight
-  // into it via POST /auth/reconnect (device-sourced number only — see
-  // PhoneSource) instead of creating a new one, so the post-registration
-  // screen should skip the "welcome, new account" flow and go directly to
-  // that account's home screen.
+  // True when the phone entered during "registration" turned out to already
+  // have an account (POST /auth/otp/check returned status:"existing") — the
+  // app logged the user straight into that existing account instead of
+  // creating a new one, so the post-verification screen should skip the
+  // "welcome, new account" flow and go directly to that account's home
+  // screen.
   final bool loggedIntoExistingAccount;
 
   bool get idCardAttached => idCardStorageKey != null;
   bool get licenseAttached => licenseStorageKey != null;
+
+  bool get isPhoneVerified =>
+      verifiedPhone != null && verifiedPhone == phone;
 
   // Every field is required — mirrors the ID card the photo is meant to
   // match, so first/last name are collected (and validated) separately
@@ -133,7 +134,6 @@ class OnboardingState {
     String? phone,
     String? phoneCountryCode,
     bool? phoneLocked,
-    PhoneSource? phoneSource,
     bool? isRequestingPhoneHint,
     District? district,
     bool clearDistrict = false,
@@ -151,6 +151,10 @@ class OnboardingState {
     bool? isUploadingLicense,
     String? licenseUploadError,
     bool clearLicenseUploadError = false,
+    String? verifiedPhone,
+    bool clearVerifiedPhone = false,
+    String? registrationToken,
+    bool clearRegistrationToken = false,
     bool? isSubmitting,
     String? submissionError,
     bool clearSubmissionError = false,
@@ -165,8 +169,8 @@ class OnboardingState {
       phone: phone ?? this.phone,
       phoneCountryCode: phoneCountryCode ?? this.phoneCountryCode,
       phoneLocked: phoneLocked ?? this.phoneLocked,
-      phoneSource: phoneSource ?? this.phoneSource,
-      isRequestingPhoneHint: isRequestingPhoneHint ?? this.isRequestingPhoneHint,
+      isRequestingPhoneHint:
+          isRequestingPhoneHint ?? this.isRequestingPhoneHint,
       district: clearDistrict ? null : (district ?? this.district),
       serviceCategory: serviceCategory ?? this.serviceCategory,
       experienceDetails: experienceDetails ?? this.experienceDetails,
@@ -190,6 +194,12 @@ class OnboardingState {
       licenseUploadError: clearLicenseUploadError
           ? null
           : (licenseUploadError ?? this.licenseUploadError),
+      verifiedPhone: clearVerifiedPhone
+          ? null
+          : (verifiedPhone ?? this.verifiedPhone),
+      registrationToken: clearRegistrationToken
+          ? null
+          : (registrationToken ?? this.registrationToken),
       isSubmitting: isSubmitting ?? this.isSubmitting,
       submissionError: clearSubmissionError
           ? null

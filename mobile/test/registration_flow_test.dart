@@ -15,7 +15,7 @@ import 'package:mobile/core/models/user_role.dart';
 import 'package:mobile/core/models/district.dart';
 import 'package:mobile/core/network/api_client.dart';
 import 'package:mobile/features/onboarding/onboarding_controller.dart';
-import 'package:mobile/features/onboarding/onboarding_state.dart';
+import 'package:mobile/features/onboarding/otp_controller.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 
 const _fakeDistrict = District(
@@ -25,6 +25,8 @@ const _fakeDistrict = District(
   isArtisanRegistrationActive: true,
   isClientOrderingActive: true,
 );
+
+const _correctOtpCode = '123456';
 
 // A real 400x300 PNG — plausible ID-card-ish dimensions, passes validation
 // (mirrors the constant in widget_test.dart).
@@ -65,23 +67,18 @@ class _FakeTokenStorage implements TokenStorage {
   }
 }
 
-// A phone number that POST /users/register (below) treats as already
-// belonging to an existing account, to exercise the 409 branches of
-// OnboardingController.completeRegistration. _alreadyRegisteredLocalNumber
-// is what a test actually types into the field (see
+// A phone number POST /auth/otp/check (below) reports as already belonging
+// to an account, to exercise the "existing account" branch.
+// _alreadyRegisteredLocalNumber is what a test types into the field (see
 // fillAndSubmitRegistrationForm); _alreadyRegisteredPhone is the resulting
 // E.164 form (+225 dial code) the fake backend matches against.
 const _alreadyRegisteredLocalNumber = '0700000099';
 const _alreadyRegisteredPhone = '+225$_alreadyRegisteredLocalNumber';
 
 // Fakes only the true I/O boundary (mirrors _FakeApiClient in
-// widget_test.dart) — everything above it (OnboardingController, the
-// screens) runs for real.
+// widget_test.dart) — everything above it (OnboardingController, OtpController,
+// the screens) runs for real.
 class _FakeApiClient extends ApiClient {
-  // These tests assert against the app's default French copy (no locale
-  // override in buildApp) — just satisfies ApiClient's now-required l10n/
-  // tokenStorage constructor params for the fallback logic this fake never
-  // triggers.
   _FakeApiClient({this.failRegister = false})
     : super(
         l10n: lookupAppLocalizations(const Locale('fr')),
@@ -113,12 +110,32 @@ class _FakeApiClient extends ApiClient {
     String path,
     Map<String, dynamic> body,
   ) async {
+    if (path == '/auth/otp/start') {
+      return {'status': 'sent', 'channel': body['channel'] ?? 'whatsapp'};
+    }
+    if (path == '/auth/otp/check') {
+      if (body['code'] != _correctOtpCode) {
+        throw ApiException('Incorrect code', statusCode: 401);
+      }
+      if (body['phone'] == _alreadyRegisteredPhone) {
+        return {
+          'status': 'existing',
+          'accessToken': 'fake-existing-access-token',
+          'refreshToken': 'fake-existing-refresh-token',
+          'user': {
+            'id': 'fake-user-id',
+            'phone': body['phone'],
+            'fullName': 'Existing Client',
+            'role': 'client',
+            'subscriptionTier': null,
+          },
+        };
+      }
+      return {'status': 'new', 'registrationToken': 'fake-registration-token'};
+    }
     if (path == '/users/register') {
       if (failRegister) {
         throw ApiException('Invalid phone number.');
-      }
-      if (body['phone'] == _alreadyRegisteredPhone) {
-        throw ApiException('Phone number already registered', statusCode: 409);
       }
       return {
         'id': 'fake-user-id',
@@ -127,22 +144,6 @@ class _FakeApiClient extends ApiClient {
         'role': body['role'],
         'accessToken': 'fake-access-token',
         'refreshToken': 'fake-refresh-token',
-      };
-    }
-    if (path == '/auth/reconnect') {
-      if (body['phone'] != _alreadyRegisteredPhone) {
-        throw ApiException('No account with this phone number', statusCode: 404);
-      }
-      return {
-        'accessToken': 'fake-reconnect-access-token',
-        'refreshToken': 'fake-reconnect-refresh-token',
-        'user': {
-          'id': 'fake-user-id',
-          'phone': body['phone'],
-          'fullName': 'Existing Artisan',
-          'role': 'client',
-          'subscriptionTier': null,
-        },
       };
     }
     throw UnimplementedError('Unexpected path in fake client: $path');
@@ -273,10 +274,21 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // Drives the OTP screen the same way every platform does — type the code,
+  // tap Vérifier.
+  Future<void> enterOtpCode(WidgetTester tester, {String code = _correctOtpCode}) async {
+    expect(find.text('Vérification du numéro'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), code);
+    await tester.pump();
+    await tester.tap(find.text('Vérifier'));
+    await tester.pumpAndSettle();
+  }
+
   // localNumber is what a real user types: just the national digits, since
   // the "+225" dial code is already shown separately via the field's flag
   // prefix (typing a full "+225..." string into the underlying TextField
-  // would double up the dial code in PhoneNumber.completeNumber).
+  // would double up the dial code in PhoneNumber.completeNumber). Leaves the
+  // flow sitting on the OTP verification screen.
   Future<void> fillAndSubmitRegistrationForm(
     WidgetTester tester, {
     required String localNumber,
@@ -324,46 +336,43 @@ void main() {
   }
 
   testWidgets(
-    'a manually-entered phone number registers directly, with no OTP step',
+    'a phone number registers after passing OTP verification',
     (tester) async {
       await fillAndSubmitRegistrationForm(tester, localNumber: '0700000001');
+
+      await enterOtpCode(tester);
 
       expect(find.text('Bienvenue, Aya Kone !'), findsOneWidget);
     },
   );
 
-  testWidgets('a failed registration shows an inline error and stays on the form', (
-    tester,
-  ) async {
-    await fillAndSubmitRegistrationForm(
-      tester,
-      localNumber: '0700000002',
-      apiClient: _FakeApiClient(failRegister: true),
-    );
-
-    expect(find.text('Invalid phone number.'), findsOneWidget);
-    expect(find.text('Inscription'), findsOneWidget);
-  });
-
   testWidgets(
-    'a manually-typed number that is already registered shows a contact-support '
-    'message instead of logging in',
+    'a registration failure after OTP shows an inline error on the verification screen',
     (tester) async {
       await fillAndSubmitRegistrationForm(
         tester,
-        localNumber: _alreadyRegisteredLocalNumber,
+        localNumber: '0700000002',
+        apiClient: _FakeApiClient(failRegister: true),
       );
 
-      expect(
-        find.text(
-          'Ce numéro est déjà associé à un compte. Contactez le support pour récupérer votre accès.',
-        ),
-        findsOneWidget,
-      );
-      // Never navigated away — a manually-typed number gets no free pass.
-      expect(find.text('Inscription'), findsOneWidget);
+      await enterOtpCode(tester);
+
+      expect(find.text('Vérification du numéro'), findsOneWidget);
+      expect(find.text('Invalid phone number.'), findsOneWidget);
+      expect(find.text('Bienvenue, Aya Kone !'), findsNothing);
     },
   );
+
+  testWidgets('a wrong OTP code shows an error and stays on the verification screen', (
+    tester,
+  ) async {
+    await fillAndSubmitRegistrationForm(tester, localNumber: '0700000003');
+
+    await enterOtpCode(tester, code: '999999');
+
+    expect(find.text('Vérification du numéro'), findsOneWidget);
+    expect(find.text('Code incorrect. Veuillez réessayer.'), findsOneWidget);
+  });
 
   test(
     'requestPhoneHint locks the phone field to a device-sourced number',
@@ -371,6 +380,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           tokenStorageProvider.overrideWithValue(_FakeTokenStorage()),
+          localeStorageProvider.overrideWithValue(_FakeLocaleStorage()),
           phoneHintServiceProvider.overrideWithValue(
             _FakePhoneHintService(isSupported: true, hint: '+2250700000003'),
           ),
@@ -384,7 +394,6 @@ void main() {
       final state = container.read(onboardingControllerProvider);
       expect(state.phone, '+2250700000003');
       expect(state.phoneLocked, isTrue);
-      expect(state.phoneSource, PhoneSource.deviceHint);
     },
   );
 
@@ -394,6 +403,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           tokenStorageProvider.overrideWithValue(_FakeTokenStorage()),
+          localeStorageProvider.overrideWithValue(_FakeLocaleStorage()),
           phoneHintServiceProvider.overrideWithValue(
             _FakePhoneHintService(isSupported: true, hint: null),
           ),
@@ -406,44 +416,61 @@ void main() {
 
       final state = container.read(onboardingControllerProvider);
       expect(state.phoneLocked, isFalse);
-      expect(state.phoneSource, PhoneSource.manual);
     },
   );
 
   test(
-    'completeRegistration reconnects automatically for a device-sourced number '
-    'that is already registered',
+    'confirmCode logs straight into an existing account instead of registering',
     () async {
       final container = ProviderContainer(
         overrides: [
           apiClientProvider.overrideWithValue(_FakeApiClient()),
           tokenStorageProvider.overrideWithValue(_FakeTokenStorage()),
           sessionStorageProvider.overrideWithValue(_FakeSessionStorage()),
-          phoneHintServiceProvider.overrideWithValue(
-            _FakePhoneHintService(
-              isSupported: true,
-              hint: _alreadyRegisteredPhone,
-            ),
-          ),
+          localeStorageProvider.overrideWithValue(_FakeLocaleStorage()),
+          phoneHintServiceProvider.overrideWithValue(_FakePhoneHintService()),
         ],
       );
       addTearDown(container.dispose);
-      final controller = container.read(onboardingControllerProvider.notifier);
-      controller.selectRole(UserRole.client);
-      controller.setDistrict(_fakeDistrict);
+      final onboarding = container.read(onboardingControllerProvider.notifier);
+      onboarding.selectRole(UserRole.client);
+      onboarding.setDistrict(_fakeDistrict);
+      onboarding.setPhone(_alreadyRegisteredPhone);
 
-      await controller.requestPhoneHint();
-      expect(
-        container.read(onboardingControllerProvider).phoneSource,
-        PhoneSource.deviceHint,
-      );
+      final verified = await container
+          .read(otpControllerProvider.notifier)
+          .confirmCode(_alreadyRegisteredPhone, _correctOtpCode);
 
-      final succeeded = await controller.completeRegistration();
-
-      expect(succeeded, isTrue);
+      expect(verified, isTrue);
       final state = container.read(onboardingControllerProvider);
       expect(state.loggedIntoExistingAccount, isTrue);
-      expect(state.registrationSucceeded, isTrue);
+      expect(state.isPhoneVerified, isTrue);
+      expect(state.registrationToken, isNull);
     },
   );
+
+  test('confirmCode stores a registrationToken for a brand-new phone', () async {
+    final container = ProviderContainer(
+      overrides: [
+        apiClientProvider.overrideWithValue(_FakeApiClient()),
+        tokenStorageProvider.overrideWithValue(_FakeTokenStorage()),
+        sessionStorageProvider.overrideWithValue(_FakeSessionStorage()),
+        localeStorageProvider.overrideWithValue(_FakeLocaleStorage()),
+        phoneHintServiceProvider.overrideWithValue(_FakePhoneHintService()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final onboarding = container.read(onboardingControllerProvider.notifier);
+    onboarding.setPhone('+2250700000042');
+
+    final verified = await container
+        .read(otpControllerProvider.notifier)
+        .confirmCode('+2250700000042', _correctOtpCode);
+
+    expect(verified, isTrue);
+    final state = container.read(onboardingControllerProvider);
+    expect(state.loggedIntoExistingAccount, isFalse);
+    expect(state.registrationToken, 'fake-registration-token');
+    expect(state.isPhoneVerified, isTrue);
+  });
 }
