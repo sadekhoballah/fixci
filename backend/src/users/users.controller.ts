@@ -27,11 +27,11 @@ export class UsersController {
     private readonly tokensService: TokensService,
   ) {}
 
-  // No phone verification happens before this (see phoneVerified on the
-  // User entity) — this phase trusts whatever number the client sends. A
-  // successful registration logs the caller straight in, same as the old
-  // "existing user" branch of verify-otp used to, so the client gets its
-  // first token pair without a separate round trip.
+  // Registration only ever gets here after POST /auth/otp/check proved the
+  // phone (see RegisterUserDto.registrationToken, verified in
+  // UsersService.register) — so, like the "existing user" branch of
+  // /auth/otp/check, a successful registration logs the caller straight in
+  // rather than making them verify again just to get their first token pair.
   @Post('register')
   async register(@Body() dto: RegisterUserDto) {
     const user = await this.usersService.register(dto);

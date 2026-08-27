@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-// Holds the JWT access/refresh pair issued by POST /auth/reconnect or
+// Holds the JWT access/refresh pair issued by POST /auth/otp/check or
 // POST /users/register (see backend/src/auth/tokens.service.ts) — this is
 // this app's entire notion of "am I logged in". Both tokens live in the
 // platform keystore, same as the phone number in SessionStorage.

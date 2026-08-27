@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/phone_hint_service.dart';
+import '../../core/auth/verify_service.dart';
 import '../../core/auth/session_storage.dart';
 import '../../core/auth/token_storage.dart';
 import '../../core/localization/locale_controller.dart';
@@ -32,14 +33,17 @@ class OnboardingController extends Notifier<OnboardingState> {
   }
 
   // Manual typing path — the iOS field, and the Android fallback once the
-  // Phone Number Hint API has come back empty. Never reachable while
-  // phoneLocked is true (the field is read-only in the UI at that point),
-  // but resets phoneSource defensively in case that ever changes.
+  // Phone Number Hint API has come back empty. Editing the number after it
+  // was OTP-verified invalidates that verification: the verifiedPhone /
+  // registrationToken pair only means something for the exact number it was
+  // issued for.
   void setPhone(String value) {
+    final stillVerified = value == state.verifiedPhone;
     state = state.copyWith(
       phone: value,
       phoneLocked: false,
-      phoneSource: PhoneSource.manual,
+      clearVerifiedPhone: !stillVerified,
+      clearRegistrationToken: !stillVerified,
     );
   }
 
@@ -78,13 +82,15 @@ class OnboardingController extends Notifier<OnboardingState> {
       currentCountryIsoCode: state.phoneCountryCode,
     );
     final countryChanged = parsed.countryIsoCode != state.phoneCountryCode;
+    final numberChanged = parsed.e164Number != state.verifiedPhone;
     state = state.copyWith(
       phone: parsed.e164Number,
       phoneCountryCode: parsed.countryIsoCode,
       phoneLocked: true,
-      phoneSource: PhoneSource.deviceHint,
       isRequestingPhoneHint: false,
       clearDistrict: countryChanged,
+      clearVerifiedPhone: numberChanged,
+      clearRegistrationToken: numberChanged,
     );
   }
 
@@ -235,15 +241,57 @@ class OnboardingController extends Notifier<OnboardingState> {
     }
   }
 
-  // No phone verification happens before this for this phase (see
-  // backend/src/database/entities/user.entity.ts's phoneVerified column
-  // comment) — POST /users/register is called directly with whatever
-  // number is in state.phone. A 409 means that number already has an
-  // account: for a device-sourced number (PhoneSource.deviceHint) that's
-  // treated as a login via POST /auth/reconnect; for a manually-typed one
-  // it isn't, since there's no possession signal behind it at all — see
-  // OnboardingState.PhoneSource and auth.controller.ts's doc comment.
-  Future<bool> completeRegistration() async {
+  // Called right after Twilio Verify approves the code (see
+  // otp_controller.dart). POST /auth/otp/check already told us whether this
+  // phone has an account: an ExistingUserSession means the caller is logged
+  // in immediately (tokens persisted below, exactly like a successful
+  // POST /users/register would); a NewUserVerified just carries proof of
+  // verification for the submitRegistration() call to use.
+  Future<void> setVerifiedPhone({
+    required String phone,
+    required OtpCheckOutcome outcome,
+  }) async {
+    switch (outcome) {
+      case ExistingUserSession():
+        await ref
+            .read(tokenStorageProvider)
+            .saveTokens(
+              accessToken: outcome.accessToken,
+              refreshToken: outcome.refreshToken,
+            );
+        final storage = ref.read(sessionStorageProvider);
+        await storage.saveRole(outcome.role);
+        await storage.savePhone(phone);
+        if (outcome.subscriptionTier != null) {
+          await storage.saveTier(outcome.subscriptionTier!);
+        }
+        state = state.copyWith(
+          verifiedPhone: phone,
+          clearRegistrationToken: true,
+          loggedIntoExistingAccount: true,
+          role: outcome.role,
+          selectedTier: outcome.subscriptionTier,
+        );
+      case NewUserVerified():
+        state = state.copyWith(
+          verifiedPhone: phone,
+          registrationToken: outcome.registrationToken,
+        );
+    }
+  }
+
+  // Called from the OTP screen once verification succeeded. An existing
+  // account was already logged into by setVerifiedPhone above — only a
+  // genuinely new phone falls through to submitRegistration().
+  Future<bool> completeAfterVerification() async {
+    if (state.loggedIntoExistingAccount) {
+      state = state.copyWith(registrationSucceeded: true);
+      return true;
+    }
+    return submitRegistration();
+  }
+
+  Future<bool> submitRegistration() async {
     state = state.copyWith(isSubmitting: true, clearSubmissionError: true);
     final l10n = ref.read(l10nProvider);
     try {
@@ -260,54 +308,6 @@ class OnboardingController extends Notifier<OnboardingState> {
       await storage.saveRole(state.role!);
       await storage.savePhone(state.phone.trim());
       state = state.copyWith(isSubmitting: false, registrationSucceeded: true);
-      return true;
-    } on ApiException catch (e) {
-      if (e.statusCode == 409 && state.phoneSource == PhoneSource.deviceHint) {
-        return _reconnectExistingAccount();
-      }
-      if (e.statusCode == 409) {
-        state = state.copyWith(
-          isSubmitting: false,
-          submissionError: l10n.phoneAlreadyRegisteredManualMessage,
-        );
-        return false;
-      }
-      state = state.copyWith(isSubmitting: false, submissionError: e.message);
-      return false;
-    } catch (_) {
-      state = state.copyWith(
-        isSubmitting: false,
-        submissionError: l10n.unexpectedErrorMessage,
-      );
-      return false;
-    }
-  }
-
-  Future<bool> _reconnectExistingAccount() async {
-    final l10n = ref.read(l10nProvider);
-    try {
-      final session = await ref
-          .read(onboardingRepositoryProvider)
-          .reconnect(state.phone.trim());
-      await ref
-          .read(tokenStorageProvider)
-          .saveTokens(
-            accessToken: session.accessToken,
-            refreshToken: session.refreshToken,
-          );
-      final storage = ref.read(sessionStorageProvider);
-      await storage.saveRole(session.role);
-      await storage.savePhone(state.phone.trim());
-      if (session.subscriptionTier != null) {
-        await storage.saveTier(session.subscriptionTier!);
-      }
-      state = state.copyWith(
-        isSubmitting: false,
-        registrationSucceeded: true,
-        loggedIntoExistingAccount: true,
-        role: session.role,
-        selectedTier: session.subscriptionTier,
-      );
       return true;
     } on ApiException catch (e) {
       state = state.copyWith(isSubmitting: false, submissionError: e.message);
