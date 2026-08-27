@@ -34,9 +34,12 @@ class OtpController extends Notifier<OtpState> {
   @override
   OtpState build() => const OtpState();
 
+  // WhatsApp isn't configured on the Twilio Verify Service yet, so every
+  // request goes out over SMS. Restore the 'whatsapp' default (and the
+  // channel-switch button on the OTP screen) once it is set up.
   Future<void> sendCode(
     String phoneNumber, {
-    String channel = 'whatsapp',
+    String channel = 'sms',
   }) async {
     state = state.copyWith(
       isSendingCode: true,

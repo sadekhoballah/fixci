@@ -31,11 +31,12 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     super.initState();
     // Riverpod disallows modifying provider state synchronously during a
     // widget's initState — sendCode's first line does that, so defer to
-    // after this build phase completes. WhatsApp is the primary channel.
+    // after this build phase completes. SMS is the only channel for now
+    // (WhatsApp isn't wired up on the Twilio Verify Service).
     Future.microtask(
       () => ref
           .read(otpControllerProvider.notifier)
-          .sendCode(widget.phone, channel: 'whatsapp'),
+          .sendCode(widget.phone, channel: 'sms'),
     );
     _cooldownTicker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
@@ -195,23 +196,9 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                     ),
                   ),
                 ),
-                Center(
-                  child: TextButton(
-                    onPressed: otpState.canResend
-                        ? () => ref
-                              .read(otpControllerProvider.notifier)
-                              .sendCode(
-                                widget.phone,
-                                channel: isWhatsapp ? 'sms' : 'whatsapp',
-                              )
-                        : null,
-                    child: Text(
-                      isWhatsapp
-                          ? l10n.otpSendViaSms
-                          : l10n.otpSendViaWhatsapp,
-                    ),
-                  ),
-                ),
+                // The channel-switch button ("receive by WhatsApp") is
+                // hidden while WhatsApp isn't wired up on the Twilio Verify
+                // Service — every code goes out over SMS.
               ],
             ],
           ),

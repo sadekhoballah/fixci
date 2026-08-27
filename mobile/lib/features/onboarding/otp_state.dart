@@ -1,6 +1,6 @@
 class OtpState {
   const OtpState({
-    this.channel = 'whatsapp',
+    this.channel = 'sms',
     this.codeWasSent = false,
     this.isSendingCode = false,
     this.isVerifyingCode = false,

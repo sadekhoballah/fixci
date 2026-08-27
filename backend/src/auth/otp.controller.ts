@@ -61,7 +61,11 @@ export class OtpController {
     }
 
     await this.throttle.assertCanSend(dto.phone);
-    const channel = this.twilioVerify.resolveChannel(dto.channel);
+    // The WhatsApp sender isn't linked to the Twilio Verify Service yet, so
+    // a 'whatsapp' request makes Twilio reject the send. Ignore whatever
+    // channel the client asked for and force every code onto SMS. Swap the
+    // argument back to `dto.channel` once WhatsApp is configured.
+    const channel = this.twilioVerify.resolveChannel('sms');
     await this.twilioVerify.startVerification(dto.phone, channel);
     await this.throttle.recordSend(dto.phone);
     return { status: 'sent', channel };
