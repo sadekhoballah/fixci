@@ -21,6 +21,7 @@ describe('TwilioVerifyService', () => {
     process.env.TWILIO_AUTH_TOKEN = 'tok_test';
     process.env.TWILIO_VERIFY_SERVICE_SID = 'VA_test';
     delete process.env.TWILIO_VERIFY_WHATSAPP_ENABLED;
+    delete process.env.TWILIO_VERIFY_SMS_ENABLED;
     process.env.NODE_ENV = 'test';
   });
 
@@ -36,6 +37,18 @@ describe('TwilioVerifyService', () => {
 
     it('forces sms when TWILIO_VERIFY_WHATSAPP_ENABLED is "false"', () => {
       process.env.TWILIO_VERIFY_WHATSAPP_ENABLED = 'false';
+      expect(service.resolveChannel('whatsapp')).toBe('sms');
+    });
+
+    it('forces whatsapp when TWILIO_VERIFY_SMS_ENABLED is "false"', () => {
+      process.env.TWILIO_VERIFY_SMS_ENABLED = 'false';
+      expect(service.resolveChannel('sms')).toBe('whatsapp');
+      expect(service.resolveChannel(undefined)).toBe('whatsapp');
+    });
+
+    it('lets WhatsApp-disabled win when both kill-switches are set', () => {
+      process.env.TWILIO_VERIFY_WHATSAPP_ENABLED = 'false';
+      process.env.TWILIO_VERIFY_SMS_ENABLED = 'false';
       expect(service.resolveChannel('whatsapp')).toBe('sms');
     });
   });

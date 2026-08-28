@@ -57,11 +57,16 @@ export class TwilioVerifyService {
   }
 
   // WhatsApp is the primary channel; the mobile client only asks for 'sms'
-  // as an explicit fallback. Set TWILIO_VERIFY_WHATSAPP_ENABLED=false to
-  // force every request onto SMS (e.g. before a WhatsApp sender is linked
-  // to the Verify Service).
+  // as an explicit fallback. Two kill-switches, each forcing one channel and
+  // ignoring what the caller asked for:
+  //   TWILIO_VERIFY_WHATSAPP_ENABLED=false -> SMS only (no WhatsApp sender
+  //     linked to the Verify Service).
+  //   TWILIO_VERIFY_SMS_ENABLED=false -> WhatsApp only (cost trial — SMS in
+  //     Côte d'Ivoire is ~10x WhatsApp; re-enable by dropping the env line).
+  // WhatsApp-disabled wins if both are set.
   resolveChannel(requested: VerifyChannel | undefined): VerifyChannel {
     if (process.env.TWILIO_VERIFY_WHATSAPP_ENABLED === 'false') return 'sms';
+    if (process.env.TWILIO_VERIFY_SMS_ENABLED === 'false') return 'whatsapp';
     return requested ?? 'whatsapp';
   }
 
