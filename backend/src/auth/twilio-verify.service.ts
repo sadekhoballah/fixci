@@ -19,6 +19,25 @@ const TWILIO_NOT_FOUND = 20404;
 // old Redis OtpService did.
 const DEV_BYPASS_CODE = '000000';
 
+// Pilot test-phone allowlist: numbers listed in OTP_TEST_PHONES (comma-
+// separated, exact E.164 as the app sends them) never touch Twilio — no SMS
+// is sent and they verify against OTP_TEST_CODE (default 000000). Unlike the
+// dev bypass above this is keyed to an explicit list, so it stays safe with
+// NODE_ENV=production and real Twilio credentials: only those exact numbers
+// skip the paid SMS. Clear OTP_TEST_PHONES once the pilot is over.
+function testPhones(): Set<string> {
+  return new Set(
+    (process.env.OTP_TEST_PHONES ?? '')
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean),
+  );
+}
+
+function testCode(): string {
+  return process.env.OTP_TEST_CODE || DEV_BYPASS_CODE;
+}
+
 // The one place that talks to Twilio Verify — mirrors the old
 // whatsapp/whatsapp.service.ts's role of being the single outbound-OTP touch
 // point, on the global `fetch` (Node 24), same idiom as the payment stub
@@ -46,10 +65,21 @@ export class TwilioVerifyService {
     return requested ?? 'whatsapp';
   }
 
+  isTestPhone(phone: string): boolean {
+    return testPhones().has(phone);
+  }
+
   async startVerification(
     phone: string,
     channel: VerifyChannel,
   ): Promise<void> {
+    if (this.isTestPhone(phone)) {
+      this.logger.log(
+        `Test phone ${phone} — skipping ${channel} send, verifies with code ${testCode()}`,
+      );
+      return;
+    }
+
     if (!this.isConfigured) {
       if (process.env.NODE_ENV === 'production') {
         throw new BadRequestException('OTP delivery is not configured');
@@ -78,6 +108,10 @@ export class TwilioVerifyService {
     phone: string,
     code: string,
   ): Promise<CheckVerificationResult> {
+    if (this.isTestPhone(phone)) {
+      return code === testCode() ? 'approved' : 'invalid';
+    }
+
     if (!this.isConfigured) {
       if (process.env.NODE_ENV === 'production') {
         throw new BadRequestException('OTP delivery is not configured');
