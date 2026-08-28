@@ -60,6 +60,17 @@ describe('scoreDocument', () => {
     );
   });
 
+  it('rejects a random scene with only incidental text (no ID signal)', () => {
+    // Text present, but no field keyword, no document label, no face —
+    // incidental text alone must not be enough to escape the reject band.
+    expect(
+      scoreDocument('OPEN 24 HOURS PARKING GARAGE ENTRANCE', [], 0).verdict,
+    ).toBe('reject');
+    expect(
+      scoreDocument('some caption', ['Snapshot', 'Selfie'], 0).verdict,
+    ).toBe('reject');
+  });
+
   it('is uncertain (not rejected) on a single weak keyword', () => {
     expect(scoreDocument('PRENOMS scribbled here', [], 0).verdict).toBe(
       'uncertain',
@@ -68,6 +79,14 @@ describe('scoreDocument', () => {
 
   it('is uncertain when only a weak "document" label is present', () => {
     expect(scoreDocument('some text', ['Document'], 0).verdict).toBe(
+      'uncertain',
+    );
+  });
+
+  it('is uncertain (not rejected) on a portrait with some text', () => {
+    // A photographed ID whose OCR is too poor for keywords still has a face
+    // and text — must reach a human, not be blocked.
+    expect(scoreDocument('blurry unreadable text here', [], 1).verdict).toBe(
       'uncertain',
     );
   });

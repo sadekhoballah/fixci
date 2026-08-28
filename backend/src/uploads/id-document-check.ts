@@ -236,22 +236,29 @@ export function scoreDocument(
     score += 1;
     reasons.push(`label Vision faible: ${weakLabel}`);
   }
-  if (faceCount > 0 && textChars >= MIN_TEXT_CHARS) {
+  const faceAndText = faceCount > 0 && textChars >= MIN_TEXT_CHARS;
+  if (faceAndText) {
     score += 2;
     reasons.push('visage + texte presents');
   }
 
+  // Reject only when NOTHING points at a document: no MRZ, no field keyword,
+  // no "document" label (strong or weak), and no portrait-with-text. A
+  // random scene that happens to contain a few incidental characters (a
+  // sign, a label) has no such signal and is rejected — incidental text
+  // alone is not enough to escape. A real ID always trips at least one of
+  // these (usually several), even when its OCR is poor.
   let verdict: IdDocVerdict;
   if (mrz || keywordHits >= KEYWORD_HITS_FOR_PASS || strongLabel) {
     verdict = 'pass';
   } else if (
-    textChars < MIN_TEXT_CHARS &&
     keywordHits === 0 &&
     !strongLabel &&
-    !weakLabel
+    !weakLabel &&
+    !faceAndText
   ) {
     verdict = 'reject';
-    reasons.push('aucun texte ni indice de document');
+    reasons.push('aucun indice de document (ni mot-cle, ni MRZ, ni visage+texte)');
   } else {
     verdict = 'uncertain';
     if (reasons.length === 0) reasons.push('signaux faibles / ambigus');
