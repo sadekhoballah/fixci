@@ -19,18 +19,13 @@ export const LICENSES_DIR = join(UPLOADS_ROOT, LICENSES_SUBDIR);
 export const MIN_ID_CARD_DIMENSION = 300;
 export const MAX_ID_CARD_ASPECT_RATIO = 3.0;
 
-// The content check (id-document-check.ts, Google Vision) only ever *rejects*
-// an upload when it sees no document signal at all. A real but hard-to-OCR
-// card (glare, angle, low light) could hit that by accident, so we don't
-// trap the user: after this many rejected attempts from the same client the
-// next upload is let through to manual review instead. Counter is per-IP in
-// Redis with this TTL.
-export const ID_DOC_REJECT_RETRY_LIMIT = 3;
-export const ID_DOC_REJECT_RETRY_TTL_SECONDS = 3600;
-
-// Shown to the user when the content check rejects the photo — actionable on
-// purpose (this is the whole point of rejecting synchronously rather than
-// letting a junk image into the manual queue).
+// Shown to the user when the content check (id-document-check.ts, Google
+// Vision) refuses the photo — it only ever refuses when nothing at all
+// points at a document. Actionable on purpose: the whole point of rejecting
+// synchronously is to get a better photo, not to let junk into the queue.
+// There is no retry escape hatch — a 'reject' is refused every time. A
+// Vision outage degrades to 'uncertain' (accepted), so this never traps a
+// user because of infrastructure.
 export const ID_DOC_REJECT_MESSAGE =
   "La photo ne ressemble pas à une pièce d'identité lisible (CNI, passeport " +
   'ou permis). Prenez-la en pleine lumière, à plat, sans reflet, avec toute ' +

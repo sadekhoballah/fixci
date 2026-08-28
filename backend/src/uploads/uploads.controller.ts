@@ -7,7 +7,6 @@ import {
   NotFoundException,
   Param,
   Post,
-  Req,
   Res,
   UploadedFile,
   UseGuards,
@@ -17,7 +16,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Throttle } from '@nestjs/throttler';
 import { Repository } from 'typeorm';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../redis/redis.constants';
 import { diskStorage } from 'multer';
@@ -31,8 +30,6 @@ import {
   ID_CARDS_DIR,
   ID_CARDS_SUBDIR,
   ID_DOC_REJECT_MESSAGE,
-  ID_DOC_REJECT_RETRY_LIMIT,
-  ID_DOC_REJECT_RETRY_TTL_SECONDS,
   LICENSES_DIR,
   LICENSES_SUBDIR,
   MAX_ID_CARD_ASPECT_RATIO,
@@ -112,14 +109,11 @@ export class UploadsController {
       },
     }),
   )
-  async uploadIdCard(
-    @Req() req: Request,
-    @UploadedFile() file?: Express.Multer.File,
-  ) {
+  async uploadIdCard(@UploadedFile() file?: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
-    const analysis = await this.assertLooksLikeDocumentPhoto(file.path, req);
+    const analysis = await this.assertLooksLikeDocumentPhoto(file.path);
     const storageKey = `${ID_CARDS_SUBDIR}/${file.filename}`;
     await this.stashAnalysis(storageKey, analysis);
     return { storageKey };
@@ -152,14 +146,11 @@ export class UploadsController {
       },
     }),
   )
-  async uploadLicense(
-    @Req() req: Request,
-    @UploadedFile() file?: Express.Multer.File,
-  ) {
+  async uploadLicense(@UploadedFile() file?: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
-    const analysis = await this.assertLooksLikeDocumentPhoto(file.path, req);
+    const analysis = await this.assertLooksLikeDocumentPhoto(file.path);
     const storageKey = `${LICENSES_SUBDIR}/${file.filename}`;
     await this.stashAnalysis(storageKey, analysis);
     return { storageKey };
@@ -209,7 +200,6 @@ export class UploadsController {
   // uploadIdCard and uploadLicense — same document-photo shape either way.
   private async assertLooksLikeDocumentPhoto(
     filePath: string,
-    req: Request,
   ): Promise<IdDocAnalysis> {
     try {
       const buffer = readFileSync(filePath);
@@ -247,10 +237,14 @@ export class UploadsController {
     // sized/shaped photo of a car or a blank wall would still pass them.
     // Google Vision (id-document-check.ts) reads the photo once and scores it
     // against the words on a real CNI/passport/permis (FR/EN/AR) + an MRZ
-    // check. Only a 'reject' verdict — essentially no document signal at all —
-    // blocks the upload; 'pass'/'uncertain'/degraded all go through to the
-    // human review queue (idVerified stays false regardless). Fail-open: any
-    // error here must not block registration.
+    // check. A 'reject' verdict — no MRZ, no field keyword, no "document"
+    // label, no portrait-with-text — is refused outright, every time, with
+    // no retry escape hatch: a real ID always trips at least one of those
+    // even with poor OCR, and if Vision genuinely sees nothing the photo is
+    // unusable for a human reviewer too. 'pass'/'uncertain'/degraded all go
+    // through to the human review queue (idVerified stays false regardless).
+    // Fail-open: any error here must not block registration, and a Vision
+    // outage surfaces as degraded => 'uncertain', never 'reject'.
     let analysis: IdDocAnalysis;
     try {
       analysis = await analyzeIdDocument(filePath);
@@ -276,20 +270,9 @@ export class UploadsController {
       return analysis;
     }
 
-    // Clear 'reject'. Refuse it with an actionable message — unless this
-    // client has already been bounced enough times, in which case a real but
-    // hard-to-OCR card mustn't trap them: let it through to manual review
-    // (the verdict is still recorded as 'reject' for the admin, with a note
-    // that the safety-valve waved it through).
-    if (await this.overIdDocRejectLimit(req)) {
-      this.logger.warn(
-        `ID document 'reject' verdict overridden by retry safety-valve (${this.clientKey(req)}) — routing to manual review`,
-      );
-      return {
-        ...analysis,
-        reasons: [...analysis.reasons, 'laissé passer (soupape anti-blocage)'],
-      };
-    }
+    this.logger.warn(
+      `ID document upload refused (${analysis.reasons.join('; ')})`,
+    );
     unlinkSync(filePath);
     throw new BadRequestException(ID_DOC_REJECT_MESSAGE);
   }
@@ -310,26 +293,6 @@ export class UploadsController {
         }`,
       );
     }
-  }
-
-  // Best-effort client identity for the reject-retry counter: the first hop
-  // in X-Forwarded-For (set by the cloudflared/Apache front) if present, else
-  // Express's req.ip. Not a security control — worst case it degrades to a
-  // shared counter that only ever lets more users through.
-  private clientKey(req: Request): string {
-    const header = req.headers['x-forwarded-for'];
-    const raw = Array.isArray(header) ? header[0] : header;
-    const forwarded = raw?.split(',')[0]?.trim();
-    return forwarded || req.ip || 'unknown';
-  }
-
-  private async overIdDocRejectLimit(req: Request): Promise<boolean> {
-    const key = `iddoc:rejects:${this.clientKey(req)}`;
-    const count = await this.redis.incr(key);
-    if (count === 1) {
-      await this.redis.expire(key, ID_DOC_REJECT_RETRY_TTL_SECONDS);
-    }
-    return count > ID_DOC_REJECT_RETRY_LIMIT;
   }
 
   // Mission photo counterpart to assertLooksLikeDocumentPhoto above — same
