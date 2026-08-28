@@ -11,6 +11,7 @@ import { BlacklistedPhone } from '../database/entities/blacklisted-phone.entity'
 import { UserRole } from '../database/enums/user-role.enum';
 import { TokensService } from '../auth/tokens.service';
 import { PresenceService } from '../matching/presence.service';
+import { REDIS_CLIENT } from '../redis/redis.constants';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -54,6 +55,10 @@ describe('UsersService', () => {
         { provide: DataSource, useValue: dataSource },
         { provide: TokensService, useValue: tokensService },
         { provide: PresenceService, useValue: {} },
+        {
+          provide: REDIS_CLIENT,
+          useValue: { get: jest.fn().mockResolvedValue(null), del: jest.fn() },
+        },
       ],
     }).compile();
 

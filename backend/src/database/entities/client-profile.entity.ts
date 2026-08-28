@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from './user.entity';
+import type { StoredIdDocAnalysis } from '../../uploads/id-document-check';
 
 @Entity('client_profiles')
 export class ClientProfile {
@@ -28,6 +29,12 @@ export class ClientProfile {
 
   @Column({ name: 'id_verified', type: 'boolean', default: false })
   idVerified: boolean;
+
+  // Google Vision auto-check verdict from ID-photo upload time — advisory,
+  // pre-scores the manual review queue, never gates anything. See
+  // CraftsmanProfile.idAutoCheck and uploads/id-document-check.ts.
+  @Column({ name: 'id_auto_check', type: 'jsonb', nullable: true })
+  idAutoCheck: StoredIdDocAnalysis | null;
 
   // Set by AdminService.deactivateClient when an admin rejects the KYC
   // submission — shown back to the client alongside the "rejected, please

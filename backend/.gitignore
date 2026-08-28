@@ -34,7 +34,3 @@ firebase-service-account*.json
 # tests
 /coverage
 /.nyc_output
-
-# tesseract.js downloads and caches OCR language data here on first use
-# (id-document-ocr.ts) — a runtime artifact, not source.
-*.traineddata

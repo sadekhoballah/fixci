@@ -201,6 +201,10 @@ class _VerificationCard extends ConsumerWidget {
             style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
+          if (entry.idAutoCheck != null) ...[
+            _AutoCheckBadge(check: entry.idAutoCheck!),
+            const SizedBox(height: 8),
+          ],
           _DocumentPreview(
             load: () => ref
                 .read(adminKycRepositoryProvider)
@@ -229,6 +233,10 @@ class _VerificationCard extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 6),
+            if (entry.licenseAutoCheck != null) ...[
+              _AutoCheckBadge(check: entry.licenseAutoCheck!),
+              const SizedBox(height: 8),
+            ],
             _DocumentPreview(
               load: () => ref
                   .read(adminKycRepositoryProvider)
@@ -266,6 +274,115 @@ class _VerificationCard extends ConsumerWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+// The Google Vision pre-check verdict, shown just above the document it
+// scored. Advisory: it only pre-sorts the admin's attention (green = likely
+// fine, amber = look closely, red = Vision saw no document at all). Tap to
+// see exactly which signals fired.
+class _AutoCheckBadge extends StatelessWidget {
+  const _AutoCheckBadge({required this.check});
+
+  final IdAutoCheck check;
+
+  ({Color color, IconData icon, String label}) get _style {
+    if (check.degraded) {
+      return (
+        color: Colors.blueGrey,
+        icon: Icons.cloud_off_rounded,
+        label: 'Auto : non analysé',
+      );
+    }
+    return switch (check.verdict) {
+      IdAutoCheckVerdict.pass => (
+        color: Colors.green,
+        icon: Icons.verified_rounded,
+        label: 'Auto : document probable',
+      ),
+      IdAutoCheckVerdict.uncertain => (
+        color: Colors.orange.shade800,
+        icon: Icons.help_outline_rounded,
+        label: 'Auto : à vérifier',
+      ),
+      IdAutoCheckVerdict.reject => (
+        color: Colors.red.shade700,
+        icon: Icons.report_gmailerrorred_rounded,
+        label: 'Auto : aucun document détecté',
+      ),
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _style;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(s.label),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!check.degraded) Text('Score : ${check.score}'),
+              const SizedBox(height: 8),
+              Text(
+                check.reasons.isEmpty
+                    ? 'Aucun détail.'
+                    : check.reasons.map((r) => '• $r').join('\n'),
+              ),
+              if (check.at != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Analysé le ${_formatDate(check.at!)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(
+                      dialogContext,
+                    ).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Fermer'),
+            ),
+          ],
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: s.color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: s.color.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(s.icon, size: 16, color: s.color),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                s.label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: s.color,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.info_outline_rounded, size: 13, color: s.color),
+          ],
+        ),
       ),
     );
   }

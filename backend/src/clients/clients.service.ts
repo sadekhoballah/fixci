@@ -1,6 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import type Redis from 'ioredis';
+import { REDIS_CLIENT } from '../redis/redis.constants';
+import { takeIdDocAnalysis } from '../uploads/id-doc-analysis.store';
 import { User } from '../database/entities/user.entity';
 import { ClientProfile } from '../database/entities/client-profile.entity';
 import { UserRole } from '../database/enums/user-role.enum';
@@ -78,6 +81,7 @@ export class ClientsService {
     @InjectRepository(ClientProfile)
     private readonly clientProfileRepository: Repository<ClientProfile>,
     private readonly dataSource: DataSource,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
   async getMe(userId: string): Promise<ClientMe> {
@@ -112,9 +116,13 @@ export class ClientsService {
     idCardStorageKey: string,
   ): Promise<void> {
     await this.findClientByUserId(userId);
+    const idAutoCheck = await takeIdDocAnalysis(
+      this.redis,
+      idCardStorageKey,
+    ).catch(() => null);
     await this.clientProfileRepository.update(
       { userId },
-      { idCardStorageKey, isActive: true },
+      { idCardStorageKey, idAutoCheck, isActive: true },
     );
   }
 

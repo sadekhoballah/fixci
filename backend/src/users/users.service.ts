@@ -1,6 +1,7 @@
 import {
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -9,6 +10,9 @@ import { unlink } from 'fs/promises';
 import { join } from 'path';
 import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
+import type Redis from 'ioredis';
+import { REDIS_CLIENT } from '../redis/redis.constants';
+import { takeIdDocAnalysis } from '../uploads/id-doc-analysis.store';
 import { User } from '../database/entities/user.entity';
 import { ClientProfile } from '../database/entities/client-profile.entity';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
@@ -51,6 +55,7 @@ export class UsersService {
     private readonly dataSource: DataSource,
     private readonly tokensService: TokensService,
     private readonly presenceService: PresenceService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
   async findByPhone(phone: string): Promise<User | null> {
@@ -114,6 +119,21 @@ export class UsersService {
       dto.phone,
     );
 
+    // Google Vision verdict stashed by POST /uploads/id-card (and /license)
+    // — read once, deleted, and carried onto the profile below. A Redis
+    // failure here must never fail a registration: worst case the profile
+    // stores no auto-check and the admin panel shows "non analysé".
+    const idAutoCheck = await takeIdDocAnalysis(
+      this.redis,
+      dto.idCardStorageKey,
+    ).catch(() => null);
+    const licenseAutoCheck =
+      dto.role === UserRole.CRAFTSMAN
+        ? await takeIdDocAnalysis(this.redis, dto.licenseStorageKey).catch(
+            () => null,
+          )
+        : null;
+
     try {
       return await this.dataSource.transaction(async (manager) => {
         // phoneVerified: the registrationToken above is proof Twilio Verify
@@ -135,7 +155,9 @@ export class UsersService {
               serviceCategory: dto.serviceCategory,
               experienceDetails: dto.experienceDetails ?? null,
               idCardStorageKey: dto.idCardStorageKey ?? null,
+              idAutoCheck,
               licenseStorageKey: dto.licenseStorageKey ?? null,
+              licenseAutoCheck,
             }),
           );
         } else {
@@ -143,6 +165,7 @@ export class UsersService {
             manager.create(ClientProfile, {
               userId: user.id,
               idCardStorageKey: dto.idCardStorageKey ?? null,
+              idAutoCheck,
             }),
           );
         }

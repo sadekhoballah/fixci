@@ -10,6 +10,7 @@ import {
 import { User } from './user.entity';
 import { ServiceCategory } from '../enums/service-category.enum';
 import { SubscriptionTier } from '../enums/subscription-tier.enum';
+import type { StoredIdDocAnalysis } from '../../uploads/id-document-check';
 
 @Entity('craftsman_profiles')
 export class CraftsmanProfile {
@@ -53,6 +54,14 @@ export class CraftsmanProfile {
   @Column({ name: 'id_verified', type: 'boolean', default: false })
   idVerified: boolean;
 
+  // Google Vision auto-check verdict captured when the ID photo was uploaded
+  // (uploads/id-document-check.ts), copied here at registration / resubmit.
+  // Advisory only — it never gates anything, it just pre-scores the manual
+  // review queue. Null when the upload predated the feature, the Redis
+  // hand-off lapsed, or Vision was unconfigured/unreachable.
+  @Column({ name: 'id_auto_check', type: 'jsonb', nullable: true })
+  idAutoCheck: StoredIdDocAnalysis | null;
+
   // Set by AdminService.deactivateCraftsman when an admin rejects the KYC
   // submission — shown back to the craftsman alongside the "rejected,
   // please resubmit" state so they know what to fix.
@@ -73,6 +82,11 @@ export class CraftsmanProfile {
 
   @Column({ name: 'license_verified', type: 'boolean', default: false })
   licenseVerified: boolean;
+
+  // Auto-check counterpart to idAutoCheck above, for the taxi/camion license
+  // document. Null for every other category.
+  @Column({ name: 'license_auto_check', type: 'jsonb', nullable: true })
+  licenseAutoCheck: StoredIdDocAnalysis | null;
 
   @Column({ name: 'license_rejection_reason', type: 'text', nullable: true })
   licenseRejectionReason: string | null;

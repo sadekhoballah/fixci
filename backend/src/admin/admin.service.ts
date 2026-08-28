@@ -12,6 +12,7 @@ import { NotificationsService } from '../firebase/notifications.service';
 import { SafetyService, PendingReport } from '../safety/safety.service';
 import { ReportStatus } from '../database/enums/report-status.enum';
 import { ResolveReportDto } from './dto/resolve-report.dto';
+import type { StoredIdDocAnalysis } from '../uploads/id-document-check';
 
 const LICENSE_REQUIRED_CATEGORIES = [
   ServiceCategory.TAXI,
@@ -27,10 +28,15 @@ export interface PendingVerification {
   serviceCategory: string | null;
   experienceDetails: string | null;
   idCardStorageKey: string;
+  // Google Vision auto-check verdict for the ID photo (advisory — pre-scores
+  // this queue, never gates). Null when unavailable. See StoredIdDocAnalysis.
+  idAutoCheck: StoredIdDocAnalysis | null;
   // Craftsman-only, and only ever set for taxi/camion (see
   // CraftsmanProfile.licenseStorageKey) — null for every other role/category.
   licenseStorageKey: string | null;
   licenseVerified: boolean;
+  // Auto-check verdict for the license photo; null for non-taxi/camion.
+  licenseAutoCheck: StoredIdDocAnalysis | null;
   createdAt: Date;
 }
 
@@ -100,8 +106,10 @@ export class AdminService {
         serviceCategory: profile.serviceCategory,
         experienceDetails: profile.experienceDetails,
         idCardStorageKey: profile.idCardStorageKey!,
+        idAutoCheck: profile.idAutoCheck ?? null,
         licenseStorageKey: profile.licenseStorageKey,
         licenseVerified: profile.licenseVerified,
+        licenseAutoCheck: profile.licenseAutoCheck ?? null,
         createdAt: profile.createdAt,
       })),
       ...clientProfiles.map((profile) => ({
@@ -112,8 +120,10 @@ export class AdminService {
         serviceCategory: null,
         experienceDetails: null,
         idCardStorageKey: profile.idCardStorageKey!,
+        idAutoCheck: profile.idAutoCheck ?? null,
         licenseStorageKey: null,
         licenseVerified: false,
+        licenseAutoCheck: null,
         createdAt: profile.createdAt,
       })),
     ];

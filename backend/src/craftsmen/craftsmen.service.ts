@@ -1,10 +1,14 @@
 import {
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import type Redis from 'ioredis';
+import { REDIS_CLIENT } from '../redis/redis.constants';
+import { takeIdDocAnalysis } from '../uploads/id-doc-analysis.store';
 import { User } from '../database/entities/user.entity';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 import { UserRole } from '../database/enums/user-role.enum';
@@ -104,6 +108,7 @@ export class CraftsmenService {
     private readonly presenceService: PresenceService,
     private readonly districtsService: DistrictsService,
     private readonly dataSource: DataSource,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
   async getMe(userId: string): Promise<CraftsmanMe> {
@@ -176,9 +181,13 @@ export class CraftsmenService {
     idCardStorageKey: string,
   ): Promise<void> {
     await this.findCraftsmanByUserId(userId);
+    const idAutoCheck = await takeIdDocAnalysis(
+      this.redis,
+      idCardStorageKey,
+    ).catch(() => null);
     await this.craftsmanProfileRepository.update(
       { userId },
-      { idCardStorageKey, isActive: true },
+      { idCardStorageKey, idAutoCheck, isActive: true },
     );
   }
 

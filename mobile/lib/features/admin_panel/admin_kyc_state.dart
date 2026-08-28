@@ -2,6 +2,48 @@ import '../../core/models/service_category.dart';
 
 enum VerificationRole { craftsman, client }
 
+/// Google Vision auto-check verdict attached to an uploaded document, as
+/// returned in each `/admin/verifications` entry (`idAutoCheck` /
+/// `licenseAutoCheck`). Advisory only — it pre-scores the queue, the admin
+/// still decides. Null on the entry when Vision wasn't consulted.
+enum IdAutoCheckVerdict { pass, uncertain, reject }
+
+class IdAutoCheck {
+  const IdAutoCheck({
+    required this.verdict,
+    required this.score,
+    required this.reasons,
+    required this.degraded,
+    this.at,
+  });
+
+  final IdAutoCheckVerdict verdict;
+  final int score;
+  final List<String> reasons;
+  // True when Vision itself couldn't run (unconfigured / error / timeout) —
+  // the verdict is then always `uncertain` and means nothing on its own.
+  final bool degraded;
+  final DateTime? at;
+
+  static IdAutoCheck? fromJson(Map<String, dynamic>? json) {
+    if (json == null) return null;
+    final verdict = switch (json['verdict']) {
+      'pass' => IdAutoCheckVerdict.pass,
+      'reject' => IdAutoCheckVerdict.reject,
+      _ => IdAutoCheckVerdict.uncertain,
+    };
+    return IdAutoCheck(
+      verdict: verdict,
+      score: (json['score'] as num?)?.toInt() ?? 0,
+      reasons:
+          (json['reasons'] as List?)?.map((e) => e.toString()).toList() ??
+          const [],
+      degraded: json['degraded'] as bool? ?? false,
+      at: json['at'] == null ? null : DateTime.tryParse(json['at'] as String),
+    );
+  }
+}
+
 class PendingVerification {
   const PendingVerification({
     required this.userId,
@@ -12,6 +54,8 @@ class PendingVerification {
     required this.experienceDetails,
     required this.licenseVerified,
     required this.createdAt,
+    this.idAutoCheck,
+    this.licenseAutoCheck,
   });
 
   final String userId;
@@ -26,6 +70,10 @@ class PendingVerification {
   // card can show its own preview/status independent of the ID card's.
   final bool licenseVerified;
   final DateTime createdAt;
+  // Google Vision pre-check on the uploaded ID photo (and, taxi/camion only,
+  // the license). Null when Vision wasn't consulted for this submission.
+  final IdAutoCheck? idAutoCheck;
+  final IdAutoCheck? licenseAutoCheck;
 }
 
 class AdminKycState {

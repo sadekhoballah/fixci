@@ -19,10 +19,22 @@ export const LICENSES_DIR = join(UPLOADS_ROOT, LICENSES_SUBDIR);
 export const MIN_ID_CARD_DIMENSION = 300;
 export const MAX_ID_CARD_ASPECT_RATIO = 3.0;
 
-// Below this, the image almost certainly isn't a text-bearing ID document —
-// a blank page, a landscape photo, or a face with no visible text all score
-// near zero recognized characters from OCR.
-export const MIN_ID_DOCUMENT_TEXT_CHARACTERS = 15;
+// The content check (id-document-check.ts, Google Vision) only ever *rejects*
+// an upload when it sees no document signal at all. A real but hard-to-OCR
+// card (glare, angle, low light) could hit that by accident, so we don't
+// trap the user: after this many rejected attempts from the same client the
+// next upload is let through to manual review instead. Counter is per-IP in
+// Redis with this TTL.
+export const ID_DOC_REJECT_RETRY_LIMIT = 3;
+export const ID_DOC_REJECT_RETRY_TTL_SECONDS = 3600;
+
+// Shown to the user when the content check rejects the photo — actionable on
+// purpose (this is the whole point of rejecting synchronously rather than
+// letting a junk image into the manual queue).
+export const ID_DOC_REJECT_MESSAGE =
+  "La photo ne ressemble pas à une pièce d'identité lisible (CNI, passeport " +
+  'ou permis). Prenez-la en pleine lumière, à plat, sans reflet, avec toute ' +
+  'la pièce dans le cadre, puis réessayez.';
 
 // Mission/Freelance board photos (e.g. "what needs fixing") — reuses the
 // same size limit and mime allowlist as the ID card/license above, but goes

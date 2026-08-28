@@ -27,6 +27,12 @@ class AdminKycRepository {
         experienceDetails: json['experienceDetails'] as String?,
         licenseVerified: json['licenseVerified'] as bool? ?? false,
         createdAt: DateTime.parse(json['createdAt'] as String),
+        idAutoCheck: IdAutoCheck.fromJson(
+          json['idAutoCheck'] as Map<String, dynamic>?,
+        ),
+        licenseAutoCheck: IdAutoCheck.fromJson(
+          json['licenseAutoCheck'] as Map<String, dynamic>?,
+        ),
       );
     }).toList();
   }
