@@ -22,6 +22,8 @@ describe('TwilioVerifyService', () => {
     process.env.TWILIO_VERIFY_SERVICE_SID = 'VA_test';
     delete process.env.TWILIO_VERIFY_WHATSAPP_ENABLED;
     delete process.env.TWILIO_VERIFY_SMS_ENABLED;
+    delete process.env.TWILIO_VERIFY_LOCALE;
+    delete process.env.TWILIO_VERIFY_WA_TEMPLATE_SID;
     process.env.NODE_ENV = 'test';
   });
 
@@ -68,6 +70,44 @@ describe('TwilioVerifyService', () => {
       );
       expect((init.body as URLSearchParams).get('To')).toBe('+2250700000001');
       expect((init.body as URLSearchParams).get('Channel')).toBe('whatsapp');
+      expect((init.body as URLSearchParams).has('Locale')).toBe(false);
+      expect((init.body as URLSearchParams).has('TemplateSid')).toBe(false);
+    });
+
+    it('adds Locale from TWILIO_VERIFY_LOCALE', async () => {
+      process.env.TWILIO_VERIFY_LOCALE = 'fr';
+      fetchMock.mockResolvedValue(jsonResponse(201, { status: 'pending' }));
+
+      await service.startVerification('+2250700000001', 'sms');
+
+      const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect((init.body as URLSearchParams).get('Locale')).toBe('fr');
+    });
+
+    it('forces an HJ… TemplateSid on the WhatsApp channel only', async () => {
+      process.env.TWILIO_VERIFY_WA_TEMPLATE_SID = 'HJ' + '0'.repeat(32);
+      fetchMock.mockResolvedValue(jsonResponse(201, { status: 'pending' }));
+
+      await service.startVerification('+2250700000001', 'whatsapp');
+      const [, waInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect((waInit.body as URLSearchParams).get('TemplateSid')).toBe(
+        'HJ' + '0'.repeat(32),
+      );
+
+      fetchMock.mockClear();
+      await service.startVerification('+2250700000001', 'sms');
+      const [, smsInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect((smsInit.body as URLSearchParams).has('TemplateSid')).toBe(false);
+    });
+
+    it('ignores a mistaken HX… Content SID in TWILIO_VERIFY_WA_TEMPLATE_SID', async () => {
+      process.env.TWILIO_VERIFY_WA_TEMPLATE_SID = 'HX' + 'a'.repeat(32);
+      fetchMock.mockResolvedValue(jsonResponse(201, { status: 'pending' }));
+
+      await service.startVerification('+2250700000001', 'whatsapp');
+
+      const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect((init.body as URLSearchParams).has('TemplateSid')).toBe(false);
     });
 
     it('maps Twilio invalid-number (60200) to BadRequestException', async () => {

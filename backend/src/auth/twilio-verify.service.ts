@@ -96,6 +96,30 @@ export class TwilioVerifyService {
     }
 
     const body = new URLSearchParams({ To: phone, Channel: channel });
+
+    // Language of Twilio's own default template — without it Verify picks
+    // `en`, which is why the fallback SMS arrived in English. Applies to the
+    // SMS/call copy and to Verify's auto-created WhatsApp auth templates.
+    const locale = process.env.TWILIO_VERIFY_LOCALE?.trim();
+    if (locale) body.set('Locale', locale);
+
+    // Verify's `TemplateSid` wants a *Verify Template* SID (HJ…), NOT a
+    // Content Template SID (HX…). It only applies to WhatsApp, and only once
+    // the WhatsApp sender is linked to the Verify Service and Twilio has
+    // auto-created the HJ templates (Twilio console -> Verify -> Templates).
+    // Left unset until then; an HX… value is a paste mistake and Twilio
+    // would 400 the whole send, so drop it with a warning instead.
+    const templateSid = process.env.TWILIO_VERIFY_WA_TEMPLATE_SID?.trim();
+    if (channel === 'whatsapp' && templateSid) {
+      if (templateSid.startsWith('HJ')) {
+        body.set('TemplateSid', templateSid);
+      } else {
+        this.logger.warn(
+          `TWILIO_VERIFY_WA_TEMPLATE_SID=${templateSid} is not an HJ… Verify Template SID (an HX… Content SID won't work here) — ignoring it`,
+        );
+      }
+    }
+
     const { response, json } = await this.call('Verifications', body, phone);
 
     if (!response.ok) {
@@ -106,6 +130,24 @@ export class TwilioVerifyService {
         `Twilio start-verification rejected ${phone} (${channel}): ${response.status} ${JSON.stringify(json)}`,
       );
       throw new BadRequestException('Could not send the verification code');
+    }
+
+    // The success path used to be silent, which hid a WhatsApp->SMS
+    // downgrade: Twilio still returns 201 while an SMS goes out, and the
+    // controller then reports `channel: 'whatsapp'` to the app. Log what
+    // Twilio says it actually did so a fallback is visible in journalctl.
+    const attempts = json?.send_code_attempts ?? [];
+    const usedChannel =
+      attempts[attempts.length - 1]?.channel ?? json?.channel ?? channel;
+    if (usedChannel !== channel) {
+      this.logger.warn(
+        `Twilio downgraded ${phone} from ${channel} to ${usedChannel} ` +
+          `(status=${json?.status}, attempts=${JSON.stringify(attempts)})`,
+      );
+    } else {
+      this.logger.log(
+        `Twilio start-verification ${phone}: channel=${usedChannel} status=${json?.status}`,
+      );
     }
   }
 
@@ -156,7 +198,15 @@ export class TwilioVerifyService {
     resource: 'Verifications' | 'VerificationCheck',
     body: URLSearchParams,
     phone: string,
-  ): Promise<{ response: Response; json: { code?: number; status?: string } }> {
+  ): Promise<{
+    response: Response;
+    json: {
+      code?: number;
+      status?: string;
+      channel?: string;
+      send_code_attempts?: Array<{ channel?: string; time?: string }>;
+    };
+  }> {
     const accountSid = process.env.TWILIO_ACCOUNT_SID!;
     const authToken = process.env.TWILIO_AUTH_TOKEN!;
     const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID!;
@@ -186,6 +236,8 @@ export class TwilioVerifyService {
     const json = (await response.json().catch(() => ({}))) as {
       code?: number;
       status?: string;
+      channel?: string;
+      send_code_attempts?: Array<{ channel?: string; time?: string }>;
     };
     return { response, json };
   }
