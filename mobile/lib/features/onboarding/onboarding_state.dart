@@ -8,7 +8,7 @@ import '../../core/models/user_role.dart';
 // 000000) AND are exempt from the mandatory ID-document upload — mirrors the
 // backend OTP_TEST_PHONES allowlist (see backend/src/auth/otp-test-phones.ts).
 // Must be kept in sync with that env var for the numbers a reviewer uses.
-const kOtpBypassPhones = {'+2250707070707'};
+const kOtpBypassPhones = {'+2250707070707', '+2250808080808'};
 
 class OnboardingState {
   const OnboardingState({
