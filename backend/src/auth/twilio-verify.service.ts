@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { isOtpTestPhone, otpTestCode } from './otp-test-phones';
 
 export type VerifyChannel = 'whatsapp' | 'sms';
 
@@ -19,24 +20,11 @@ const TWILIO_NOT_FOUND = 20404;
 // old Redis OtpService did.
 const DEV_BYPASS_CODE = '000000';
 
-// Pilot test-phone allowlist: numbers listed in OTP_TEST_PHONES (comma-
-// separated, exact E.164 as the app sends them) never touch Twilio — no SMS
-// is sent and they verify against OTP_TEST_CODE (default 000000). Unlike the
-// dev bypass above this is keyed to an explicit list, so it stays safe with
-// NODE_ENV=production and real Twilio credentials: only those exact numbers
-// skip the paid SMS. Clear OTP_TEST_PHONES once the pilot is over.
-function testPhones(): Set<string> {
-  return new Set(
-    (process.env.OTP_TEST_PHONES ?? '')
-      .split(',')
-      .map((p) => p.trim())
-      .filter(Boolean),
-  );
-}
-
-function testCode(): string {
-  return process.env.OTP_TEST_CODE || DEV_BYPASS_CODE;
-}
+// Pilot test-phone allowlist (OTP_TEST_PHONES) lives in ./otp-test-phones so
+// the registration DTO can share it — those numbers never touch Twilio (no
+// SMS sent, verified against OTP_TEST_CODE) and are also exempt from the
+// mandatory ID upload. Keyed to an explicit list, so it stays safe with
+// NODE_ENV=production and real Twilio credentials.
 
 // The one place that talks to Twilio Verify — mirrors the old
 // whatsapp/whatsapp.service.ts's role of being the single outbound-OTP touch
@@ -71,7 +59,7 @@ export class TwilioVerifyService {
   }
 
   isTestPhone(phone: string): boolean {
-    return testPhones().has(phone);
+    return isOtpTestPhone(phone);
   }
 
   async startVerification(
@@ -80,7 +68,7 @@ export class TwilioVerifyService {
   ): Promise<void> {
     if (this.isTestPhone(phone)) {
       this.logger.log(
-        `Test phone ${phone} — skipping ${channel} send, verifies with code ${testCode()}`,
+        `Test phone ${phone} — skipping ${channel} send, verifies with code ${otpTestCode()}`,
       );
       return;
     }
@@ -156,7 +144,7 @@ export class TwilioVerifyService {
     code: string,
   ): Promise<CheckVerificationResult> {
     if (this.isTestPhone(phone)) {
-      return code === testCode() ? 'approved' : 'invalid';
+      return code === otpTestCode() ? 'approved' : 'invalid';
     }
 
     if (!this.isConfigured) {

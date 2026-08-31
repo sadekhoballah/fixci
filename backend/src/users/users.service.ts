@@ -21,6 +21,7 @@ import { BlacklistedPhone } from '../database/entities/blacklisted-phone.entity'
 import { UserRole } from '../database/enums/user-role.enum';
 import { SubscriptionTier } from '../database/enums/subscription-tier.enum';
 import { RegisterUserDto } from './dto/register-user.dto';
+import { isOtpTestPhone } from '../auth/otp-test-phones';
 import { TokensService } from '../auth/tokens.service';
 import { PresenceService } from '../matching/presence.service';
 import { UPLOADS_ROOT } from '../uploads/uploads.constants';
@@ -119,6 +120,13 @@ export class UsersService {
       dto.phone,
     );
 
+    // An OTP_TEST_PHONES number (Play Store review / pilot) registers with no
+    // KYC document at all — see RegisterUserDto. Mark it verified up front so
+    // the account is fully usable without an admin pass: for taxi/camion this
+    // is what lets PresenceService.setOnline accept it (that gate needs
+    // idVerified AND licenseVerified); every other category ignores the flag.
+    const kycWaived = isOtpTestPhone(dto.phone);
+
     // Google Vision verdict stashed by POST /uploads/id-card (and /license)
     // — read once, deleted, and carried onto the profile below. A Redis
     // failure here must never fail a registration: worst case the profile
@@ -156,8 +164,10 @@ export class UsersService {
               experienceDetails: dto.experienceDetails ?? null,
               idCardStorageKey: dto.idCardStorageKey ?? null,
               idAutoCheck,
+              idVerified: kycWaived,
               licenseStorageKey: dto.licenseStorageKey ?? null,
               licenseAutoCheck,
+              licenseVerified: kycWaived,
             }),
           );
         } else {
@@ -166,6 +176,7 @@ export class UsersService {
               userId: user.id,
               idCardStorageKey: dto.idCardStorageKey ?? null,
               idAutoCheck,
+              idVerified: kycWaived,
             }),
           );
         }

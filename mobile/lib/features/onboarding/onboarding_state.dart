@@ -4,6 +4,12 @@ import '../../core/models/service_category.dart';
 import '../../core/models/subscription_tier.dart';
 import '../../core/models/user_role.dart';
 
+// Play-Store-review / pilot numbers that skip OTP delivery (verify with
+// 000000) AND are exempt from the mandatory ID-document upload — mirrors the
+// backend OTP_TEST_PHONES allowlist (see backend/src/auth/otp-test-phones.ts).
+// Must be kept in sync with that env var for the numbers a reviewer uses.
+const kOtpBypassPhones = {'+2250707070707'};
+
 class OnboardingState {
   const OnboardingState({
     this.role,
@@ -96,6 +102,10 @@ class OnboardingState {
   bool get idCardAttached => idCardStorageKey != null;
   bool get licenseAttached => licenseStorageKey != null;
 
+  // A reviewer/pilot number registers with no KYC document at all — the
+  // backend waives the same requirement for these numbers.
+  bool get idDocumentWaived => kOtpBypassPhones.contains(phone.trim());
+
   bool get isPhoneVerified =>
       verifiedPhone != null && verifiedPhone == phone;
 
@@ -114,12 +124,14 @@ class OnboardingState {
     if (lastName.trim().isEmpty) return false;
     if (phone.trim().isEmpty) return false;
     if (district == null) return false;
-    if (!idCardAttached) return false;
+    if (!idCardAttached && !idDocumentWaived) return false;
     if (role == UserRole.craftsman) {
       if (serviceCategory == null || experienceDetails.trim().isEmpty) {
         return false;
       }
-      if (serviceCategory!.requiresDriverLicense && !licenseAttached) {
+      if (serviceCategory!.requiresDriverLicense &&
+          !licenseAttached &&
+          !idDocumentWaived) {
         return false;
       }
       return true;
