@@ -23,6 +23,9 @@ workflows:
           flutter config --no-enable-swift-package-manager
           echo $GOOGLE_SERVICE_INFO_PLIST | base64 --decode > $CM_BUILD_DIR/mobile/ios/Runner/GoogleService-Info.plist
           flutter pub get
+      - name: Pre-generate Xcode config files (Generated.xcconfig, flutter_export_environment.sh)
+        script: |
+          flutter build ios --release --no-codesign
       - name: Set up keychain
         script: keychain initialize
       - name: Fetch signing files (create if none exist yet)
