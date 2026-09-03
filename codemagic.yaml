@@ -20,6 +20,7 @@ workflows:
           #!/bin/sh
           set -e
           set -x
+          flutter config --no-enable-swift-package-manager
           echo $GOOGLE_SERVICE_INFO_PLIST | base64 --decode > $CM_BUILD_DIR/mobile/ios/Runner/GoogleService-Info.plist
           flutter pub get
       - name: Set up keychain
