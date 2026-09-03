@@ -7,9 +7,6 @@ workflows:
       app_store_connect: Fix Pro Apple
     working_directory: mobile
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.fixci.mobile
       groups:
         - ios_secrets
       flutter: 3.44.6
