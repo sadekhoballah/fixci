@@ -22,9 +22,6 @@ workflows:
           set -x
           echo $GOOGLE_SERVICE_INFO_PLIST | base64 --decode > $CM_BUILD_DIR/mobile/ios/Runner/GoogleService-Info.plist
           flutter pub get
-      - name: Install CocoaPods dependencies
-        script: |
-          find . -name "Podfile" -maxdepth 2 -type f -execdir pod install --repo-update \;
       - name: Set up keychain
         script: keychain initialize
       - name: Fetch signing files (create if none exist yet)
