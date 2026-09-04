@@ -6,6 +6,13 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<!-- App only uses standard HTTPS/TLS (OS-provided) encryption, no
+	proprietary crypto — declares this upfront so every future TestFlight
+	upload skips the manual Export Compliance question in App Store
+	Connect (was blocking "Build is not in an externally assignable
+	state" until answered once per build). -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>CFBundleDisplayName</key>
 	<string>Fix Pro</string>
 	<key>CFBundleExecutable</key>
