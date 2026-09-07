@@ -13,8 +13,10 @@
 #
 # Selectors are the on-screen FRENCH strings (the app defaults to French
 # regardless of device locale -- see core/localization/locale_controller.dart).
-# If a step ever breaks, it is almost always one of these text matchers
-# drifting from an l10n change -- fix the string here, not the app.
+# Every tap target is wrapped as `(?s).*text.*` on purpose: Maestro's tapOn
+# does a FULL-string regex match, and Flutter's iOS semantics labels often
+# carry a trailing newline / merge a card's title with its subtitle, so an
+# exact match like "Client" fails while "(?s).*Client.*" works.
 appId: com.fixci.mobile
 name: Fix Pro App Store screenshots
 ---
@@ -25,79 +27,79 @@ name: Fix Pro App Store screenshots
 
 # --- Onboarding: splash (hard 3s delay) -> role selection ---
 - extendedWaitUntil:
-    visible: "Qui êtes-vous ?"
+    visible: "(?s).*êtes-vous.*"
     timeout: 30000
-- tapOn: "Client"
-- tapOn: "Continuer"
+- tapOn: "(?s).*Client.*Je cherche un artisan.*"
+- tapOn: "(?s).*Continuer.*"
 
 # --- Registration form: fill only what enables the "S'inscrire" button
 #     (first name, last name, phone, district; the ID document is waived
 #     for the OTP-bypass numbers -- see OnboardingState.idDocumentWaived). ---
 - extendedWaitUntil:
-    visible: "S'inscrire"
+    visible: "(?s).*S'inscrire.*"
     timeout: 20000
-- tapOn: "Prénom.*"
+- tapOn: "(?s).*Prénom.*"
 - inputText: "Client"
 - hideKeyboard
-- tapOn: "Nom de famille.*"
+- tapOn: "(?s).*Nom de famille.*"
 - inputText: "Demo"
 - hideKeyboard
-- tapOn: "Numéro de téléphone"
+- tapOn: "(?s).*Numéro de téléphone.*"
 - inputText: "0505050505"          # + CI dial code -> +2250505050505
 - hideKeyboard
-- tapOn: "Votre zone / commune"
+- tapOn: "(?s).*Votre zone / commune.*"
 # First real district in the opened dropdown. Cocody is a stable choice for
 # Cote d'Ivoire; the ".*" tolerates a "(liste d'attente)" suffix.
-- tapOn: "Cocody.*"
-- tapOn: "S'inscrire"
+- tapOn: "(?s).*Cocody.*"
+- tapOn: "(?s).*S'inscrire.*"
 
 # --- OTP: bypass code for the review test number ---
 - extendedWaitUntil:
-    visible: "Code à 6 chiffres"
+    visible: "(?s).*Code à 6 chiffres.*"
     timeout: 30000
-- tapOn: "Code à 6 chiffres"
+- tapOn: "(?s).*Code à 6 chiffres.*"
 - inputText: "000000"
 - hideKeyboard
-- tapOn: "Vérifier"
+- tapOn: "(?s).*Vérifier.*"
 
 # A brand-new number lands on the success screen first; an existing account
 # (the usual case for the review number) goes straight to the shell.
 - runFlow:
     when:
-      visible: "Continuer"
+      visible: "(?s).*Continuer.*"
     commands:
-      - tapOn: "Continuer"
+      - tapOn: "(?s).*Continuer.*"
 
 # --- 01  Accueil: the service-category grid ---
 - extendedWaitUntil:
-    visible: "De quoi avez-vous besoin ?"
+    visible: "(?s).*De quoi avez-vous besoin.*"
     timeout: 40000
 - waitForAnimationToEnd
 - takeScreenshot: build/screenshots/01_accueil
 
 # --- 02  Metier: trade detail (hero image + description + CTA) ---
-- tapOn: "Plombier"
+- tapOn: "(?s).*Plombier.*"
 - extendedWaitUntil:
-    visible: "Réparation de fuites.*"
+    visible: "(?s).*Réparation de fuites.*"
     timeout: 20000
 - waitForAnimationToEnd
 - takeScreenshot: build/screenshots/02_metier_plombier
 - back
 
 # --- 03  Missions: the freelance / missions board ---
-- tapOn: "Missions"
+- tapOn: "(?s).*Missions.*"
 - extendedWaitUntil:
-    visible: "Annonces"
+    visible: "(?s).*Annonces.*"
     timeout: 20000
 - waitForAnimationToEnd
 - takeScreenshot: build/screenshots/03_missions
 
 # --- 04  Historique ---
-- tapOn: "Historique"
+- tapOn: "(?s).*Historique.*"
 - waitForAnimationToEnd
 - takeScreenshot: build/screenshots/04_historique
 
 # --- 05  Compte (test account -- no real personal data) ---
-- tapOn: "Compte"
+- tapOn: "(?s).*Compte.*"
 - waitForAnimationToEnd
 - takeScreenshot: build/screenshots/05_compte

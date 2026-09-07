@@ -68,6 +68,7 @@ workflows:
         BUNDLE_ID: "com.fixci.mobile"
         API_BASE_URL: "https://api.fix-pro.app"
         SIM_DEVICE: "iPhone 16 Pro Max"   # 6.9" -> 1320x2868, an accepted App Store size
+        MAESTRO_CLI_NO_ANALYTICS: "1"
       groups:
         - ios_secrets
       flutter: 3.44.6
@@ -114,6 +115,14 @@ workflows:
           #!/bin/sh
           set -e
           which maestro || (curl -Ls "https://get.maestro.mobile.dev" | bash)
+      - name: Dump the UI hierarchy (role-selection screen) for debugging
+        script: |
+          #!/bin/sh
+          set -x
+          export PATH="$PATH:$HOME/.maestro/bin"
+          mkdir -p build/screenshots
+          maestro --device "$SIM_UDID" test .maestro/_probe.yaml || true
+          maestro --device "$SIM_UDID" hierarchy > build/screenshots/_hierarchy_role_selection.txt 2>&1 || true
       - name: Run the Maestro screenshot flow
         script: |
           #!/bin/sh
@@ -123,5 +132,6 @@ workflows:
           mkdir -p build/screenshots
           maestro --device "$SIM_UDID" test .maestro/screenshots.yaml
     artifacts:
-      - build/screenshots/*.png
-      - $HOME/.maestro/tests/**/*.png
+      - build/screenshots/*
+      - build/screenshots/**/*
+      - $HOME/.maestro/tests

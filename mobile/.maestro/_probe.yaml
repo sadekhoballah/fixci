@@ -1,0 +1,13 @@
+# Throwaway helper: just launches the app and waits for the role-selection
+# screen, so the workflow can dump the UI hierarchy right after (Maestro has
+# no in-flow "dump hierarchy" command). Not part of the screenshot set.
+appId: com.fixci.mobile
+name: probe
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- extendedWaitUntil:
+    visible: "(?s).*êtes-vous.*"
+    timeout: 30000
