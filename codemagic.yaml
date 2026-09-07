@@ -89,7 +89,8 @@ workflows:
           set -e
           set -x
           flutter build ios --simulator --debug \
-            --dart-define=API_BASE_URL=$API_BASE_URL
+            --dart-define=API_BASE_URL=$API_BASE_URL \
+            --dart-define=SCREENSHOT_MODE=true
       - name: Boot simulator, install app, set a clean status bar
         script: |
           #!/bin/sh
@@ -115,14 +116,14 @@ workflows:
           #!/bin/sh
           set -e
           which maestro || (curl -Ls "https://get.maestro.mobile.dev" | bash)
-      - name: Dump the UI hierarchy (role-selection screen) for debugging
+      - name: Dump the UI hierarchy (client home screen) for debugging
         script: |
           #!/bin/sh
           set -x
           export PATH="$PATH:$HOME/.maestro/bin"
           mkdir -p build/screenshots
           maestro --device "$SIM_UDID" test .maestro/_probe.yaml || true
-          maestro --device "$SIM_UDID" hierarchy > build/screenshots/_hierarchy_role_selection.txt 2>&1 || true
+          maestro --device "$SIM_UDID" hierarchy > build/screenshots/_hierarchy_home.txt 2>&1 || true
       - name: Run the Maestro screenshot flow
         script: |
           #!/bin/sh

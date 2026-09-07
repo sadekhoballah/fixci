@@ -1,12 +1,26 @@
 # App Store screenshots (iOS)
 
-`screenshots.yaml` is a [Maestro](https://maestro.mobile.dev) flow that logs
-into the Apple-review **client** test account and captures the key screens on
-an iOS Simulator, at the simulator's full native resolution.
+`screenshots.yaml` is a [Maestro](https://maestro.mobile.dev) flow that
+captures the key screens on an iOS Simulator, at the simulator's full native
+resolution.
 
 It exists so App Store screenshots can be produced without a Mac or an
 iPhone. It is **iOS-only** — it drives the running app, it changes nothing
 for Android.
+
+## How the login is skipped
+
+The `screenshots-workflow` builds the app with
+`--dart-define=SCREENSHOT_MODE=true`. That flag (read only in
+`lib/features/onboarding/screens/splash_screen.dart`, a `const false` in
+every normal build) makes the splash screen log straight into the
+Apple-review test **client** account (`+2250505050505`, OTP bypass) and jump
+to its home shell. So the Maestro flow never drives the onboarding form or
+the OTP screen — it just walks the bottom-nav tabs and one trade detail.
+
+Driving the onboarding form from Maestro was tried and abandoned: Flutter's
+iOS accessibility merges the form fields into large nodes, and Maestro's
+`hideKeyboard` kept tapping the privacy-policy link underneath the keyboard.
 
 ## Run it (the normal way)
 
@@ -24,7 +38,9 @@ for Android.
 
 ```sh
 cd mobile
-flutter build ios --simulator --debug --dart-define=API_BASE_URL=https://api.fix-pro.app
+flutter build ios --simulator --debug \
+  --dart-define=API_BASE_URL=https://api.fix-pro.app \
+  --dart-define=SCREENSHOT_MODE=true
 xcrun simctl boot "iPhone 16 Pro Max"
 xcrun simctl install booted build/ios/iphonesimulator/Runner.app
 maestro test .maestro/screenshots.yaml
@@ -44,13 +60,14 @@ Keep 01–03; 04–05 are usually too sparse to be worth submitting.
 
 ## If a step fails
 
-The selectors are on-screen **French** strings. A failure is almost always
-one of them drifting after an `l10n` change — update the string in
-`screenshots.yaml`, not the app. The most fragile steps, in order:
+The selectors are on-screen **French** strings wrapped `(?s).*text.*`. A
+failure is almost always one drifting after an `l10n` change — update the
+string in `screenshots.yaml`, not the app. Check the artifact
+`build/screenshots/_hierarchy_home.txt` (dumped every run) for the exact
+`accessibilityText` values Maestro sees.
 
-- **district dropdown** (`tapOn: "Cocody.*"`) — if Cocody is ever removed
-  from the seeded Côte d'Ivoire districts, pick another one that shows in
-  the list.
-- **`- back`** after the trade detail — relies on the iOS edge-swipe pop.
-- the **phone field** (`tapOn: "Numéro de téléphone"`) — it's an
-  `IntlPhoneField`; if focus lands wrong, target the field by index instead.
+If `SCREENSHOT_MODE` login itself fails (the flow times out on
+"De quoi avez-vous besoin"), the app falls back to the normal
+role-selection screen — check that `+2250505050505` is still in the VPS
+`OTP_TEST_PHONES` and that the backend is reachable at
+`https://api.fix-pro.app`.

@@ -1,22 +1,20 @@
 # App Store / marketing screenshot capture for Fix Pro (iOS).
 #
 # Runs on a booted iOS Simulator via the `screenshots-workflow` in
-# /codemagic.yaml. It logs in as the Apple-review test CLIENT account
-# (+2250505050505, OTP-bypass code 000000 -- see `kOtpBypassPhones` in
-# mobile/lib/features/onboarding/onboarding_state.dart and the backend
-# OTP_TEST_PHONES allowlist), then captures the key screens at the
-# simulator's full native resolution. PNGs land in
-# mobile/build/screenshots/ and are collected as build artifacts.
+# /codemagic.yaml. That workflow builds the app with
+# `--dart-define=SCREENSHOT_MODE=true`, which makes SplashScreen log
+# straight into the Apple-review test CLIENT account (+2250505050505) and
+# jump to its home shell -- so this flow never touches the onboarding form
+# or the OTP screen. It just walks the bottom-nav tabs and one trade
+# detail, screenshotting each at the simulator's full native resolution.
+# PNGs land in mobile/build/screenshots/ and are collected as artifacts.
 #
-# iOS-only: this drives the running app on a simulator, it changes no
+# iOS-only: it drives the running app on a simulator; it changes no
 # Android code or config.
 #
-# Selectors are the on-screen FRENCH strings (the app defaults to French
-# regardless of device locale -- see core/localization/locale_controller.dart).
-# Every tap target is wrapped as `(?s).*text.*` on purpose: Maestro's tapOn
-# does a FULL-string regex match, and Flutter's iOS semantics labels often
-# carry a trailing newline / merge a card's title with its subtitle, so an
-# exact match like "Client" fails while "(?s).*Client.*" works.
+# Selectors are on-screen FRENCH strings wrapped as `(?s).*text.*` --
+# Maestro's tapOn is a full-string regex match and Flutter's iOS semantics
+# labels carry newlines / merge sibling text, so exact matches miss.
 appId: com.fixci.mobile
 name: Fix Pro App Store screenshots
 ---
@@ -25,81 +23,34 @@ name: Fix Pro App Store screenshots
     permissions:
       all: allow
 
-# --- Onboarding: splash (hard 3s delay) -> role selection ---
-- extendedWaitUntil:
-    visible: "(?s).*êtes-vous.*"
-    timeout: 30000
-- tapOn: "(?s).*Client.*Je cherche un artisan.*"
-- tapOn: "(?s).*Continuer.*"
-
-# --- Registration form: fill only what enables the "S'inscrire" button
-#     (first name, last name, phone, district; the ID document is waived
-#     for the OTP-bypass numbers -- see OnboardingState.idDocumentWaived). ---
-- extendedWaitUntil:
-    visible: "(?s).*S'inscrire.*"
-    timeout: 20000
-- tapOn: "(?s).*Prénom.*"
-- inputText: "Client"
-- hideKeyboard
-- tapOn: "(?s).*Nom de famille.*"
-- inputText: "Demo"
-- hideKeyboard
-- tapOn: "(?s).*Numéro de téléphone.*"
-- inputText: "0505050505"          # + CI dial code -> +2250505050505
-- hideKeyboard
-- tapOn: "(?s).*Votre zone / commune.*"
-# First real district in the opened dropdown. Cocody is a stable choice for
-# Cote d'Ivoire; the ".*" tolerates a "(liste d'attente)" suffix.
-- tapOn: "(?s).*Cocody.*"
-- tapOn: "(?s).*S'inscrire.*"
-
-# --- OTP: bypass code for the review test number ---
-- extendedWaitUntil:
-    visible: "(?s).*Code à 6 chiffres.*"
-    timeout: 30000
-- tapOn: "(?s).*Code à 6 chiffres.*"
-- inputText: "000000"
-- hideKeyboard
-- tapOn: "(?s).*Vérifier.*"
-
-# A brand-new number lands on the success screen first; an existing account
-# (the usual case for the review number) goes straight to the shell.
-- runFlow:
-    when:
-      visible: "(?s).*Continuer.*"
-    commands:
-      - tapOn: "(?s).*Continuer.*"
-
-# --- 01  Accueil: the service-category grid ---
+# SCREENSHOT_MODE logs in during the splash; wait for the client home grid.
 - extendedWaitUntil:
     visible: "(?s).*De quoi avez-vous besoin.*"
-    timeout: 40000
+    timeout: 90000
 - waitForAnimationToEnd
 - takeScreenshot: build/screenshots/01_accueil
 
-# --- 02  Metier: trade detail (hero image + description + CTA) ---
+# --- bottom-nav tabs (done before the trade detail so there's no `back`) ---
+- tapOn: "(?s).*Missions.*"
+- waitForAnimationToEnd
+- takeScreenshot: build/screenshots/03_missions
+
+- tapOn: "(?s).*Historique.*"
+- waitForAnimationToEnd
+- takeScreenshot: build/screenshots/04_historique
+
+- tapOn: "(?s).*Compte.*"
+- waitForAnimationToEnd
+- takeScreenshot: build/screenshots/05_compte
+
+# --- back to the grid, then into a trade detail (hero image + description) ---
+- tapOn: "(?s).*Accueil.*"
+- extendedWaitUntil:
+    visible: "(?s).*De quoi avez-vous besoin.*"
+    timeout: 20000
 - tapOn: "(?s).*Plombier.*"
 - extendedWaitUntil:
     visible: "(?s).*Réparation de fuites.*"
     timeout: 20000
 - waitForAnimationToEnd
 - takeScreenshot: build/screenshots/02_metier_plombier
-- back
-
-# --- 03  Missions: the freelance / missions board ---
-- tapOn: "(?s).*Missions.*"
-- extendedWaitUntil:
-    visible: "(?s).*Annonces.*"
-    timeout: 20000
-- waitForAnimationToEnd
-- takeScreenshot: build/screenshots/03_missions
-
-# --- 04  Historique ---
-- tapOn: "(?s).*Historique.*"
-- waitForAnimationToEnd
-- takeScreenshot: build/screenshots/04_historique
-
-# --- 05  Compte (test account -- no real personal data) ---
-- tapOn: "(?s).*Compte.*"
-- waitForAnimationToEnd
-- takeScreenshot: build/screenshots/05_compte
