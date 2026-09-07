@@ -23,6 +23,11 @@ name: Fix Pro App Store screenshots
     permissions:
       all: allow
 
+# --- 00  Splash / branded launch screen (SCREENSHOT_MODE holds it ~5s
+#     before auto-login navigates away). ---
+- waitForAnimationToEnd
+- takeScreenshot: build/screenshots/00_splash
+
 # SCREENSHOT_MODE logs in during the splash; wait for the client home grid.
 - extendedWaitUntil:
     visible: "(?s).*De quoi avez-vous besoin.*"
@@ -33,6 +38,14 @@ name: Fix Pro App Store screenshots
 # --- bottom-nav tabs (done before the trade detail so there's no `back`) ---
 - tapOn: "(?s).*Missions.*"
 - waitForAnimationToEnd
+# Seeded missions are usually outside the default 5 km / own-district
+# filter -- widen to all districts if the board offers it.
+- runFlow:
+    when:
+      visible: "(?s).*Élargir la recherche.*"
+    commands:
+      - tapOn: "(?s).*Élargir la recherche.*"
+      - waitForAnimationToEnd
 - takeScreenshot: build/screenshots/03_missions
 
 - tapOn: "(?s).*Historique.*"

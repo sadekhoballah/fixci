@@ -76,6 +76,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   // fall back to the normal launch flow if anything goes wrong.
   Future<bool> _screenshotLogin() async {
     try {
+      // Hold the splash on screen long enough for the screenshot flow to
+      // capture it before we navigate away (the normal flow has its own
+      // 3s delay; this path otherwise wouldn't).
+      await Future<void>.delayed(const Duration(seconds: 5));
+
       final verify = ref.read(verifyServiceProvider);
       final onboarding = ref.read(onboardingControllerProvider.notifier);
 
