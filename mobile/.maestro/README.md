@@ -52,11 +52,17 @@ maestro test .maestro/screenshots.yaml
 |------|--------|
 | `01_accueil`         | service-category grid ("De quoi avez-vous besoin ?") |
 | `02_metier_plombier` | trade detail — hero image + description |
-| `03_missions`        | missions / freelance board |
-| `04_historique`      | job history |
+| `03_missions`        | missions / freelance board (needs 1–2 seeded missions to look good) |
+| `04_historique`      | job history (empty for the test account) |
 | `05_compte`          | account (test account, no real personal data) |
+| `06_recherche`       | live-search radar animation |
 
-Keep 01–03; 04–05 are usually too sparse to be worth submitting.
+Best for the App Store: `01`, `02`, `06`, and `03` once missions are seeded.
+`04`/`05` are usually too sparse to submit.
+
+`06_recherche` sends a **real** service request from the test client
+(the workflow sets a simulated Abidjan location first), then the flow
+cancels it — nothing is left pending.
 
 ## If a step fails
 

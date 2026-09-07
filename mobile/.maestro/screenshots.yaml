@@ -54,3 +54,21 @@ name: Fix Pro App Store screenshots
     timeout: 20000
 - waitForAnimationToEnd
 - takeScreenshot: build/screenshots/02_metier_plombier
+
+# --- 06  Live search radar. Sends a real request (the workflow sets a
+#     simulated Abidjan location first), screenshots the radar, then cancels
+#     it so nothing is left pending. ---
+- tapOn: "(?s).*Demander maintenant.*"
+- extendedWaitUntil:
+    visible: "(?s).*Recherche d'un plombier.*"
+    timeout: 30000
+- takeScreenshot: build/screenshots/06_recherche
+- tapOn: "(?s).*Annuler la recherche.*"
+- runFlow:
+    when:
+      visible: "(?s).*Annuler la demande.*\\?.*"
+    commands:
+      # 0 = dialog title ("Annuler la demande ?"), 1 = the confirm button
+      - tapOn:
+          text: "(?s).*Annuler la demande.*"
+          index: 1

@@ -111,6 +111,9 @@ workflows:
             --dataNetwork wifi --wifiMode active --wifiBars 3 \
             --cellularMode active --cellularBars 4 \
             --batteryState charged --batteryLevel 100
+          # Abidjan (Cocody) -- so the live-search screenshot can send a real
+          # geolocated request instead of failing on "position unavailable".
+          xcrun simctl location "$UDID" set 5.3596,-3.9869 || true
       - name: Install Maestro if the image doesn't already have it
         script: |
           #!/bin/sh
