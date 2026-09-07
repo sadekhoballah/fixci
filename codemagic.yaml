@@ -52,3 +52,76 @@ workflows:
         beta_groups:
           - external tester ios
         submit_to_app_store: false
+
+  # Captures App Store / marketing screenshots on an iOS Simulator by driving
+  # the running app with Maestro (.maestro/screenshots.yaml). No code signing,
+  # no App Store Connect publishing -- it only produces PNG artifacts.
+  # Trigger it manually from the Codemagic UI when screenshots are needed.
+  # iOS-only; builds and runs nothing for Android.
+  screenshots-workflow:
+    name: App Store Screenshots (iOS Simulator)
+    max_build_duration: 45
+    instance_type: mac_mini_m2
+    working_directory: mobile
+    environment:
+      vars:
+        BUNDLE_ID: "com.fixci.mobile"
+        API_BASE_URL: "https://api.fix-pro.app"
+        SIM_DEVICE: "iPhone 16 Pro Max"   # 6.9" -> 1320x2868, an accepted App Store size
+      groups:
+        - ios_secrets
+      flutter: 3.44.6
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Write GoogleService-Info.plist and get Flutter packages
+        script: |
+          #!/bin/sh
+          set -e
+          set -x
+          flutter config --no-enable-swift-package-manager
+          echo $GOOGLE_SERVICE_INFO_PLIST | base64 --decode > $CM_BUILD_DIR/mobile/ios/Runner/GoogleService-Info.plist
+          flutter pub get
+      - name: Build app for the iOS simulator (debug, no signing)
+        script: |
+          #!/bin/sh
+          set -e
+          set -x
+          flutter build ios --simulator --debug \
+            --dart-define=API_BASE_URL=$API_BASE_URL
+      - name: Boot simulator, install app, set a clean status bar
+        script: |
+          #!/bin/sh
+          set -e
+          set -x
+          UDID=$(xcrun simctl list devices available | grep -E "$SIM_DEVICE \(" | head -1 | grep -oiE "[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}" || true)
+          if [ -z "$UDID" ]; then
+            echo "\"$SIM_DEVICE\" not available on this image; falling back to any iPhone Pro Max."
+            UDID=$(xcrun simctl list devices available | grep -E "iPhone .* Pro Max \(" | head -1 | grep -oiE "[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}")
+          fi
+          echo "Using simulator UDID: $UDID"
+          echo "SIM_UDID=$UDID" >> $CM_ENV
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" build/ios/iphonesimulator/Runner.app
+          xcrun simctl status_bar "$UDID" override \
+            --time "09:41" \
+            --dataNetwork wifi --wifiMode active --wifiBars 3 \
+            --cellularMode active --cellularBars 4 \
+            --batteryState charged --batteryLevel 100
+      - name: Install Maestro if the image doesn't already have it
+        script: |
+          #!/bin/sh
+          set -e
+          which maestro || (curl -Ls "https://get.maestro.mobile.dev" | bash)
+      - name: Run the Maestro screenshot flow
+        script: |
+          #!/bin/sh
+          set -e
+          set -x
+          export PATH="$PATH:$HOME/.maestro/bin"
+          mkdir -p build/screenshots
+          maestro --device "$SIM_UDID" test .maestro/screenshots.yaml
+    artifacts:
+      - build/screenshots/*.png
+      - $HOME/.maestro/tests/**/*.png
