@@ -7,6 +7,7 @@ import '../../core/location/location_service.dart' as location_service;
 import '../../core/models/service_category.dart';
 import '../../core/network/api_client.dart';
 import '../../core/realtime/matching_socket_service.dart';
+import '../../core/screenshot_mode.dart';
 import 'service_request_repository.dart';
 import 'service_request_state.dart';
 
@@ -59,6 +60,11 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
   // available. Returns null (with state already set to an actionable error)
   // if location still isn't available after this.
   Future<Position?> _resolvePosition() async {
+    // SCREENSHOT_MODE runs on a Simulator with no GPS and no permission
+    // prompts -- skip straight to a fixed fix so the live-search screenshot
+    // reaches the "searching" state.
+    if (kScreenshotMode) return location_service.screenshotPosition();
+
     final l10n = ref.read(l10nProvider);
     if (!await Geolocator.isLocationServiceEnabled()) {
       await Geolocator.openLocationSettings();

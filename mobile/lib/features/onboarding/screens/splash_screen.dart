@@ -6,6 +6,7 @@ import '../../../core/auth/user_lookup_service.dart';
 import '../../../core/auth/verify_service.dart';
 import '../../../core/models/subscription_tier.dart';
 import '../../../core/models/user_role.dart';
+import '../../../core/screenshot_mode.dart';
 import '../../client_home/screens/client_shell_screen.dart';
 import '../../craftsman_home/screens/artisan_shell_screen.dart';
 import '../onboarding_controller.dart';
@@ -21,14 +22,9 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen> {
-  // Compile-time only. Set via
-  //   flutter build ... --dart-define=SCREENSHOT_MODE=true
-  // by the App Store screenshot pipeline (see /codemagic.yaml's
-  // `screenshots-workflow` and mobile/.maestro/screenshots.yaml). In every
-  // normal build this is a const `false`, so `_screenshotLogin` and
-  // everything it reaches is tree-shaken away -- it has no effect on real
-  // users, and is never set for Android builds.
-  static const _screenshotMode = bool.fromEnvironment('SCREENSHOT_MODE');
+  // See core/screenshot_mode.dart. In every normal build `kScreenshotMode`
+  // is a const `false`, so `_screenshotLogin` and everything it reaches is
+  // tree-shaken away.
   static const _screenshotPhone = String.fromEnvironment(
     'SCREENSHOT_PHONE',
     defaultValue: '+2250505050505', // Apple-review test CLIENT (OTP bypass)
@@ -42,7 +38,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _prepareNextScreen() async {
-    if (_screenshotMode && await _screenshotLogin()) return;
+    if (kScreenshotMode && await _screenshotLogin()) return;
 
     final storage = ref.read(sessionStorageProvider);
     final results = await Future.wait([

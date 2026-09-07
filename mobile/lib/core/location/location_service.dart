@@ -2,6 +2,24 @@ import 'dart:async';
 
 import 'package:geolocator/geolocator.dart';
 
+import '../screenshot_mode.dart';
+
+// A fixed Abidjan (Cocody) fix, used only when SCREENSHOT_MODE is set: the
+// App Store screenshot pipeline runs on a Simulator with no real GPS, so
+// the live-search screenshot would otherwise fail on "position unavailable".
+Position screenshotPosition() => Position(
+  latitude: 5.3596,
+  longitude: -3.9869,
+  timestamp: DateTime.now(),
+  accuracy: 10,
+  altitude: 0,
+  altitudeAccuracy: 0,
+  heading: 0,
+  headingAccuracy: 0,
+  speed: 0,
+  speedAccuracy: 0,
+);
+
 // Reproduced live during testing: with no time limit, a GPS fix that never
 // arrives (weak signal, indoors) leaves Geolocator.getCurrentPosition
 // hanging forever — the client's "Recherche…" screen would sit frozen with
@@ -34,6 +52,7 @@ const _overallTimeLimit = Duration(seconds: 25);
 // platform/plugin failure collapses to the same null path as a plain
 // denial.
 Future<Position?> getCurrentPosition() async {
+  if (kScreenshotMode) return screenshotPosition();
   try {
     return await _fetchPosition().timeout(_overallTimeLimit);
   } catch (_) {
