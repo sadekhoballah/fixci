@@ -24,6 +24,7 @@ import { DirectoryModule } from './directory/directory.module';
 import { AuthModule } from './auth/auth.module';
 import { MissionsModule } from './missions/missions.module';
 import { SafetyModule } from './safety/safety.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { SafetyModule } from './safety/safety.module';
     DirectoryModule,
     MissionsModule,
     SafetyModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

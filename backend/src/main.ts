@@ -21,6 +21,10 @@ function resolveAllowedOrigins(): string[] | boolean {
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Behind Apache's reverse proxy (see fixci-api.conf) — without this,
+  // req.ip/@Ip() would resolve to 127.0.0.1 for every visitor instead of
+  // reading the real client IP from X-Forwarded-For.
+  app.set('trust proxy', true);
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.enableCors({ origin: resolveAllowedOrigins() });
   await app.listen(process.env.PORT ?? 3000);

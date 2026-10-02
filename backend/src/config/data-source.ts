@@ -13,6 +13,7 @@ import { BlacklistedPhone } from '../database/entities/blacklisted-phone.entity'
 import { BroadcastNotification } from '../database/entities/broadcast-notification.entity';
 import { Mission } from '../database/entities/mission.entity';
 import { MissionApplication } from '../database/entities/mission-application.entity';
+import { SiteVisit } from '../database/entities/site-visit.entity';
 
 dotenv.config();
 
@@ -41,6 +42,7 @@ const baseOptions = {
     BroadcastNotification,
     Mission,
     MissionApplication,
+    SiteVisit,
   ],
   synchronize: false,
 };
