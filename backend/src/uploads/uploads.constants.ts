@@ -40,3 +40,10 @@ export const MISSION_PHOTOS_SUBDIR = 'mission-photos';
 export const MISSION_PHOTOS_DIR = join(UPLOADS_ROOT, MISSION_PHOTOS_SUBDIR);
 export const MAX_MISSION_PHOTO_SIZE_BYTES = MAX_ID_CARD_SIZE_BYTES;
 export const ALLOWED_MISSION_PHOTO_MIME_TYPES = ALLOWED_ID_CARD_MIME_TYPES;
+
+// Server-side compression target for mission photos — see
+// mission-photo-compress.ts. Quality steps are tried in order until the
+// output fits under the byte cap.
+export const MISSION_PHOTO_MAX_DIMENSION = 1280;
+export const MAX_COMPRESSED_MISSION_PHOTO_BYTES = 500 * 1024;
+export const MISSION_PHOTO_JPEG_QUALITIES = [78, 70, 60, 50, 40];

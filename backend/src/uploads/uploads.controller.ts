@@ -39,6 +39,7 @@ import {
   MISSION_PHOTOS_DIR,
   MISSION_PHOTOS_SUBDIR,
 } from './uploads.constants';
+import { compressMissionPhotoInPlace } from './mission-photo-compress';
 import { analyzeIdDocument } from './id-document-check';
 import type { IdDocAnalysis } from './id-document-check';
 import { saveIdDocAnalysis } from './id-doc-analysis.store';
@@ -185,11 +186,20 @@ export class UploadsController {
       },
     }),
   )
-  uploadMissionPhoto(@UploadedFile() file?: Express.Multer.File) {
+  async uploadMissionPhoto(@UploadedFile() file?: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
     this.assertLooksLikeGenericPhoto(file.path);
+    // Best-effort: a compression failure keeps the original (already
+    // validated) file rather than failing the upload.
+    try {
+      await compressMissionPhotoInPlace(file.path);
+    } catch (error) {
+      this.logger.warn(
+        `Mission photo compression failed for ${file.filename}: ${String(error)}`,
+      );
+    }
     return { storageKey: `${MISSION_PHOTOS_SUBDIR}/${file.filename}` };
   }
 
