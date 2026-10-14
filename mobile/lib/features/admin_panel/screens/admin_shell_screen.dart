@@ -4,15 +4,17 @@ import 'admin_broadcast_screen.dart';
 import 'admin_directory_screen.dart';
 import 'admin_districts_screen.dart';
 import 'admin_kyc_screen.dart';
+import 'admin_mission_history_screen.dart';
 import 'admin_missions_screen.dart';
 import 'admin_ops_screen.dart';
 import 'admin_reports_screen.dart';
+import 'admin_request_history_screen.dart';
 
-// Post-login shell. The dashboard grew to 8 modules, which is well past what
+// Post-login shell. The dashboard grew to 10 modules, which is well past what
 // a bottom NavigationBar can show legibly — so the four daily-driver screens
 // (the three review queues + Live Ops) sit directly in the bar, and the
-// four occasional ones (config / comms / browse) live behind a "Plus"
-// destination that opens a sheet. An IndexedStack over all 8 keeps each
+// occasional ones (history / config / comms / browse) live behind a "Plus"
+// destination that opens a sheet. An IndexedStack over all of them keeps each
 // screen's state alive regardless of how it's reached.
 class AdminShellScreen extends StatefulWidget {
   const AdminShellScreen({super.key});
@@ -29,7 +31,7 @@ class _AdminNavItem {
 }
 
 class _AdminShellScreenState extends State<AdminShellScreen> {
-  // 0..3 primary (shown in the bar), 4..7 secondary (reached via "Plus").
+  // 0..3 primary (shown in the bar), 4.. secondary (reached via "Plus").
   int _index = 0;
 
   static const _primary = <_AdminNavItem>[
@@ -40,6 +42,16 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
   ];
 
   static const _secondary = <_AdminNavItem>[
+    _AdminNavItem(
+      Icons.task_alt_rounded,
+      'Missions effectuées',
+      AdminMissionHistoryScreen(),
+    ),
+    _AdminNavItem(
+      Icons.query_stats_rounded,
+      'Ops live détaillée',
+      AdminRequestHistoryScreen(),
+    ),
     _AdminNavItem(Icons.contacts_outlined, 'Annuaire', AdminDirectoryScreen()),
     _AdminNavItem(Icons.block_rounded, 'Liste noire', AdminBlacklistScreen()),
     _AdminNavItem(Icons.campaign_outlined, 'Diffusion', AdminBroadcastScreen()),
