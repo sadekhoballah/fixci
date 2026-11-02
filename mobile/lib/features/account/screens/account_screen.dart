@@ -113,6 +113,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       // No paid plan to switch to outside CI/LB (see paidPlansAvailableIn).
       floatingActionButton: paidPlansAvailableIn(home.countryCode)
           ? FloatingActionButton.extended(
+              // Both tabs stay alive in the shell's IndexedStack, so their FABs
+              // must not share the default hero tag.
+              heroTag: null,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) =>

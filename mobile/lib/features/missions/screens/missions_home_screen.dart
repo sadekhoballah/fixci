@@ -74,6 +74,9 @@ class _MissionsHomeScreenState extends ConsumerState<MissionsHomeScreen>
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        // Both tabs stay alive in the shell's IndexedStack, so their FABs
+        // must not share the default hero tag.
+        heroTag: null,
         onPressed: _openCreateForm,
         icon: const Icon(Icons.add_rounded),
         label: Text(l10n.postMissionButton),
