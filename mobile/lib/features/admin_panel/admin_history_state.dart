@@ -74,6 +74,7 @@ class RequestHistoryItem {
     required this.cancelledAt,
     required this.endedAt,
     required this.ratingStars,
+    this.contacts = const [],
   });
 
   final String id;
@@ -88,6 +89,24 @@ class RequestHistoryItem {
   final DateTime? cancelledAt;
   final DateTime? endedAt;
   final int? ratingStars;
+  // Craftsmen the client reached out to by WhatsApp / call from the
+  // "contact directly" list after the request expired, oldest first.
+  final List<RequestContact> contacts;
+}
+
+class RequestContact {
+  const RequestContact({
+    required this.craftsmanName,
+    required this.craftsmanPhone,
+    required this.channel,
+    required this.createdAt,
+  });
+
+  final String craftsmanName;
+  final String? craftsmanPhone;
+  // 'whatsapp' | 'call'
+  final String channel;
+  final DateTime createdAt;
 }
 
 class HistoryPage<T> {

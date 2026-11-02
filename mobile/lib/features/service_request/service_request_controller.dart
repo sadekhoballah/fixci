@@ -208,6 +208,15 @@ class ServiceRequestController extends Notifier<ServiceRequestState> {
           craftsmanFullName: active.craftsmanFullName,
           craftsmanPhone: active.craftsmanPhone,
         );
+      } else if (active == null &&
+          state.status == ServiceRequestStatus.searching) {
+        // The 75s window closed while backgrounded (the client switched to
+        // WhatsApp, locked the screen…) and request:no_craftsman_available
+        // went by unheard — a client can only cancel from this screen, so
+        // a search that's no longer active has expired.
+        state = state.copyWith(
+          status: ServiceRequestStatus.noCraftsmanAvailable,
+        );
       }
     } catch (_) {
       // Best-effort reconciliation — the socket rejoin above still covers

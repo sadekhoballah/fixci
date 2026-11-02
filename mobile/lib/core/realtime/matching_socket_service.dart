@@ -15,9 +15,15 @@ class IncomingRequestEvent {
     required this.estimatedArrivalMinutes,
     this.destinationAddress,
     this.loadDetails,
+    this.respondWithin = defaultRespondWithin,
   });
 
+  // What a backend from before the 75s matching window sent no
+  // respondWithinSeconds for — it withdrew every offer after 18s.
+  static const defaultRespondWithin = Duration(seconds: 18);
+
   factory IncomingRequestEvent.fromJson(Map<String, dynamic> json) {
+    final respondWithinSeconds = json['respondWithinSeconds'] as num?;
     return IncomingRequestEvent(
       requestId: json['requestId'] as String,
       serviceCategory: _parseCategory(json['serviceCategory'] as String),
@@ -25,6 +31,9 @@ class IncomingRequestEvent {
       estimatedArrivalMinutes: json['estimatedArrivalMinutes'] as int,
       destinationAddress: json['destinationAddress'] as String?,
       loadDetails: json['loadDetails'] as String?,
+      respondWithin: respondWithinSeconds == null
+          ? defaultRespondWithin
+          : Duration(seconds: respondWithinSeconds.toInt()),
     );
   }
 
@@ -35,6 +44,11 @@ class IncomingRequestEvent {
   // Taxi/camion only — see ServiceCategory.requiresDestination.
   final String? destinationAddress;
   final String? loadDetails;
+  // How long this offer stays open, counted from when it arrived — the
+  // backend keeps every offer open until its 75s matching window closes,
+  // so a craftsman offered later in the window gets less. Relative rather
+  // than an absolute expiresAt, so a phone clock that's off doesn't matter.
+  final Duration respondWithin;
 }
 
 ServiceCategory _parseCategory(String wireValue) => ServiceCategory.values

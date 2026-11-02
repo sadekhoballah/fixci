@@ -1,71 +1,97 @@
 import { ServiceCategory } from '../database/enums/service-category.enum';
 
-export const INITIAL_RADIUS_METERS = 5000;
-export const RADIUS_STEP_METERS = 5000;
-export const MAX_RADIUS_METERS = 30000;
-export const CANDIDATES_PER_ROUND = 5;
-export const ACCEPT_TIMEOUT_MS = 18000;
+// The whole real-time search runs inside one fixed window. Within it,
+// candidates are added step by step (see buildDispatchSchedule), but an
+// offer is never withdrawn when the next step starts: every craftsman
+// notified keeps it until the window closes, so whoever is nearest gets the
+// full 75s to notice the push, unlock the phone and tap "Accepter" — a
+// craftsman is usually mid-job, not staring at the app. When the window
+// closes with no taker, the client is shown the nearest craftsmen to
+// contact directly by WhatsApp / phone (see MatchingService.
+// findFallbackCraftsmen) instead of a bare "nobody available".
+export const MATCHING_WINDOW_MS = 75_000;
 
-// Fallback round after every radius round comes up empty: pushes to the
-// nearest craftsmen by last-known location (see PresenceService) instead of
-// live Redis presence. Timeout is much longer than ACCEPT_TIMEOUT_MS because
-// a woken-up craftsman needs to notice the push, unlock their phone, let the
-// app cold-start, and get a fresh GPS fix before they can even see the
-// request — 18s is calibrated for someone with the app already open.
-export const WAKEUP_CANDIDATES = 5;
-export const WAKEUP_ACCEPT_TIMEOUT_MS = 90000;
+export const CANDIDATES_PER_STEP = 5;
+
+// Craftsmen not live in Redis presence right now, but whose last-known
+// location is within the step's radius, get a "wake-up" push at the same
+// moment as the live candidates — so they too have the rest of the window
+// to open the app (which re-delivers the request, see
+// MatchingGateway.handleCraftsmanOnline) and accept.
+export const WAKEUP_CANDIDATES_PER_STEP = 5;
+
+export interface DispatchStep {
+  // Offset from the start of the window at which this step's candidates
+  // are notified.
+  atMs: number;
+  radiusMeters: number;
+}
+
+// Every category but taxi/camion: nearest 5 within 5km immediately (75s to
+// answer), widened to 10km at 35s (40s to answer). 10km is the founder's
+// cap — further than that, contacting directly is the better option.
+const STANDARD_SCHEDULE: DispatchStep[] = [
+  { atMs: 0, radiusMeters: 5_000 },
+  { atMs: 35_000, radiusMeters: 10_000 },
+];
 
 // Taxi/camion get a much tighter, non-escalating-far search than every other
 // category: the founder's explicit requirement is that a client never waits
-// on a driver more than ~4km away, so unlike the other categories this
-// sequence is hardcoded rather than derived from INITIAL/STEP/MAX above, and
-// MatchingGateway.runMatchingLoop skips the last-known-location wake-up
-// fallback entirely for these two categories (see the TIGHT_RADIUS_CATEGORIES
-// check there) — that fallback has no radius cap of its own, which would
-// silently break the "never further than 4km" guarantee.
+// on a driver more than ~4km away, so the radii are hardcoded and
+// MatchingGateway.runMatchingLoop skips the wake-up pushes for these two
+// categories — drivers who take rides are expected to be online. Spread
+// over the same 75s window, with the same "offers stay open" rule.
 const TIGHT_RADIUS_CATEGORIES = new Set<ServiceCategory>([
   ServiceCategory.TAXI,
   ServiceCategory.CAMION,
 ]);
-const TIGHT_RADIUS_SEQUENCE_METERS = [100, 500, 1500, 3000, 4000];
+const TIGHT_SCHEDULE: DispatchStep[] = [
+  { atMs: 0, radiusMeters: 100 },
+  { atMs: 15_000, radiusMeters: 500 },
+  { atMs: 30_000, radiusMeters: 1_500 },
+  { atMs: 45_000, radiusMeters: 3_000 },
+  { atMs: 60_000, radiusMeters: 4_000 },
+];
+
+// How far the post-window "contact directly" list may reach. Wider than the
+// dispatch radius for regular trades — a craftsman 15km away can't take a
+// live job in time, but is still worth a WhatsApp message — while
+// taxi/camion keep their 4km guarantee.
+const FALLBACK_RADIUS_METERS = 20_000;
+const TIGHT_FALLBACK_RADIUS_METERS = 4_000;
+export const FALLBACK_CRAFTSMEN_COUNT = 3;
+
+// How long after a request expired its client may still fetch the
+// fallback list — long enough to come back to it from the push
+// notification, short enough that an old request can't be replayed to
+// harvest craftsmen's phone numbers.
+export const FALLBACK_LIST_TTL_MS = 2 * 60 * 60 * 1000;
 
 export function isTightRadiusCategory(category: ServiceCategory): boolean {
   return TIGHT_RADIUS_CATEGORIES.has(category);
 }
 
-export function buildRadiusSequence(category: ServiceCategory): number[] {
-  if (isTightRadiusCategory(category)) {
-    return TIGHT_RADIUS_SEQUENCE_METERS;
-  }
-  const radii: number[] = [];
-  for (
-    let radius = INITIAL_RADIUS_METERS;
-    radius <= MAX_RADIUS_METERS;
-    radius += RADIUS_STEP_METERS
-  ) {
-    radii.push(radius);
-  }
-  return radii;
+export function buildDispatchSchedule(
+  category: ServiceCategory,
+): DispatchStep[] {
+  return isTightRadiusCategory(category) ? TIGHT_SCHEDULE : STANDARD_SCHEDULE;
 }
 
 export function initialRadiusMetersFor(category: ServiceCategory): number {
+  return buildDispatchSchedule(category)[0].radiusMeters;
+}
+
+export function fallbackRadiusMetersFor(category: ServiceCategory): number {
   return isTightRadiusCategory(category)
-    ? TIGHT_RADIUS_SEQUENCE_METERS[0]
-    : INITIAL_RADIUS_METERS;
+    ? TIGHT_FALLBACK_RADIUS_METERS
+    : FALLBACK_RADIUS_METERS;
 }
 
 // Longest a runMatchingLoop call could possibly run, across every category —
 // used only to size abortMatchingLoop's self-clear timeout in
 // matching.gateway.ts, which doesn't know (and shouldn't need to know) which
-// category a given cancelled request belongs to.
-const DEFAULT_ROUNDS =
-  Math.floor((MAX_RADIUS_METERS - INITIAL_RADIUS_METERS) / RADIUS_STEP_METERS) +
-  1;
-
+// category a given cancelled request belongs to. A little slack for the
+// DB round-trips around the window itself.
 export function worstCaseLoopDurationMs(): number {
-  const maxRounds = Math.max(
-    DEFAULT_ROUNDS,
-    TIGHT_RADIUS_SEQUENCE_METERS.length,
-  );
-  return maxRounds * ACCEPT_TIMEOUT_MS + WAKEUP_ACCEPT_TIMEOUT_MS;
+  return MATCHING_WINDOW_MS + 10_000;
 }

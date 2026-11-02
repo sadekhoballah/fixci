@@ -370,5 +370,17 @@
   "phoneCheckTitle": "Confirm your number",
   "phoneCheckServiceRequestMessage": "To complete your request, confirm your phone number with the code we'll send you by WhatsApp or SMS. You only need to do this once.",
   "phoneCheckMissionMessage": "To continue, confirm your phone number with the code we'll send you by WhatsApp or SMS. You only need to do this once.",
-  "phoneCheckSendCodeButton": "Get the code"
+  "phoneCheckSendCodeButton": "Get the code",
+  "fallbackScreenTitle": "Nearby craftsmen",
+  "fallbackLoadingMessage": "Finding the nearest craftsmen…",
+  "fallbackTitle": "No craftsman accepted in time",
+  "fallbackSubtitle": "Here are the craftsmen nearest to you. Contact them directly by WhatsApp or phone.",
+  "fallbackWhatsappMessage": "Hello, I found you on Fix Pro ({trade}). I need a job done in {district}. Are you available?",
+  "fallbackWhatsappMessageNoDistrict": "Hello, I found you on Fix Pro ({trade}). I need a job done. Are you available?",
+  "fallbackDistanceKm": "{km} km",
+  "fallbackRating": "{rating} ({count})",
+  "fallbackNewCraftsman": "New",
+  "fallbackOnlineBadge": "Online",
+  "fallbackCallButton": "Call",
+  "fallbackRetryButton": "Search again"
 }

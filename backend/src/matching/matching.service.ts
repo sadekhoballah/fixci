@@ -77,11 +77,9 @@ export class MatchingService {
   }
 
   // Catches the craftsman who logs in / goes available *after* a client's
-  // request already exists — runMatchingLoop only samples candidates at the
-  // start of each radius round, so a craftsman who comes online between
-  // rounds (or after the loop moved to a wider radius) would otherwise wait
-  // for the next round's findNearest to happen to pick them up, or miss the
-  // request entirely if it's already run out of rounds. Called once, right
+  // request already exists — runMatchingLoop only samples candidates at
+  // each dispatch step, so a craftsman who comes online in between (e.g.
+  // after tapping a wake-up push) would otherwise never see it. Called once, right
   // after presence registration, so this newly-online craftsman gets an
   // immediate request:new for anything still pending within its own
   // (possibly already-expanded) search_radius_meters.
@@ -123,8 +121,8 @@ export class MatchingService {
     }));
   }
 
-  // Fallback candidate source for MatchingGateway's wake-up phase, when
-  // Redis presence has nobody live at all: queries craftsman_profiles.location,
+  // Candidate source for MatchingGateway's wake-up pushes — craftsmen who
+  // aren't live in Redis presence right now: queries craftsman_profiles.location,
   // which PresenceService.setOnline/updateLocation keep as a best-effort
   // "last seen here" marker independent of live Redis membership. Joins
   // districts to mirror the same open-zone gate PresenceService.setOnline
@@ -133,13 +131,15 @@ export class MatchingService {
   // is_available: that flag is exactly what drifts stale when a socket
   // drops without a clean disconnect, so it's not trustworthy here.
   // A craftsman who has never once gone online has location IS NULL and is
-  // correctly excluded — there is no location to wake them up with.
+  // correctly excluded — there is no location to wake them up with. Capped
+  // to the dispatch step's radius, same as the live candidates.
   async findNearestByLastKnownLocation(
     category: ServiceCategory,
     longitude: number,
     latitude: number,
     excludeCraftsmanIds: string[],
     limit: number,
+    maxDistanceMeters: number,
   ): Promise<Array<{ craftsmanId: string; distanceMeters: number }>> {
     const rows: Array<{ user_id: string; distance_meters: string }> =
       await this.dataSource.query(
@@ -151,11 +151,20 @@ export class MatchingService {
          WHERE cp."service_category" = $3
            AND cp."is_active" = true
            AND cp."location" IS NOT NULL
+           AND u."deleted_at" IS NULL
            AND d."is_artisan_registration_active" = true
            AND NOT (cp."user_id" = ANY($4::uuid[]))
+           AND ST_DWithin(cp."location", ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $6)
          ORDER BY distance_meters ASC
          LIMIT $5`,
-        [longitude, latitude, category, excludeCraftsmanIds, limit],
+        [
+          longitude,
+          latitude,
+          category,
+          excludeCraftsmanIds,
+          limit,
+          maxDistanceMeters,
+        ],
       );
     return rows.map((row) => ({
       craftsmanId: row.user_id,
@@ -191,6 +200,21 @@ export class MatchingService {
       [craftsmanId, requestId],
     );
     return rows.length === 1;
+  }
+
+  // Called once at startup (MatchingGateway.onApplicationBootstrap). The
+  // matching loop lives in memory, so a request still 'pending' when the
+  // process starts has no loop driving it any more — and, through the
+  // one-active-request-per-client index, it would block that client from
+  // ever creating another one. Expiring it frees them (and makes its
+  // contact-directly list available, see FallbackContactsService).
+  async expireOrphanedPendingRequests(): Promise<number> {
+    const [rows]: [Array<{ id: string }>, number] = await this.dataSource.query(
+      `UPDATE "service_requests" SET "status" = 'expired', "updated_at" = now()
+       WHERE "status" = 'pending'
+       RETURNING "id"`,
+    );
+    return rows.length;
   }
 
   async expireRequest(requestId: string): Promise<boolean> {
@@ -279,7 +303,7 @@ export class MatchingService {
   // guarded by a status check, so it'd find 0 rows and no-op — but the
   // caller (MatchingController) also calls MatchingGateway.abortMatchingLoop
   // right after this succeeds, which does actively stop it rather than
-  // letting it run out its ~4 minute worst case.
+  // letting it run out its 75s window.
   async cancelByClient(
     requestId: string,
     clientId: string,

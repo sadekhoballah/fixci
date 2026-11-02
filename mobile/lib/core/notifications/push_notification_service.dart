@@ -14,6 +14,7 @@ import 'push_token_repository.dart';
 import '../../features/client_home/screens/client_shell_screen.dart';
 import '../../features/craftsman_home/screens/artisan_shell_screen.dart';
 import '../../features/missions/screens/mission_detail_screen.dart';
+import '../../features/service_request/screens/fallback_craftsmen_screen.dart';
 
 // Matches AndroidManifest.xml's default_notification_channel_id — must stay
 // in sync, since a mismatch means Android silently drops the channel
@@ -179,6 +180,18 @@ class PushNotificationService {
       MaterialPageRoute(builder: (_) => destination),
       (route) => false,
     );
+    // "Nobody accepted in time" — straight to the contact-directly list.
+    final requestId = data['requestId'];
+    if (role == UserRole.client &&
+        requestId != null &&
+        data['event'] == 'request:no_craftsman_available') {
+      navigator.push(
+        MaterialPageRoute(
+          builder: (_) => FallbackCraftsmenScreen(requestId: requestId),
+        ),
+      );
+      return;
+    }
     final missionId = data['missionId'];
     if (missionId != null && (data['event'] ?? '').startsWith('mission:')) {
       navigator.push(

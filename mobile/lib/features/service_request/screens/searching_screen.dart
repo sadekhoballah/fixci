@@ -11,6 +11,7 @@ import '../../safety/widgets/report_block_menu.dart';
 import '../service_request_controller.dart';
 import '../service_request_repository.dart' show ActiveRequest;
 import '../service_request_state.dart';
+import '../widgets/fallback_craftsmen_panel.dart';
 import '../widgets/star_rating_input.dart';
 
 class SearchingScreen extends ConsumerStatefulWidget {
@@ -105,6 +106,21 @@ class _SearchingScreenState extends ConsumerState<SearchingScreen>
                   notifier.submitRating(stars: stars, comment: comment),
               onSkip: notifier.skipRating,
             ),
+            // Nobody accepted within the 75s window — the nearest
+            // craftsmen to contact directly, on this same screen.
+            ServiceRequestStatus.noCraftsmanAvailable
+                when state.requestId != null =>
+              SingleChildScrollView(
+                child: FallbackCraftsmenPanel(
+                  requestId: state.requestId!,
+                  category: category,
+                  onRetry: () => ref
+                      .read(serviceRequestControllerProvider.notifier)
+                      .retry(category),
+                  onBackHome: () =>
+                      Navigator.of(context).popUntil((route) => route.isFirst),
+                ),
+              ),
             ServiceRequestStatus.noCraftsmanAvailable => _Outcome(
               icon: Icons.search_off_rounded,
               iconColor: Colors.grey,

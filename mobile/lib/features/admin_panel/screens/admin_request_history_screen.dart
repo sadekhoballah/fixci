@@ -280,6 +280,19 @@ class _RequestHistoryCard extends StatelessWidget {
                 r.completedAt!.difference(r.startedAt!),
               ),
             ),
+          // Reached out to directly after nobody accepted in time.
+          if (r.contacts.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            for (final contact in r.contacts)
+              HistoryInfoLine(
+                label: contact.channel == 'whatsapp'
+                    ? 'Contacté (WhatsApp)'
+                    : 'Contacté (appel)',
+                value:
+                    '${_person(contact.craftsmanName, contact.craftsmanPhone)}'
+                    ' · ${formatHistoryDate(contact.createdAt)}',
+              ),
+          ],
         ],
       ),
     );

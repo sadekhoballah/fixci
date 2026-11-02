@@ -125,8 +125,8 @@ export class PresenceService {
   }
 
   // Postgres's only record of "where was this craftsman last seen" —
-  // MatchingGateway's wake-up phase queries this once Redis presence is
-  // completely empty for a category. Best-effort/fire-and-forget: a failure
+  // MatchingGateway's wake-up pushes query it for craftsmen not live in
+  // Redis presence right now. Best-effort/fire-and-forget: a failure
   // here must never block a craftsman actually going online or pinging their
   // location, since Redis presence (the live path) already succeeded by the
   // time this is called.
@@ -198,6 +198,21 @@ export class PresenceService {
 
   async listOnlineClientIds(): Promise<string[]> {
     return this.redis.smembers(this.onlineClientsKey);
+  }
+
+  // Which of these craftsmen are live in presence for this category right
+  // now — one round trip, for the "En ligne" badge on the post-window
+  // contact list (FallbackContactsService).
+  async onlineAmong(
+    category: ServiceCategory,
+    craftsmanIds: string[],
+  ): Promise<Set<string>> {
+    if (craftsmanIds.length === 0) return new Set();
+    const scores = await this.redis.zmscore(
+      this.geoKey(category),
+      ...craftsmanIds,
+    );
+    return new Set(craftsmanIds.filter((_, i) => scores[i] !== null));
   }
 
   async findNearest(

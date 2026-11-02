@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/models/service_category.dart';
 import '../../../l10n/app_localizations.dart';
-import '../live_requests_controller.dart' show acceptTimeout;
 import '../live_requests_state.dart';
 
 // A live incoming customer request. Deliberately doesn't show a customer
@@ -49,7 +48,7 @@ class _IncomingRequestCardState extends State<IncomingRequestCard> {
 
   Duration get _remaining {
     final elapsed = DateTime.now().difference(widget.request.receivedAt);
-    final remaining = acceptTimeout - elapsed;
+    final remaining = widget.request.respondWithin - elapsed;
     return remaining.isNegative ? Duration.zero : remaining;
   }
 
@@ -58,8 +57,8 @@ class _IncomingRequestCardState extends State<IncomingRequestCard> {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final event = widget.request.event;
-    final progress =
-        _remaining.inMilliseconds / acceptTimeout.inMilliseconds;
+    final windowMs = widget.request.respondWithin.inMilliseconds;
+    final progress = windowMs == 0 ? 0.0 : _remaining.inMilliseconds / windowMs;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

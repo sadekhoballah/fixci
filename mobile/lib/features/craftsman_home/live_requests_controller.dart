@@ -8,11 +8,6 @@ import '../../core/realtime/matching_socket_service.dart';
 import 'craftsman_home_repository.dart';
 import 'live_requests_state.dart';
 
-// Mirrors the backend's ACCEPT_TIMEOUT_MS (matching.constants.ts) — used
-// only to drive the local countdown display; the backend's own timeout is
-// what actually decides when a round is abandoned.
-const acceptTimeout = Duration(seconds: 18);
-
 // Owns the realtime side of the craftsman experience end to end: the socket
 // connection, the incoming-request feed, and the active job — kept separate
 // from CraftsmanHomeController (profile/stats, REST-only) since this has a
@@ -218,9 +213,14 @@ class LiveRequestsController extends Notifier<LiveRequestsState> {
     // A little slack past the backend's own timeout so a request:unavailable
     // that's already in flight gets to arrive and remove it normally first —
     // this is only the fallback for if that event is ever missed.
-    final cutoff = acceptTimeout + const Duration(seconds: 3);
+    // Each offer's own window (see IncomingRequestEvent.respondWithin) —
+    // the backend's is what actually decides when it's withdrawn.
     final remaining = state.incomingRequests
-        .where((r) => now.difference(r.receivedAt) < cutoff)
+        .where(
+          (r) =>
+              now.difference(r.receivedAt) <
+              r.respondWithin + const Duration(seconds: 3),
+        )
         .toList();
     if (remaining.length != state.incomingRequests.length) {
       state = state.copyWith(incomingRequests: remaining);

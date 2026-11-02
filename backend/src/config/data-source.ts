@@ -14,6 +14,7 @@ import { BroadcastNotification } from '../database/entities/broadcast-notificati
 import { Mission } from '../database/entities/mission.entity';
 import { MissionApplication } from '../database/entities/mission-application.entity';
 import { SiteVisit } from '../database/entities/site-visit.entity';
+import { ServiceRequestContact } from '../database/entities/service-request-contact.entity';
 
 dotenv.config();
 
@@ -43,6 +44,7 @@ const baseOptions = {
     Mission,
     MissionApplication,
     SiteVisit,
+    ServiceRequestContact,
   ],
   synchronize: false,
 };

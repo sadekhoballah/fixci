@@ -23,6 +23,63 @@ class ActiveRequest {
   final String? craftsmanPhone;
 }
 
+// One of the nearest craftsmen offered to contact directly once the 75s
+// matching window closes with nobody accepting — see the backend's
+// FallbackContactsService.
+class FallbackCraftsman {
+  const FallbackCraftsman({
+    required this.id,
+    required this.fullName,
+    required this.phone,
+    required this.distanceMeters,
+    required this.averageRating,
+    required this.ratingsCount,
+    required this.completedJobsCount,
+    required this.isOnline,
+  });
+
+  factory FallbackCraftsman.fromJson(Map<String, dynamic> json) =>
+      FallbackCraftsman(
+        id: json['id'] as String,
+        fullName: json['fullName'] as String?,
+        phone: json['phone'] as String,
+        distanceMeters: (json['distanceMeters'] as num).toInt(),
+        averageRating: (json['averageRating'] as num?)?.toDouble(),
+        ratingsCount: json['ratingsCount'] as int,
+        completedJobsCount: json['completedJobsCount'] as int,
+        isOnline: json['isOnline'] as bool,
+      );
+
+  final String id;
+  final String? fullName;
+  final String phone;
+  final int distanceMeters;
+  final double? averageRating;
+  final int ratingsCount;
+  final int completedJobsCount;
+  final bool isOnline;
+}
+
+class FallbackList {
+  const FallbackList({
+    required this.serviceCategory,
+    required this.clientDistrictName,
+    required this.craftsmen,
+  });
+
+  final ServiceCategory serviceCategory;
+  final String? clientDistrictName;
+  final List<FallbackCraftsman> craftsmen;
+}
+
+enum ContactChannel {
+  whatsapp('whatsapp'),
+  call('call');
+
+  const ContactChannel(this.wireValue);
+  final String wireValue;
+}
+
 class ServiceRequestRepository {
   ServiceRequestRepository(this._apiClient);
 
@@ -75,6 +132,33 @@ class ServiceRequestRepository {
       craftsmanPhone: response['craftsmanPhone'] as String?,
     );
   }
+
+  Future<FallbackList> getFallbackCraftsmen(String requestId) async {
+    final response = await _apiClient.get(
+      '/matching/requests/$requestId/fallback-craftsmen',
+    );
+    return FallbackList(
+      serviceCategory: ServiceCategory.values.firstWhere(
+        (c) => c.wireValue == response['serviceCategory'],
+        orElse: () => ServiceCategory.plumber,
+      ),
+      clientDistrictName: response['clientDistrictName'] as String?,
+      craftsmen: (response['craftsmen'] as List<dynamic>)
+          .map((c) => FallbackCraftsman.fromJson(c as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  // Logged server-side (admin "Ops live détaillée") and pushes the
+  // craftsman a heads-up the first time — see FallbackContactsService.
+  Future<void> recordContact(
+    String requestId, {
+    required String craftsmanId,
+    required ContactChannel channel,
+  }) => _apiClient.post('/matching/requests/$requestId/contacts', {
+    'craftsmanId': craftsmanId,
+    'channel': channel.wireValue,
+  });
 
   Future<void> confirmCompletion(String requestId) => _apiClient.patch(
     '/matching/requests/$requestId/confirm-complete',

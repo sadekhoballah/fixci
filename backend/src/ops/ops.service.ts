@@ -77,6 +77,17 @@ export interface RequestHistoryRow {
   // EXPIRED (no dedicated column). Null while the request is still open.
   endedAt: Date | null;
   ratingStars: number | null;
+  // Who the client reached out to from the "contact directly" list after
+  // the request expired (see FallbackContactsService), oldest first.
+  contacts: RequestContactRow[];
+}
+
+export interface RequestContactRow {
+  craftsmanId: string;
+  fullName: string | null;
+  phone: string | null;
+  channel: 'whatsapp' | 'call';
+  createdAt: string;
 }
 
 export interface HistoryPage<T, S extends string> {
@@ -133,6 +144,7 @@ interface RequestHistoryDbRow {
   craftsman_phone: string | null;
   craftsman_deleted: boolean | null;
   rating_stars: number | null;
+  contacts: RequestContactRow[];
 }
 
 // Escapes ILIKE wildcards so a search for "50%" matches literally.
@@ -405,7 +417,17 @@ export class OpsService {
          a.id AS craftsman_id, a.full_name AS craftsman_name,
          a.phone AS craftsman_phone,
          a.deleted_at IS NOT NULL AS craftsman_deleted,
-         r.stars AS rating_stars
+         r.stars AS rating_stars,
+         (SELECT COALESCE(json_agg(json_build_object(
+                    'craftsmanId', k.craftsman_id,
+                    'fullName', ku.full_name,
+                    'phone', ku.phone,
+                    'channel', k.channel,
+                    'createdAt', k.created_at
+                  ) ORDER BY k.created_at), '[]'::json)
+          FROM service_request_contacts k
+          JOIN users ku ON ku.id = k.craftsman_id
+          WHERE k.service_request_id = sr.id) AS contacts
        ${from}
        LEFT JOIN ratings r ON r.service_request_id = sr.id
        WHERE ${listConditions.join(' AND ')}
@@ -448,6 +470,7 @@ export class OpsService {
         cancelledAt: r.cancelled_at,
         endedAt: r.ended_at,
         ratingStars: r.rating_stars,
+        contacts: r.contacts,
       })),
     };
   }

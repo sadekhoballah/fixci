@@ -83,6 +83,17 @@ class AdminHistoryRepository {
         cancelledAt: _parseDate(json['cancelledAt']),
         endedAt: _parseDate(json['endedAt']),
         ratingStars: json['ratingStars'] as int?,
+        contacts: ((json['contacts'] as List<dynamic>?) ?? const [])
+            .map((c) => c as Map<String, dynamic>)
+            .map(
+              (c) => RequestContact(
+                craftsmanName: (c['fullName'] as String?) ?? '—',
+                craftsmanPhone: c['phone'] as String?,
+                channel: c['channel'] as String,
+                createdAt: DateTime.parse(c['createdAt'] as String),
+              ),
+            )
+            .toList(),
       );
     });
   }

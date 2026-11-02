@@ -55,6 +55,7 @@ class IncomingRequest {
   final DateTime receivedAt;
 
   String get requestId => event.requestId;
+  Duration get respondWithin => event.respondWithin;
 }
 
 class LiveRequestsState {

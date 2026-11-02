@@ -7,18 +7,18 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { Server, Socket } from 'socket.io';
 import { PresenceService } from './presence.service';
 import { CreatedServiceRequest, MatchingService } from './matching.service';
 import {
-  ACCEPT_TIMEOUT_MS,
-  CANDIDATES_PER_ROUND,
-  WAKEUP_ACCEPT_TIMEOUT_MS,
-  WAKEUP_CANDIDATES,
-  buildRadiusSequence,
+  CANDIDATES_PER_STEP,
+  DispatchStep,
+  MATCHING_WINDOW_MS,
+  WAKEUP_CANDIDATES_PER_STEP,
+  buildDispatchSchedule,
   isTightRadiusCategory,
   worstCaseLoopDurationMs,
 } from './matching.constants';
@@ -124,12 +124,17 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '')
           : '*',
   },
 })
-export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
+export class MatchingGateway
+  implements OnGatewayInit, OnGatewayDisconnect, OnApplicationBootstrap
+{
+  private readonly logger = new Logger(MatchingGateway.name);
+
   @WebSocketServer()
   server: Server;
 
-  // One in-flight accept-wait per request at a time (radius rounds are
-  // sequential), resolved by handleAccept or timed out by waitForAccept.
+  // One accept-wait per in-flight request, open for its whole matching
+  // window — resolved by handleAccept, by abortMatchingLoop, or by the
+  // window closing (see openAcceptWindow).
   // This only coordinates accepts within a single server process — the
   // Postgres WHERE status='pending' guard in tryAssign is what actually
   // makes assignment safe if this ever runs behind multiple instances.
@@ -144,12 +149,22 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
   // single-process caveat as acceptResolvers above.
   private readonly activeAssignments = new Map<string, string>();
 
-  // Requests abortMatchingLoop has flagged — checked at the top of every
-  // round in runMatchingLoop so a cancelled request stops pushing to
-  // candidates immediately instead of quietly running out its ~4 minute
-  // worst case (see abortMatchingLoop below for why the DB status flip
-  // alone doesn't stop the in-flight loop).
+  // Requests abortMatchingLoop has flagged — checked before every dispatch
+  // step in runMatchingLoop so a cancelled request stops pushing to
+  // candidates immediately instead of running out its window (see
+  // abortMatchingLoop below for why the DB status flip alone doesn't stop
+  // the in-flight loop).
   private readonly cancelledRequestIds = new Set<string>();
+
+  // Per in-flight search: when its window closes, and every craftsman an
+  // offer went out to — live candidates, wake-up pushes, and late joiners
+  // picked up by handleCraftsmanOnline — so they all get request:unavailable
+  // when it ends, and a late joiner's card counts down to the real deadline.
+  // Same single-process caveat as acceptResolvers above.
+  private readonly activeSearches = new Map<
+    string,
+    { deadline: number; offeredTo: Set<string> }
+  >();
 
   constructor(
     private readonly matchingService: MatchingService,
@@ -159,6 +174,19 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     private readonly safetyService: SafetyService,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
+
+  // The matching loop lives only in this process's memory: anything still
+  // 'pending' at startup lost its loop when the previous process stopped
+  // (every deploy restarts it) and would otherwise block its client from
+  // creating a new request forever. See expireOrphanedPendingRequests.
+  async onApplicationBootstrap(): Promise<void> {
+    const expired = await this.matchingService.expireOrphanedPendingRequests();
+    if (expired > 0) {
+      this.logger.warn(
+        `Expired ${expired} pending request(s) orphaned by the restart`,
+      );
+    }
+  }
 
   // Every socket must prove who it is before any handler runs — otherwise a
   // client could claim to be any clientId/craftsmanId in its message bodies.
@@ -236,14 +264,29 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
       body.latitude,
     );
     for (const request of pending) {
-      this.server.to(craftsmanRoom(user.id)).emit('request:new', {
-        requestId: request.id,
-        serviceCategory: body.serviceCategory,
-        distanceMeters: Math.round(request.distanceMeters),
-        estimatedArrivalMinutes: estimateArrivalMinutes(request.distanceMeters),
-        destinationAddress: request.destinationAddress,
-        loadDetails: request.loadDetails,
-      });
+      // No live search behind it (orphaned — see onApplicationBootstrap):
+      // an accept would go nowhere.
+      const search = this.activeSearches.get(request.id);
+      if (!search) continue;
+      if (
+        await this.safetyService.isBlockedEitherWay(user.id, request.clientId)
+      ) {
+        continue;
+      }
+      search.offeredTo.add(user.id);
+      this.server.to(craftsmanRoom(user.id)).emit(
+        'request:new',
+        this.offerPayload(
+          {
+            id: request.id,
+            serviceCategory: body.serviceCategory,
+            destinationAddress: request.destinationAddress,
+            loadDetails: request.loadDetails,
+          },
+          request.distanceMeters,
+          search.deadline,
+        ),
+      );
     }
   }
 
@@ -284,9 +327,8 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
   // craftsman:offline first (app killed, backgrounded and OS-suspended,
   // network loss) stays in the Redis presence GEO index forever — Redis has
   // no TTL on these keys. runMatchingLoop then "finds" them as a candidate,
-  // emits into an empty room, and burns a full ACCEPT_TIMEOUT_MS round for
-  // nobody, every round, until the request expires with no craftsman ever
-  // actually notified. Same staleness risk for a client's online_clients
+  // emits into an empty room, and wastes one of the step's candidate slots
+  // on nobody, every request, until the stale entry goes away. Same staleness risk for a client's online_clients
   // set membership, just with a lower-stakes consequence (a stale "online"
   // badge on the admin directory, nothing matching-critical).
   async handleDisconnect(client: Socket): Promise<void> {
@@ -313,11 +355,11 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
   // Called by MatchingController right after a cancel (client or craftsman
   // side) succeeds, so runMatchingLoop notices and stops on its own instead
   // of continuing to push request:new/notifications to candidates for a
-  // request nobody's waiting on anymore. Wakes an in-flight waitForAccept
-  // immediately (an empty craftsmanId resolves it the same way a timeout
-  // would — falsy, so the caller treats it as "nobody accepted") rather than
-  // leaving it to time out on its own; the flag itself covers the loop
-  // between rounds, where no waitForAccept is currently pending. Self-clears
+  // request nobody's waiting on anymore. Settles the open accept window
+  // immediately (an empty craftsmanId is falsy, like the window closing)
+  // so the loop withdraws every outstanding offer at once rather than
+  // leaving cards up until the 75s run out; the flag is what tells it this
+  // was a cancellation rather than "nobody accepted". Self-clears
   // after the loop's own worst-case duration in case cancellation lands
   // after the loop already returned (e.g. cancelling a request that was
   // already 'assigned') and so never reaches the check that would delete it.
@@ -412,163 +454,188 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
 
   // Fire-and-forget from the controller: the HTTP response returns as soon as
   // the request row exists, and this loop runs independently, pushing
-  // updates over sockets as candidates are broadcast to / assigned / expired.
+  // updates over sockets as candidates are offered / assigned / expired.
+  //
+  // One MATCHING_WINDOW_MS (75s) window per request. Dispatch steps (see
+  // buildDispatchSchedule) add candidates as it goes — nearest 5 within 5km
+  // straight away, the next 5 within 10km at 35s — but no offer is ever
+  // withdrawn before the window closes: the nearest craftsmen get the full
+  // 75s to respond. First accept wins (tryAssign's compare-and-swap). If
+  // nobody accepts, the request expires and the client app fetches the
+  // nearest craftsmen to contact directly (FallbackContactsService).
   async runMatchingLoop(request: CreatedServiceRequest): Promise<void> {
-    // Everyone ever pushed to across every live round — excluded from the
-    // wake-up phase's query below so nobody who already had a live shot
-    // (and either declined or went quiet) gets double-pushed.
-    const triedCraftsmanIds = new Set<string>();
-
-    // Fetched once per request, not per round — a block can't change
-    // mid-loop, and this keeps every round's findNearest call itself
-    // untouched (PresenceService/Redis stay generic, filtering happens
-    // here). See UserBlock's class-level comment for why this is
-    // bidirectional regardless of who blocked whom.
-    const blockedCraftsmanIds = await this.safetyService.getBlockedCounterpartIds(
-      request.clientId,
-    );
-
-    for (const radius of buildRadiusSequence(request.serviceCategory)) {
-      if (this.cancelledRequestIds.delete(request.id)) return;
-
-      await this.matchingService.updateSearchRadius(request.id, radius);
-
-      const candidates = (
-        await this.presenceService.findNearest(
-          request.serviceCategory,
-          request.longitude,
-          request.latitude,
-          radius,
-          CANDIDATES_PER_ROUND,
-        )
-      ).filter((candidate) => !blockedCraftsmanIds.has(candidate.craftsmanId));
-
-      // Deliberately not skipping the wait when candidates.length === 0:
-      // this round's ACCEPT_TIMEOUT_MS is also the window during which a
-      // craftsman who logs in / goes available mid-round gets caught by
-      // handleCraftsmanOnline's findPendingNear catch-up and can still tap
-      // accept against this same waitForAccept. Bailing out early here would
-      // make a request with nobody currently online expire in milliseconds,
-      // leaving no realistic window for a craftsman arriving moments later.
-      for (const candidate of candidates) {
-        this.server
-          .to(craftsmanRoom(candidate.craftsmanId))
-          .emit('request:new', {
-            requestId: request.id,
-            serviceCategory: request.serviceCategory,
-            distanceMeters: Math.round(candidate.distanceMeters),
-            estimatedArrivalMinutes: estimateArrivalMinutes(
-              candidate.distanceMeters,
-            ),
-            destinationAddress: request.destinationAddress,
-            loadDetails: request.loadDetails,
-          });
-        // OS push only on this candidate's first exposure to this request —
-        // re-sent every round (like the socket emit above) it would mean up
-        // to buildRadiusSequence(...).length pushes for the same craftsman
-        // (e.g. 5 for taxi/camion's tight-radius sequence, since a nearby
-        // candidate keeps getting rediscovered as the radius grows and
-        // nobody's accepted yet). The socket already keeps their in-app card
-        // fresh every round; the push only needs to happen once to serve its
-        // actual job — waking up a backgrounded/killed app.
-        if (!triedCraftsmanIds.has(candidate.craftsmanId)) {
-          void this.notificationsService.sendToUser(
-            candidate.craftsmanId,
-            {
-              title: 'Nouvelle demande',
-              body: request.destinationAddress
-                ? `Une demande de ${SERVICE_CATEGORY_LABELS_FR[request.serviceCategory]} à ${(candidate.distanceMeters / 1000).toFixed(1)} km de vous → destination : ${request.destinationAddress}`
-                : `Une demande de ${SERVICE_CATEGORY_LABELS_FR[request.serviceCategory]} à ${(candidate.distanceMeters / 1000).toFixed(1)} km de vous.`,
-            },
-            { event: 'request:new', requestId: request.id },
-          );
-        }
-        triedCraftsmanIds.add(candidate.craftsmanId);
-      }
-
-      const acceptedCraftsmanId = await this.waitForAccept(
+    const startedAt = Date.now();
+    const deadline = startedAt + MATCHING_WINDOW_MS;
+    // Everyone an offer went out to — never offered twice, and all told
+    // request:unavailable once the search ends.
+    const offeredTo = new Set<string>();
+    this.activeSearches.set(request.id, { deadline, offeredTo });
+    try {
+      // Fetched once per request — a block can't change mid-search. See
+      // UserBlock's class-level comment for why this is bidirectional.
+      const blockedCraftsmanIds =
+        await this.safetyService.getBlockedCounterpartIds(request.clientId);
+      const acceptance = this.openAcceptWindow(
         request.id,
-        ACCEPT_TIMEOUT_MS,
+        deadline - Date.now(),
       );
 
-      if (acceptedCraftsmanId) {
-        const won = await this.assignAndNotify(
-          request,
-          acceptedCraftsmanId,
-          candidates.map((candidate) => candidate.craftsmanId),
+      for (const step of buildDispatchSchedule(request.serviceCategory)) {
+        const settledEarly = await this.settlesWithin(
+          acceptance,
+          startedAt + step.atMs - Date.now(),
         );
-        if (won) return;
+        if (settledEarly || this.cancelledRequestIds.has(request.id)) break;
+        await this.dispatchStep(
+          request,
+          step,
+          offeredTo,
+          blockedCraftsmanIds,
+          deadline,
+        );
       }
 
-      for (const candidate of candidates) {
-        this.server
-          .to(craftsmanRoom(candidate.craftsmanId))
-          .emit('request:unavailable', { requestId: request.id });
+      const acceptedCraftsmanId = await acceptance;
+      if (this.cancelledRequestIds.delete(request.id)) {
+        this.withdrawOffers(request.id, offeredTo);
+        return;
       }
-    }
-
-    if (this.cancelledRequestIds.delete(request.id)) return;
-
-    // Taxi/camion never fall through to the wake-up phase below: it queries
-    // last-known Postgres location with no radius cap at all, which would
-    // silently break the founder's explicit "never further than 4km"
-    // requirement for these two categories. Every other category keeps the
-    // wake-up fallback as-is.
-    if (isTightRadiusCategory(request.serviceCategory)) {
+      if (acceptedCraftsmanId) {
+        // Losing tryAssign means the request already left 'pending' (the
+        // client cancelled in the same instant) — nothing left to match.
+        const won = await this.assignAndNotify(request, acceptedCraftsmanId, [
+          ...offeredTo,
+        ]);
+        if (!won) this.withdrawOffers(request.id, offeredTo);
+        return;
+      }
+      this.withdrawOffers(request.id, offeredTo);
       await this.expireAndNotify(request);
-      return;
+    } finally {
+      this.activeSearches.delete(request.id);
     }
+  }
 
-    // Fallback for the common early-stage-marketplace case: zero craftsmen
-    // currently hold a live socket in Redis (app backgrounded/killed), but at
-    // least one has a last-known Postgres location on file. Push a
-    // notification so their app cold-opens; CraftsmanHomeController's
-    // _goOnlineFromGps runs unconditionally on every load, which
-    // re-establishes the socket, calls craftsman:online, and
-    // handleCraftsmanOnline's existing findPendingNear catch-up re-emits
-    // request:new for this still-pending request with zero new code on that
-    // path. Their subsequent request:accept resolves this very waitForAccept
-    // call via the same requestId — no new accept mechanism needed.
-    const wakeupCandidates =
-      await this.matchingService.findNearestByLastKnownLocation(
+  // One dispatch step: the nearest live candidates within the step's radius
+  // that haven't had this offer yet, plus (regular trades only — see
+  // TIGHT_RADIUS_CATEGORIES) a wake-up push to the nearest craftsmen who
+  // aren't live right now but were last seen within that radius.
+  private async dispatchStep(
+    request: CreatedServiceRequest,
+    step: DispatchStep,
+    offeredTo: Set<string>,
+    blockedCraftsmanIds: Set<string>,
+    deadline: number,
+  ): Promise<void> {
+    await this.matchingService.updateSearchRadius(
+      request.id,
+      step.radiusMeters,
+    );
+    const categoryLabel = SERVICE_CATEGORY_LABELS_FR[request.serviceCategory];
+    const offer = (distanceMeters: number) =>
+      this.offerPayload(request, distanceMeters, deadline);
+
+    // Over-fetch by everyone already offered/blocked, since Redis returns
+    // the nearest N regardless and those get filtered out here.
+    const live = (
+      await this.presenceService.findNearest(
         request.serviceCategory,
         request.longitude,
         request.latitude,
-        [...triedCraftsmanIds, ...blockedCraftsmanIds],
-        WAKEUP_CANDIDATES,
+        step.radiusMeters,
+        CANDIDATES_PER_STEP + offeredTo.size + blockedCraftsmanIds.size,
+      )
+    )
+      .filter(
+        (candidate) =>
+          !offeredTo.has(candidate.craftsmanId) &&
+          !blockedCraftsmanIds.has(candidate.craftsmanId),
+      )
+      .slice(0, CANDIDATES_PER_STEP);
+    for (const candidate of live) {
+      offeredTo.add(candidate.craftsmanId);
+      this.server
+        .to(craftsmanRoom(candidate.craftsmanId))
+        .emit('request:new', offer(candidate.distanceMeters));
+      const km = (candidate.distanceMeters / 1000).toFixed(1);
+      void this.notificationsService.sendToUser(
+        candidate.craftsmanId,
+        {
+          title: 'Nouvelle demande',
+          body: request.destinationAddress
+            ? `Une demande de ${categoryLabel} à ${km} km de vous → destination : ${request.destinationAddress}`
+            : `Une demande de ${categoryLabel} à ${km} km de vous.`,
+        },
+        { event: 'request:new', requestId: request.id },
       );
-
-    if (wakeupCandidates.length > 0) {
-      for (const candidate of wakeupCandidates) {
-        void this.notificationsService.sendToUser(
-          candidate.craftsmanId,
-          {
-            title: 'Nouvelle demande à proximité',
-            body: `Une demande de ${SERVICE_CATEGORY_LABELS_FR[request.serviceCategory]} à ${(candidate.distanceMeters / 1000).toFixed(1)} km de vous. Ouvrez l'application pour l'accepter.`,
-          },
-          { event: 'request:new', requestId: request.id },
-        );
-      }
-
-      const wakeupAcceptedCraftsmanId = await this.waitForAccept(
-        request.id,
-        WAKEUP_ACCEPT_TIMEOUT_MS,
-      );
-      if (wakeupAcceptedCraftsmanId) {
-        const won = await this.assignAndNotify(
-          request,
-          wakeupAcceptedCraftsmanId,
-          wakeupCandidates.map((candidate) => candidate.craftsmanId),
-        );
-        if (won) return;
-      }
     }
 
-    await this.expireAndNotify(request);
+    if (isTightRadiusCategory(request.serviceCategory)) return;
+    const sleeping = await this.matchingService.findNearestByLastKnownLocation(
+      request.serviceCategory,
+      request.longitude,
+      request.latitude,
+      [...offeredTo, ...blockedCraftsmanIds],
+      WAKEUP_CANDIDATES_PER_STEP,
+      step.radiusMeters,
+    );
+    for (const candidate of sleeping) {
+      offeredTo.add(candidate.craftsmanId);
+      // Also over the socket: "not among the nearest live 5" doesn't mean
+      // offline — someone further down the live list with the app open
+      // should see the card straight away rather than only the push.
+      this.server
+        .to(craftsmanRoom(candidate.craftsmanId))
+        .emit('request:new', offer(candidate.distanceMeters));
+      void this.notificationsService.sendToUser(
+        candidate.craftsmanId,
+        {
+          title: 'Nouvelle demande à proximité',
+          body: `Une demande de ${categoryLabel} à ${(candidate.distanceMeters / 1000).toFixed(1)} km de vous. Ouvrez l'application dans la minute pour l'accepter.`,
+        },
+        { event: 'request:new', requestId: request.id },
+      );
+    }
   }
 
-  // Shared by both the taxi/camion early-exit above (no wake-up phase for
-  // those) and the normal end-of-loop fallthrough for every other category.
+  // The request:new payload. respondWithinSeconds/expiresAt let the
+  // craftsman app count down to this offer's real deadline — app builds
+  // from before the 75s window ignore them and keep their fixed 18s.
+  private offerPayload(
+    request: Pick<
+      CreatedServiceRequest,
+      'id' | 'serviceCategory' | 'destinationAddress' | 'loadDetails'
+    >,
+    distanceMeters: number,
+    deadline: number,
+  ) {
+    return {
+      requestId: request.id,
+      serviceCategory: request.serviceCategory,
+      distanceMeters: Math.round(distanceMeters),
+      estimatedArrivalMinutes: estimateArrivalMinutes(distanceMeters),
+      destinationAddress: request.destinationAddress,
+      loadDetails: request.loadDetails,
+      respondWithinSeconds: Math.max(
+        0,
+        Math.floor((deadline - Date.now()) / 1000),
+      ),
+      expiresAt: new Date(deadline).toISOString(),
+    };
+  }
+
+  private withdrawOffers(requestId: string, craftsmanIds: Set<string>): void {
+    for (const craftsmanId of craftsmanIds) {
+      this.server
+        .to(craftsmanRoom(craftsmanId))
+        .emit('request:unavailable', { requestId });
+    }
+  }
+
+  // The client app reacts to request:no_craftsman_available by fetching the
+  // nearest craftsmen to contact directly (GET /matching/requests/:id/
+  // fallback-craftsmen) — the push copy stays generic enough for app builds
+  // from before that list existed.
   private async expireAndNotify(request: CreatedServiceRequest): Promise<void> {
     const expired = await this.matchingService.expireRequest(request.id);
     if (expired) {
@@ -578,19 +645,16 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
       void this.notificationsService.sendToUser(
         request.clientId,
         {
-          title: 'Aucun artisan disponible',
-          body: "Nous n'avons trouvé aucun artisan disponible pour le moment.",
+          title: "Aucun artisan n'a accepté à temps",
+          body: 'Ouvrez Fix Pro pour trouver un artisan proche de vous.',
         },
         { event: 'request:no_craftsman_available', requestId: request.id },
       );
     }
   }
 
-  // Shared by both the radius-round win path and the wake-up-phase win path:
-  // once a craftsman's accept resolves tryAssign's compare-and-swap, the
-  // notify-winner/notify-client/notify-losers sequence is identical
-  // regardless of which mechanism (live round vs. wake-up push) got them
-  // there.
+  // Once a craftsman's accept resolves tryAssign's compare-and-swap:
+  // notify the winner, the client, and everyone else who had the offer.
   private async assignAndNotify(
     request: CreatedServiceRequest,
     acceptedCraftsmanId: string,
@@ -647,20 +711,38 @@ export class MatchingGateway implements OnGatewayInit, OnGatewayDisconnect {
     return true;
   }
 
-  private waitForAccept(
+  // Resolves with the accepting craftsman's id, '' if abortMatchingLoop
+  // cancelled the search, or null once the window closes.
+  private openAcceptWindow(
     requestId: string,
-    timeoutMs: number,
+    windowMs: number,
   ): Promise<string | null> {
     return new Promise((resolve) => {
       const timer = setTimeout(() => {
         this.acceptResolvers.delete(requestId);
         resolve(null);
-      }, timeoutMs);
+      }, windowMs);
 
       this.acceptResolvers.set(requestId, (craftsmanId: string) => {
         clearTimeout(timer);
         this.acceptResolvers.delete(requestId);
         resolve(craftsmanId);
+      });
+    });
+  }
+
+  // Waits up to `ms` for `acceptance` to settle; true if it did (accepted,
+  // cancelled or closed), false if the time ran out first.
+  private settlesWithin(
+    acceptance: Promise<string | null>,
+    ms: number,
+  ): Promise<boolean> {
+    if (ms <= 0) return Promise.resolve(false);
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => resolve(false), ms);
+      void acceptance.then(() => {
+        clearTimeout(timer);
+        resolve(true);
       });
     });
   }

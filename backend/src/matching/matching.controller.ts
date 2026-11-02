@@ -3,14 +3,19 @@ import {
   ConflictException,
   Controller,
   ForbiddenException,
+  Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { CreateServiceRequestDto } from './dto/create-service-request.dto';
 import { CreateRatingDto } from './dto/create-rating.dto';
+import { RecordContactDto } from './dto/record-contact.dto';
+import { FallbackContactsService } from './fallback-contacts.service';
 import { MatchingService } from './matching.service';
 import { MatchingGateway } from './matching.gateway';
 import { DistrictsService } from '../districts/districts.service';
@@ -27,6 +32,7 @@ export class MatchingController {
     private readonly matchingService: MatchingService,
     private readonly matchingGateway: MatchingGateway,
     private readonly districtsService: DistrictsService,
+    private readonly fallbackContactsService: FallbackContactsService,
   ) {}
 
   @Post('requests')
@@ -182,6 +188,39 @@ export class MatchingController {
     });
     this.matchingGateway.clearActiveAssignment(user.id);
     return { requestId: id, status: 'cancelled' };
+  }
+
+  // The "nobody accepted in time" screen: nearest craftsmen of the trade,
+  // phone included, to reach directly. See FallbackContactsService for the
+  // eligibility and phone-number exposure rules.
+  @Get('requests/:id/fallback-craftsmen')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  async getFallbackCraftsmen(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    this.requireClient(user);
+    assertPhoneVerified(user);
+    return this.fallbackContactsService.getFallbackList(id, user.id);
+  }
+
+  // Logged when the client taps WhatsApp / Appeler on that screen.
+  @Post('requests/:id/contacts')
+  @HttpCode(204)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  async recordContact(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RecordContactDto,
+  ): Promise<void> {
+    this.requireClient(user);
+    assertPhoneVerified(user);
+    await this.fallbackContactsService.recordContact(
+      id,
+      user.id,
+      dto.craftsmanId,
+      dto.channel,
+    );
   }
 
   private requireCraftsman(user: AuthenticatedUser): void {

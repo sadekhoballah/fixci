@@ -370,5 +370,17 @@
   "phoneCheckTitle": "أكّد رقمك",
   "phoneCheckServiceRequestMessage": "لإتمام طلبك، أكّد رقم هاتفك بالرمز الذي سنرسله إليك عبر واتساب أو رسالة نصية. هذا التحقق يتم مرة واحدة فقط.",
   "phoneCheckMissionMessage": "للمتابعة، أكّد رقم هاتفك بالرمز الذي سنرسله إليك عبر واتساب أو رسالة نصية. هذا التحقق يتم مرة واحدة فقط.",
-  "phoneCheckSendCodeButton": "استلام الرمز"
+  "phoneCheckSendCodeButton": "استلام الرمز",
+  "fallbackScreenTitle": "حرفيون قريبون",
+  "fallbackLoadingMessage": "جارٍ البحث عن أقرب الحرفيين…",
+  "fallbackTitle": "لم يقبل أي حرفي الطلب في الوقت المحدد",
+  "fallbackSubtitle": "هؤلاء أقرب الحرفيين إليك. تواصل معهم مباشرة عبر واتساب أو بالاتصال.",
+  "fallbackWhatsappMessage": "مرحباً، وجدتك على Fix Pro ({trade}). أحتاج إلى خدمة في {district}. هل أنت متاح؟",
+  "fallbackWhatsappMessageNoDistrict": "مرحباً، وجدتك على Fix Pro ({trade}). أحتاج إلى خدمة. هل أنت متاح؟",
+  "fallbackDistanceKm": "{km} كم",
+  "fallbackRating": "{rating} ({count})",
+  "fallbackNewCraftsman": "جديد",
+  "fallbackOnlineBadge": "متصل",
+  "fallbackCallButton": "اتصال",
+  "fallbackRetryButton": "إعادة البحث"
 }

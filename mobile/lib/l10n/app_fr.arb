@@ -533,5 +533,21 @@
   "phoneCheckTitle": "Confirmez votre numéro",
   "phoneCheckServiceRequestMessage": "Pour finaliser votre demande, confirmez votre numéro de téléphone avec le code que nous allons vous envoyer par WhatsApp ou SMS. Cette vérification ne se fait qu'une seule fois.",
   "phoneCheckMissionMessage": "Pour continuer, confirmez votre numéro de téléphone avec le code que nous allons vous envoyer par WhatsApp ou SMS. Cette vérification ne se fait qu'une seule fois.",
-  "phoneCheckSendCodeButton": "Recevoir le code"
+  "phoneCheckSendCodeButton": "Recevoir le code",
+  "fallbackScreenTitle": "Artisans proches",
+  "fallbackLoadingMessage": "Recherche des artisans les plus proches…",
+  "fallbackTitle": "Aucun artisan n'a accepté à temps",
+  "fallbackSubtitle": "Voici les artisans les plus proches de vous. Contactez-les directement par WhatsApp ou par appel.",
+  "fallbackWhatsappMessage": "Bonjour, je vous ai trouvé sur Fix Pro ({trade}). J'ai besoin d'une intervention à {district}. Êtes-vous disponible ?",
+  "@fallbackWhatsappMessage": {"placeholders": {"trade": {"type": "String"}, "district": {"type": "String"}}},
+  "fallbackWhatsappMessageNoDistrict": "Bonjour, je vous ai trouvé sur Fix Pro ({trade}). J'ai besoin d'une intervention. Êtes-vous disponible ?",
+  "@fallbackWhatsappMessageNoDistrict": {"placeholders": {"trade": {"type": "String"}}},
+  "fallbackDistanceKm": "{km} km",
+  "@fallbackDistanceKm": {"placeholders": {"km": {"type": "String"}}},
+  "fallbackRating": "{rating} ({count})",
+  "@fallbackRating": {"placeholders": {"rating": {"type": "String"}, "count": {"type": "int"}}},
+  "fallbackNewCraftsman": "Nouveau",
+  "fallbackOnlineBadge": "En ligne",
+  "fallbackCallButton": "Appeler",
+  "fallbackRetryButton": "Relancer la recherche"
 }

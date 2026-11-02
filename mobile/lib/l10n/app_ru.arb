@@ -370,5 +370,17 @@
   "phoneCheckTitle": "Подтвердите номер",
   "phoneCheckServiceRequestMessage": "Чтобы завершить заявку, подтвердите номер телефона кодом, который мы отправим по WhatsApp или SMS. Это нужно сделать только один раз.",
   "phoneCheckMissionMessage": "Чтобы продолжить, подтвердите номер телефона кодом, который мы отправим по WhatsApp или SMS. Это нужно сделать только один раз.",
-  "phoneCheckSendCodeButton": "Получить код"
+  "phoneCheckSendCodeButton": "Получить код",
+  "fallbackScreenTitle": "Мастера рядом",
+  "fallbackLoadingMessage": "Ищем ближайших мастеров…",
+  "fallbackTitle": "Никто из мастеров не принял заявку вовремя",
+  "fallbackSubtitle": "Вот ближайшие к вам мастера. Свяжитесь с ними напрямую через WhatsApp или по телефону.",
+  "fallbackWhatsappMessage": "Здравствуйте, я нашёл вас в Fix Pro ({trade}). Нужна работа в районе {district}. Вы свободны?",
+  "fallbackWhatsappMessageNoDistrict": "Здравствуйте, я нашёл вас в Fix Pro ({trade}). Нужна работа. Вы свободны?",
+  "fallbackDistanceKm": "{km} км",
+  "fallbackRating": "{rating} ({count})",
+  "fallbackNewCraftsman": "Новый",
+  "fallbackOnlineBadge": "В сети",
+  "fallbackCallButton": "Позвонить",
+  "fallbackRetryButton": "Искать снова"
 }
