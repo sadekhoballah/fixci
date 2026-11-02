@@ -117,6 +117,11 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
                   Image.asset(
                     'assets/categories/${category.wireValue}.jpg',
                     fit: BoxFit.cover,
+                    // A trade added before its illustration ships still gets a tile.
+                    errorBuilder: (_, _, _) => ColoredBox(
+                      color: category.accentColor.withValues(alpha: 0.25),
+                      child: Icon(category.icon, size: 56, color: category.accentColor),
+                    ),
                   ),
                   const DecoratedBox(
                     decoration: BoxDecoration(

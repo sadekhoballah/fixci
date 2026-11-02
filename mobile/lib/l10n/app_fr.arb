@@ -290,6 +290,8 @@
   "categoryBlacksmithDescription": "Fabrication et réparation de portails, grilles et structures métalliques.",
   "categoryHousekeepingLabel": "Femme de ménage",
   "categoryHousekeepingDescription": "Ménage à domicile, repassage et entretien courant du foyer.",
+  "categoryGardenerLabel": "Jardinier",
+  "categoryGardenerDescription": "Entretien de jardins, tonte de pelouse, taille de haies et d'arbustes, plantations.",
   "categoryHomeTutoringLabel": "Cours à domicile",
   "categoryHomeTutoringDescription": "Cours particuliers à domicile pour tous niveaux et matières.",
   "categoryTaxiLabel": "Chauffeur taxi",

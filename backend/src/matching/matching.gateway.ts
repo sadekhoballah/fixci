@@ -50,6 +50,7 @@ const SERVICE_CATEGORY_LABELS_FR: Record<ServiceCategory, string> = {
   [ServiceCategory.BLACKSMITH]: 'ferronnerie',
   [ServiceCategory.HOUSEKEEPING]: 'ménage',
   [ServiceCategory.HOME_TUTORING]: 'soutien scolaire',
+  [ServiceCategory.GARDENER]: 'jardinage',
   [ServiceCategory.TAXI]: 'taxi',
   [ServiceCategory.CAMION]: 'camion',
   [ServiceCategory.OTHER_TRADE]: 'autre métier',

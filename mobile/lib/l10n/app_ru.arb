@@ -206,6 +206,8 @@
   "categoryBlacksmithDescription": "Изготовление и ремонт ворот, решёток и металлических конструкций.",
   "categoryHousekeepingLabel": "Домработница",
   "categoryHousekeepingDescription": "Уборка на дому, глажка и повседневное обслуживание дома.",
+  "categoryGardenerLabel": "Садовник",
+  "categoryGardenerDescription": "Уход за садом, стрижка газона, обрезка живой изгороди и кустарников, посадка растений.",
   "categoryHomeTutoringLabel": "Репетиторство на дому",
   "categoryHomeTutoringDescription": "Частные уроки на дому для всех уровней и предметов.",
   "categoryTaxiLabel": "Водитель такси",

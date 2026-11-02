@@ -14,6 +14,7 @@ export enum ServiceCategory {
   BLACKSMITH = 'blacksmith',
   HOUSEKEEPING = 'housekeeping',
   HOME_TUTORING = 'home_tutoring',
+  GARDENER = 'gardener',
   TAXI = 'taxi',
   CAMION = 'camion',
   // Catch-all for a trade that doesn't fit any category above. Never shown

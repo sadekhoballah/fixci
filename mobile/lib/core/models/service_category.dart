@@ -16,6 +16,7 @@ enum ServiceCategory {
   construction,
   blacksmith,
   housekeeping,
+  gardener,
   homeTutoring,
   taxi,
   camion;
@@ -35,6 +36,7 @@ enum ServiceCategory {
     ServiceCategory.construction => 'Construction',
     ServiceCategory.blacksmith => 'Forgeron',
     ServiceCategory.housekeeping => 'Femme de ménage',
+    ServiceCategory.gardener => 'Jardinier',
     ServiceCategory.homeTutoring => 'Cours à domicile',
     ServiceCategory.taxi => 'Chauffeur taxi',
     ServiceCategory.camion => 'Chauffeur camion',
@@ -80,6 +82,7 @@ enum ServiceCategory {
     ServiceCategory.construction => 'construction',
     ServiceCategory.blacksmith => 'blacksmith',
     ServiceCategory.housekeeping => 'housekeeping',
+    ServiceCategory.gardener => 'gardener',
     ServiceCategory.homeTutoring => 'home_tutoring',
     ServiceCategory.taxi => 'taxi',
     ServiceCategory.camion => 'camion',
@@ -114,6 +117,8 @@ enum ServiceCategory {
       'Fabrication et réparation de portails, grilles et structures métalliques.',
     ServiceCategory.housekeeping =>
       'Ménage à domicile, repassage et entretien courant du foyer.',
+    ServiceCategory.gardener =>
+      "Entretien de jardins, tonte de pelouse, taille de haies et d'arbustes, plantations.",
     ServiceCategory.homeTutoring =>
       'Cours particuliers à domicile pour tous niveaux et matières.',
     ServiceCategory.taxi =>
@@ -137,6 +142,7 @@ enum ServiceCategory {
     ServiceCategory.construction => Icons.construction_rounded,
     ServiceCategory.blacksmith => Icons.hardware_rounded,
     ServiceCategory.housekeeping => Icons.local_laundry_service_rounded,
+    ServiceCategory.gardener => Icons.yard_rounded,
     ServiceCategory.homeTutoring => Icons.school_rounded,
     ServiceCategory.taxi => Icons.local_taxi_rounded,
     ServiceCategory.camion => Icons.local_shipping_rounded,
@@ -161,6 +167,7 @@ enum ServiceCategory {
     ServiceCategory.aluminumWork => Colors.blueGrey,
     ServiceCategory.construction => Colors.deepOrange,
     ServiceCategory.painter => Colors.green,
+    ServiceCategory.gardener => Colors.lightGreen,
     ServiceCategory.mechanic => Colors.indigo,
     ServiceCategory.taxi => Colors.indigo,
     ServiceCategory.camion => Colors.indigo,
@@ -191,6 +198,7 @@ extension ServiceCategoryLocalization on ServiceCategory {
     ServiceCategory.construction => l10n.categoryConstructionLabel,
     ServiceCategory.blacksmith => l10n.categoryBlacksmithLabel,
     ServiceCategory.housekeeping => l10n.categoryHousekeepingLabel,
+    ServiceCategory.gardener => l10n.categoryGardenerLabel,
     ServiceCategory.homeTutoring => l10n.categoryHomeTutoringLabel,
     ServiceCategory.taxi => l10n.categoryTaxiLabel,
     ServiceCategory.camion => l10n.categoryCamionLabel,
@@ -213,6 +221,7 @@ extension ServiceCategoryLocalization on ServiceCategory {
     ServiceCategory.construction => l10n.categoryConstructionDescription,
     ServiceCategory.blacksmith => l10n.categoryBlacksmithDescription,
     ServiceCategory.housekeeping => l10n.categoryHousekeepingDescription,
+    ServiceCategory.gardener => l10n.categoryGardenerDescription,
     ServiceCategory.homeTutoring => l10n.categoryHomeTutoringDescription,
     ServiceCategory.taxi => l10n.categoryTaxiDescription,
     ServiceCategory.camion => l10n.categoryCamionDescription,
