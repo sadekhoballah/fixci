@@ -529,5 +529,9 @@
   "noBlockedUsersMessage": "Vous n'avez bloqué personne.",
   "unblockButton": "Débloquer",
   "userUnblockedMessage": "Utilisateur débloqué.",
-  "termsOfServiceButton": "Conditions d'utilisation"
+  "termsOfServiceButton": "Conditions d'utilisation",
+  "phoneCheckTitle": "Confirmez votre numéro",
+  "phoneCheckServiceRequestMessage": "Pour finaliser votre demande, confirmez votre numéro de téléphone avec le code que nous allons vous envoyer par WhatsApp ou SMS. Cette vérification ne se fait qu'une seule fois.",
+  "phoneCheckMissionMessage": "Pour continuer, confirmez votre numéro de téléphone avec le code que nous allons vous envoyer par WhatsApp ou SMS. Cette vérification ne se fait qu'une seule fois.",
+  "phoneCheckSendCodeButton": "Recevoir le code"
 }

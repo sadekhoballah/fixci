@@ -39,10 +39,15 @@ export class RegisterUserDto {
   @MaxLength(2000)
   experienceDetails?: string;
 
-  // Mandatory KYC document for both roles — except for an OTP_TEST_PHONES
-  // number (Play Store review / pilot), which may register with no document
-  // at all. See ../../auth/otp-test-phones.ts.
-  @ValidateIf((dto: RegisterUserDto) => !isOtpTestPhone(dto.phone))
+  // Mandatory KYC document for craftsmen only — except for an
+  // OTP_TEST_PHONES number (Play Store review / pilot), which may register
+  // with no document at all. See ../../auth/otp-test-phones.ts. Clients no
+  // longer upload one: the phone OTP is their only verification. Older app
+  // builds may still send one for a client; it's stored as before.
+  @ValidateIf(
+    (dto: RegisterUserDto) =>
+      dto.role === UserRole.CRAFTSMAN && !isOtpTestPhone(dto.phone),
+  )
   @IsNotEmpty()
   @IsString()
   @MaxLength(255)
@@ -50,11 +55,19 @@ export class RegisterUserDto {
 
   // Proof this phone was actually OTP-verified — issued by
   // POST /auth/otp/check when no account exists yet for the phone (see
-  // TokensService.issueRegistrationToken). Required: registration can no
-  // longer happen without having verified the phone first.
+  // TokensService.issueRegistrationToken). Required for a craftsman. A
+  // client registers without it (phoneVerified: false) and confirms the
+  // number by OTP once, the first time they request a craftsman / post or
+  // apply to a mission — see assertPhoneVerified. Still accepted from a
+  // client (older app builds verify up front), in which case the account
+  // starts out verified.
+  @ValidateIf(
+    (dto: RegisterUserDto) =>
+      dto.role === UserRole.CRAFTSMAN || dto.registrationToken != null,
+  )
   @IsNotEmpty()
   @IsString()
-  registrationToken: string;
+  registrationToken?: string | null;
 
   // Second mandatory document, taxi/camion craftsmen only — see
   // CraftsmanProfile.licenseStorageKey.

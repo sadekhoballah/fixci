@@ -7,6 +7,9 @@ export interface VerifiedAuth {
   // claim) — null for the dev-bypass path, which has no signed proof of an
   // account id, only a caller-supplied phone.
   userId: string | null;
+  // The token's `pv` claim — false only for a session opened before the
+  // number was OTP-confirmed. See AccessTokenPayload.pv.
+  issuedBeforeVerification: boolean;
 }
 
 // Shared by AccessTokenGuard (HTTP) and MatchingGateway's socket handshake
@@ -26,14 +29,18 @@ export async function resolveVerifiedAuth(
 ): Promise<VerifiedAuth> {
   if (token) {
     const payload = await tokensService.verifyAccessToken(token);
-    return { phone: payload.phone, userId: payload.sub };
+    return {
+      phone: payload.phone,
+      userId: payload.sub,
+      issuedBeforeVerification: payload.pv === false,
+    };
   }
 
   const bypassEnabled =
     process.env.NODE_ENV !== 'production' &&
     process.env.ALLOW_DEV_AUTH_BYPASS === 'true';
   if (bypassEnabled && devPhone) {
-    return { phone: devPhone, userId: null };
+    return { phone: devPhone, userId: null, issuedBeforeVerification: false };
   }
 
   throw new UnauthorizedException('Missing bearer token');

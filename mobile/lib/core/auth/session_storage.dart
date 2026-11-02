@@ -8,6 +8,7 @@ class SessionStorage {
   static const _roleKey = 'session_role';
   static const _tierKey = 'session_tier';
   static const _phoneKey = 'session_phone';
+  static const _phoneVerifiedKey = 'session_phone_verified';
 
   // The phone number is the one piece of quasi-identifying data cached
   // locally, so unlike role/tier (plain UI state) it belongs in the
@@ -55,10 +56,25 @@ class SessionStorage {
   // Wipes the cached session — used when the backend no longer recognizes
   // this phone (e.g. the account was deleted), so the next launch goes
   // through registration instead of trusting stale local flags.
+  // False only for a client who registered without OTP and hasn't confirmed
+  // their number yet — see ensurePhoneVerified. A missing value means a
+  // session from before clients could register unverified, when every
+  // account was verified up front, hence the `true` default.
+  Future<void> savePhoneVerified(bool verified) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_phoneVerifiedKey, verified);
+  }
+
+  Future<bool> loadPhoneVerified() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_phoneVerifiedKey) ?? true;
+  }
+
   Future<void> clearSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_roleKey);
     await prefs.remove(_tierKey);
+    await prefs.remove(_phoneVerifiedKey);
     await _secureStorage.delete(key: _phoneKey);
   }
 }

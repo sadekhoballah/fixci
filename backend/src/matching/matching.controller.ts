@@ -17,6 +17,7 @@ import { DistrictsService } from '../districts/districts.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth-request';
+import { assertPhoneVerified } from '../auth/assert-phone-verified';
 import { UserRole } from '../database/enums/user-role.enum';
 
 @Controller('matching')
@@ -36,6 +37,7 @@ export class MatchingController {
     if (user.role !== UserRole.CLIENT) {
       throw new ForbiddenException('Only clients can create service requests');
     }
+    assertPhoneVerified(user);
     if (!(await this.districtsService.isClientOrderingActiveForUser(user.id))) {
       throw new ForbiddenException(
         "Le service n'est pas encore disponible dans votre zone.",

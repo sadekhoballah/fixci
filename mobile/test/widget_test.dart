@@ -267,6 +267,7 @@ class _FakeSessionStorage implements SessionStorage {
   UserRole? _role;
   SubscriptionTier? _tier;
   String? _phone;
+  bool? phoneVerified;
 
   @override
   Future<void> saveRole(UserRole role) async => _role = role;
@@ -287,10 +288,18 @@ class _FakeSessionStorage implements SessionStorage {
   Future<String?> loadPhone() async => _phone;
 
   @override
+  Future<void> savePhoneVerified(bool verified) async =>
+      phoneVerified = verified;
+
+  @override
+  Future<bool> loadPhoneVerified() async => phoneVerified ?? true;
+
+  @override
   Future<void> clearSession() async {
     _role = null;
     _tier = null;
     _phone = null;
+    phoneVerified = null;
   }
 }
 
@@ -385,15 +394,17 @@ void main() {
       expect(find.text('Vos informations'), findsOneWidget);
       expect(find.text('Catégorie de service'), findsNothing);
 
+      // No ID document for a client.
+      expect(find.text("Ajouter votre pièce d'identité"), findsNothing);
       await fillIdentity(tester, phone: '+2250700000000');
-      await attachIdCard(tester);
 
       await tester.ensureVisible(find.text("S'inscrire"));
       await tester.tap(find.text("S'inscrire"));
       await tester.pumpAndSettle();
 
-      await _verifyPhoneViaOtp(tester);
-
+      // ...and no OTP at registration: it's asked once, at the first
+      // request (see ensurePhoneVerified).
+      expect(find.text('Vérification du numéro'), findsNothing);
       expect(find.text('Bienvenue, Aya Kone !'), findsOneWidget);
 
       await tester.tap(find.text('Continuer'));
@@ -574,11 +585,10 @@ void main() {
   );
 
   testWidgets(
-    // Phone verification succeeds (POST /auth/otp/check -> status "new"),
-    // then failRegister makes POST /users/register 409 — the error surfaces
-    // on the verification screen and the flow stays there rather than
-    // advancing to the welcome screen.
-    'a registration failure after OTP shows an inline error on the verification screen',
+    // POST /users/register 409s (failRegister) — the number already has an
+    // account (reinstall / new phone), so instead of an error the client is
+    // sent to the OTP screen to log into it.
+    'a client number that already has an account goes to the OTP screen to log in',
     (tester) async {
       await tester.pumpWidget(buildApp(failRegister: true));
       await tester.pumpAndSettle(const Duration(seconds: 4));
@@ -589,17 +599,13 @@ void main() {
       await tester.pumpAndSettle();
 
       await fillIdentity(tester, phone: '+2250700000000');
-      await attachIdCard(tester);
 
       await tester.ensureVisible(find.text("S'inscrire"));
       await tester.tap(find.text("S'inscrire"));
       await tester.pumpAndSettle();
 
-      await _verifyPhoneViaOtp(tester);
-
       expect(find.text('Vérification du numéro'), findsOneWidget);
-      expect(find.text('Phone number already registered'), findsOneWidget);
-      expect(find.text('Bienvenue, Aya Kone !'), findsNothing);
+      expect(find.text('Phone number already registered'), findsNothing);
     },
   );
 }

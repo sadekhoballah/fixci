@@ -1,20 +1,34 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '../database/entities/user.entity';
+import { UserRole } from '../database/enums/user-role.enum';
 
 const ACCESS_TOKEN_TTL = '15m';
 const REFRESH_TOKEN_TTL = '30d';
+// Clients verify their phone by OTP exactly once (at their first request,
+// see the mobile guest flow) and are then never asked again — so their
+// session must outlive any realistic gap between two uses of the app.
+// Sliding like the craftsman one: every /auth/refresh re-issues it.
+const CLIENT_REFRESH_TOKEN_TTL = '365d';
 const REGISTRATION_TOKEN_TTL = '15m';
 
+// `pv` (phone verified) is stamped on both tokens so a session opened
+// *before* the number was OTP-confirmed stops working the moment it is (see
+// AuthGuard and AuthController.refresh): a client registers without OTP, so
+// whoever typed a number they don't own must lose that session once the
+// real owner verifies it. Absent on tokens minted before this field existed
+// — every such account was already verified, so absent means verified.
 export interface AccessTokenPayload {
   sub: string;
   phone: string;
   role: string;
+  pv?: boolean;
 }
 
 export interface RefreshTokenPayload {
   sub: string;
   type: 'refresh';
+  pv?: boolean;
 }
 
 export interface RegistrationTokenPayload {
@@ -57,16 +71,18 @@ export class TokensService {
   }
 
   async issueTokens(
-    user: Pick<User, 'id' | 'phone' | 'role'>,
+    user: Pick<User, 'id' | 'phone' | 'role' | 'phoneVerified'>,
   ): Promise<TokenPair> {
     const accessPayload: AccessTokenPayload = {
       sub: user.id,
       phone: user.phone!,
       role: user.role,
+      pv: user.phoneVerified,
     };
     const refreshPayload: RefreshTokenPayload = {
       sub: user.id,
       type: 'refresh',
+      pv: user.phoneVerified,
     };
 
     const [accessToken, refreshToken] = await Promise.all([
@@ -76,7 +92,10 @@ export class TokensService {
       }),
       this.jwtService.signAsync(refreshPayload, {
         secret: this.refreshSecret,
-        expiresIn: REFRESH_TOKEN_TTL,
+        expiresIn:
+          user.role === UserRole.CLIENT
+            ? CLIENT_REFRESH_TOKEN_TTL
+            : REFRESH_TOKEN_TTL,
       }),
     ]);
     return { accessToken, refreshToken };

@@ -32,7 +32,10 @@ export class UsersController {
   // UsersService.register) — so, like the "existing user" branch of
   // /auth/otp/check, a successful registration logs the caller straight in
   // rather than making them verify again just to get their first token pair.
+  // Tighter than the global limit: a client registers with no OTP, so this
+  // is the one account-creating route that costs an attacker nothing.
   @Post('register')
+  @Throttle({ default: { limit: 10, ttl: 300_000 } })
   async register(@Body() dto: RegisterUserDto) {
     const user = await this.usersService.register(dto);
     const tokens = await this.tokensService.issueTokens(user);

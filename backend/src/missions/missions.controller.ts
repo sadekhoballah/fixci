@@ -19,6 +19,7 @@ import { ApplyToMissionDto } from './dto/apply-to-mission.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth-request';
+import { assertPhoneVerified } from '../auth/assert-phone-verified';
 
 const DEFAULT_LIMIT = 20;
 
@@ -38,6 +39,7 @@ export class MissionsController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateMissionDto,
   ) {
+    assertPhoneVerified(user);
     return this.missionsService.createMission(user.id, dto);
   }
 
@@ -123,6 +125,7 @@ export class MissionsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ApplyToMissionDto,
   ) {
+    assertPhoneVerified(user);
     const result = await this.missionsService.applyToMission(id, user.id, dto);
     void this.matchingGateway.notifyUser(
       result.posterId,

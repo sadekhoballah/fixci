@@ -44,6 +44,7 @@ class OnboardingState {
     this.registrationSucceeded = false,
     this.selectedTier,
     this.loggedIntoExistingAccount = false,
+    this.phoneAlreadyRegistered = false,
   });
 
   final UserRole? role;
@@ -105,6 +106,10 @@ class OnboardingState {
   // "welcome, new account" flow and go directly to that account's home
   // screen.
   final bool loggedIntoExistingAccount;
+  // A client's POST /users/register (no OTP) came back 409: this number
+  // already has an account — a reinstall or a new phone. RegistrationScreen
+  // then sends them through the OTP screen to log into it instead.
+  final bool phoneAlreadyRegistered;
 
   bool get idCardAttached => idCardStorageKey != null;
   bool get licenseAttached => licenseStorageKey != null;
@@ -131,8 +136,9 @@ class OnboardingState {
     if (lastName.trim().isEmpty) return false;
     if (phone.trim().isEmpty) return false;
     if (district == null) return false;
-    if (!idCardAttached && !idDocumentWaived) return false;
     if (role == UserRole.craftsman) {
+      // Clients upload no ID document — the phone OTP is their only check.
+      if (!idCardAttached && !idDocumentWaived) return false;
       if (serviceCategory == null || experienceDetails.trim().isEmpty) {
         return false;
       }
@@ -180,6 +186,7 @@ class OnboardingState {
     bool? registrationSucceeded,
     SubscriptionTier? selectedTier,
     bool? loggedIntoExistingAccount,
+    bool? phoneAlreadyRegistered,
   }) {
     return OnboardingState(
       role: role ?? this.role,
@@ -228,6 +235,8 @@ class OnboardingState {
       selectedTier: selectedTier ?? this.selectedTier,
       loggedIntoExistingAccount:
           loggedIntoExistingAccount ?? this.loggedIntoExistingAccount,
+      phoneAlreadyRegistered:
+          phoneAlreadyRegistered ?? this.phoneAlreadyRegistered,
     );
   }
 }

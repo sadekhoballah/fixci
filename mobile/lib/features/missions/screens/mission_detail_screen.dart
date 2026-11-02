@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/auth/phone_verification_gate.dart';
 import '../../../core/network/api_client.dart';
 import '../../../l10n/app_localizations.dart';
 import '../mission_detail_controller.dart';
@@ -44,6 +45,12 @@ class _MissionDetailScreenState extends ConsumerState<MissionDetailScreen> {
   }
 
   Future<void> _confirmApply() async {
+    // See ensurePhoneVerified — a client confirms their number once, here
+    // if this is their first mission action.
+    if (!await ensurePhoneVerified(context, ref, PhoneCheckReason.mission)) {
+      return;
+    }
+    if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
     final messageController = TextEditingController();
     final confirmed = await showDialog<bool>(

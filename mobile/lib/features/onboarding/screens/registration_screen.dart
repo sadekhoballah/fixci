@@ -50,8 +50,29 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     OnboardingState state,
     OnboardingController controller,
   ) async {
-    // Verify the phone first: fill the form, then Twilio Verify on the OTP
-    // screen, which completes registration itself once the code checks out.
+    // A client registers straight away: no OTP here — the number is
+    // confirmed once, at their first request (see ensurePhoneVerified). If
+    // it turns out to already have an account (reinstall / new phone), the
+    // OTP screen logs them into it instead.
+    if (state.role == UserRole.client && !state.isPhoneVerified) {
+      final registered = await controller.submitRegistration();
+      if (!context.mounted) return;
+      if (registered) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const RegistrationSuccessScreen()),
+        );
+      } else if (ref.read(onboardingControllerProvider).phoneAlreadyRegistered) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => OtpVerificationScreen(phone: state.phone),
+          ),
+        );
+      }
+      return;
+    }
+    // A craftsman verifies the phone first: fill the form, then Twilio
+    // Verify on the OTP screen, which completes registration itself once
+    // the code checks out.
     if (!state.isPhoneVerified) {
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -166,8 +187,12 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   },
                 ),
               ],
-              const SizedBox(height: 16),
-              _IdCardPicker(state: state, controller: controller),
+              // Craftsmen only — a client's one and only verification is
+              // the phone OTP, at their first request.
+              if (isCraftsman) ...[
+                const SizedBox(height: 16),
+                _IdCardPicker(state: state, controller: controller),
+              ],
               if (isCraftsman &&
                   (state.serviceCategory?.requiresDriverLicense ??
                       false)) ...[

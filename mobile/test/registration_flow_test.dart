@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/app.dart';
 import 'package:mobile/core/auth/phone_hint_service.dart';
+import 'package:mobile/core/auth/phone_verification_gate.dart';
 import 'package:mobile/core/auth/session_storage.dart';
 import 'package:mobile/core/auth/token_storage.dart';
 import 'package:mobile/core/localization/locale_storage.dart';
@@ -137,11 +138,16 @@ class _FakeApiClient extends ApiClient {
       if (failRegister) {
         throw ApiException('Invalid phone number.');
       }
+      if (body['phone'] == _alreadyRegisteredPhone) {
+        throw ApiException('Phone number already registered', statusCode: 409);
+      }
       return {
         'id': 'fake-user-id',
         'phone': body['phone'],
         'fullName': body['fullName'],
         'role': body['role'],
+        // A client registers without OTP, a craftsman only after it.
+        'phoneVerified': body['registrationToken'] != null,
         'accessToken': 'fake-access-token',
         'refreshToken': 'fake-refresh-token',
       };
@@ -183,6 +189,7 @@ class _FakeSessionStorage implements SessionStorage {
   UserRole? _role;
   SubscriptionTier? _tier;
   String? _phone;
+  bool? phoneVerified;
 
   @override
   Future<void> saveRole(UserRole role) async => _role = role;
@@ -203,10 +210,18 @@ class _FakeSessionStorage implements SessionStorage {
   Future<String?> loadPhone() async => _phone;
 
   @override
+  Future<void> savePhoneVerified(bool verified) async =>
+      phoneVerified = verified;
+
+  @override
+  Future<bool> loadPhoneVerified() async => phoneVerified ?? true;
+
+  @override
   Future<void> clearSession() async {
     _role = null;
     _tier = null;
     _phone = null;
+    phoneVerified = null;
   }
 }
 
@@ -245,12 +260,15 @@ void main() {
     _FakeApiClient? apiClient,
     TokenStorage? tokenStorage,
     PhoneHintService? phoneHintService,
+    _FakeSessionStorage? sessionStorage,
   }) {
     return ProviderScope(
       overrides: [
         apiClientProvider.overrideWithValue(apiClient ?? _FakeApiClient()),
         idCardPickerProvider.overrideWithValue(_FakeIdCardPicker()),
-        sessionStorageProvider.overrideWithValue(_FakeSessionStorage()),
+        sessionStorageProvider.overrideWithValue(
+          sessionStorage ?? _FakeSessionStorage(),
+        ),
         tokenStorageProvider.overrideWithValue(
           tokenStorage ?? _FakeTokenStorage(),
         ),
@@ -261,17 +279,6 @@ void main() {
       ],
       child: const FixCiApp(),
     );
-  }
-
-  Future<void> attachIdCard(WidgetTester tester) async {
-    await tester.ensureVisible(find.text("Ajouter votre pièce d'identité"));
-    await tester.tap(find.text("Ajouter votre pièce d'identité"));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Choisir depuis la galerie'));
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 300)),
-    );
-    await tester.pumpAndSettle();
   }
 
   // Drives the OTP screen the same way every platform does — type the code,
@@ -294,9 +301,14 @@ void main() {
     required String localNumber,
     _FakeApiClient? apiClient,
     PhoneHintService? phoneHintService,
+    _FakeSessionStorage? sessionStorage,
   }) async {
     await tester.pumpWidget(
-      buildApp(apiClient: apiClient, phoneHintService: phoneHintService),
+      buildApp(
+        apiClient: apiClient,
+        phoneHintService: phoneHintService,
+        sessionStorage: sessionStorage,
+      ),
     );
     await tester.pumpAndSettle(const Duration(seconds: 4));
 
@@ -328,7 +340,8 @@ void main() {
     await tester.tap(find.text('Cocody').last);
     await tester.pumpAndSettle();
 
-    await attachIdCard(tester);
+    // No ID document for a client.
+    expect(find.text("Ajouter votre pièce d'identité"), findsNothing);
 
     await tester.ensureVisible(find.text("S'inscrire"));
     await tester.tap(find.text("S'inscrire"));
@@ -336,18 +349,23 @@ void main() {
   }
 
   testWidgets(
-    'a phone number registers after passing OTP verification',
+    'a client registers with no OTP and no ID, as not-yet-verified',
     (tester) async {
-      await fillAndSubmitRegistrationForm(tester, localNumber: '0700000001');
+      final sessionStorage = _FakeSessionStorage();
+      await fillAndSubmitRegistrationForm(
+        tester,
+        localNumber: '0700000001',
+        sessionStorage: sessionStorage,
+      );
 
-      await enterOtpCode(tester);
-
+      expect(find.text('Vérification du numéro'), findsNothing);
       expect(find.text('Bienvenue, Aya Kone !'), findsOneWidget);
+      expect(sessionStorage.phoneVerified, isFalse);
     },
   );
 
   testWidgets(
-    'a registration failure after OTP shows an inline error on the verification screen',
+    'a registration failure shows an inline error on the form',
     (tester) async {
       await fillAndSubmitRegistrationForm(
         tester,
@@ -355,24 +373,89 @@ void main() {
         apiClient: _FakeApiClient(failRegister: true),
       );
 
-      await enterOtpCode(tester);
-
-      expect(find.text('Vérification du numéro'), findsOneWidget);
       expect(find.text('Invalid phone number.'), findsOneWidget);
       expect(find.text('Bienvenue, Aya Kone !'), findsNothing);
     },
   );
 
-  testWidgets('a wrong OTP code shows an error and stays on the verification screen', (
-    tester,
-  ) async {
-    await fillAndSubmitRegistrationForm(tester, localNumber: '0700000003');
+  testWidgets(
+    'a client number that already has an account logs in through the OTP screen',
+    (tester) async {
+      await fillAndSubmitRegistrationForm(
+        tester,
+        localNumber: _alreadyRegisteredLocalNumber,
+      );
 
-    await enterOtpCode(tester, code: '999999');
+      await enterOtpCode(tester, code: '999999');
+      expect(find.text('Vérification du numéro'), findsOneWidget);
+      expect(find.text('Code incorrect. Veuillez réessayer.'), findsOneWidget);
 
-    expect(find.text('Vérification du numéro'), findsOneWidget);
-    expect(find.text('Code incorrect. Veuillez réessayer.'), findsOneWidget);
-  });
+      await enterOtpCode(tester);
+      expect(find.text('De quoi avez-vous besoin ?'), findsOneWidget);
+
+      // The client shell's Missions tab starts a location lookup with a 25s
+      // timeout (no geolocator fake in this file) — let it lapse.
+      await tester.pump(const Duration(seconds: 30));
+    },
+  );
+
+  testWidgets(
+    'ensurePhoneVerified asks for the code once, then lets the action through',
+    (tester) async {
+      final sessionStorage = _FakeSessionStorage()
+        ..phoneVerified = false;
+      await sessionStorage.saveRole(UserRole.client);
+      await sessionStorage.savePhone(_alreadyRegisteredPhone);
+      final results = <bool>[];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            apiClientProvider.overrideWithValue(_FakeApiClient()),
+            sessionStorageProvider.overrideWithValue(sessionStorage),
+            tokenStorageProvider.overrideWithValue(_FakeTokenStorage()),
+            localeStorageProvider.overrideWithValue(_FakeLocaleStorage()),
+          ],
+          child: MaterialApp(
+            locale: const Locale('fr'),
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            home: Consumer(
+              builder: (context, ref, _) => Scaffold(
+                body: TextButton(
+                  onPressed: () async => results.add(
+                    await ensurePhoneVerified(
+                      context,
+                      ref,
+                      PhoneCheckReason.serviceRequest,
+                    ),
+                  ),
+                  child: const Text('Demander'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Demander'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Pour finaliser votre demande'), findsOneWidget);
+      expect(find.textContaining('une seule fois'), findsOneWidget);
+      await tester.tap(find.text('Recevoir le code'));
+      await tester.pumpAndSettle();
+
+      await enterOtpCode(tester);
+      expect(results, [true]);
+      expect(sessionStorage.phoneVerified, isTrue);
+
+      // Second time: no dialog, no code — straight through.
+      await tester.tap(find.text('Demander'));
+      await tester.pumpAndSettle();
+      expect(find.text('Recevoir le code'), findsNothing);
+      expect(results, [true, true]);
+    },
+  );
 
   test(
     'requestPhoneHint locks the phone field to a device-sourced number',

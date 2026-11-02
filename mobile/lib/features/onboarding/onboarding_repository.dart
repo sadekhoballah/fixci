@@ -9,10 +9,16 @@ import '../../l10n/app_localizations.dart';
 import 'onboarding_state.dart';
 
 class RegisteredTokens {
-  const RegisteredTokens({required this.accessToken, required this.refreshToken});
+  const RegisteredTokens({
+    required this.accessToken,
+    required this.refreshToken,
+    required this.phoneVerified,
+  });
 
   final String accessToken;
   final String refreshToken;
+  // False for a client who registered without OTP — see ensurePhoneVerified.
+  final bool phoneVerified;
 }
 
 class OnboardingRepository {
@@ -61,8 +67,12 @@ class OnboardingRepository {
       'fullName': state.fullName.trim(),
       'role': role.wireValue,
       'districtId': state.district!.id,
-      'idCardStorageKey': state.idCardStorageKey,
-      'registrationToken': state.registrationToken,
+      // Both absent for a client: no ID document, and no OTP until their
+      // first request (see ensurePhoneVerified).
+      if (state.idCardStorageKey != null)
+        'idCardStorageKey': state.idCardStorageKey,
+      if (state.registrationToken != null)
+        'registrationToken': state.registrationToken,
       if (role == UserRole.craftsman && state.serviceCategory != null)
         'serviceCategory': state.serviceCategory!.wireValue,
       if (role == UserRole.craftsman)
@@ -74,6 +84,7 @@ class OnboardingRepository {
     return RegisteredTokens(
       accessToken: response['accessToken'] as String,
       refreshToken: response['refreshToken'] as String,
+      phoneVerified: response['phoneVerified'] as bool? ?? true,
     );
   }
 

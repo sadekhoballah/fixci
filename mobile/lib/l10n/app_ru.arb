@@ -366,5 +366,9 @@
   "noBlockedUsersMessage": "Вы никого не заблокировали.",
   "unblockButton": "Разблокировать",
   "userUnblockedMessage": "Пользователь разблокирован.",
-  "termsOfServiceButton": "Условия использования"
+  "termsOfServiceButton": "Условия использования",
+  "phoneCheckTitle": "Подтвердите номер",
+  "phoneCheckServiceRequestMessage": "Чтобы завершить заявку, подтвердите номер телефона кодом, который мы отправим по WhatsApp или SMS. Это нужно сделать только один раз.",
+  "phoneCheckMissionMessage": "Чтобы продолжить, подтвердите номер телефона кодом, который мы отправим по WhatsApp или SMS. Это нужно сделать только один раз.",
+  "phoneCheckSendCodeButton": "Получить код"
 }

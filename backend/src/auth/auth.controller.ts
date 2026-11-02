@@ -39,6 +39,11 @@ export class AuthController {
     if (!user || user.deletedAt) {
       throw new UnauthorizedException('Account no longer active');
     }
+    // See AccessTokenPayload.pv — a session opened before the number was
+    // OTP-confirmed can't be extended once it has been.
+    if (payload.pv === false && user.phoneVerified) {
+      throw new UnauthorizedException('Session expired — please log in again');
+    }
     return this.tokensService.issueTokens(user);
   }
 }

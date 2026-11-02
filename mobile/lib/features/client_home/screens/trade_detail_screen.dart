@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/auth/phone_verification_gate.dart';
 import '../../../core/models/service_category.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../service_request/service_request_controller.dart';
@@ -46,6 +47,26 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
     // Rebuilds so the submit button's enabled state tracks the destination
     // field for taxi/camion (see the button's onPressed below).
     _destinationController.addListener(() => setState(() {}));
+  }
+
+  // A client confirms their number by OTP right here, once, at their first
+  // request — then the request goes out as normal. See ensurePhoneVerified.
+  Future<void> _requestNow() async {
+    if (!await ensurePhoneVerified(
+      context,
+      ref,
+      PhoneCheckReason.serviceRequest,
+    )) {
+      return;
+    }
+    if (!mounted) return;
+    await ref
+        .read(serviceRequestControllerProvider.notifier)
+        .submit(
+          category,
+          destinationAddress: _destinationController.text.trim(),
+          loadDetails: _selectedTonnage,
+        );
   }
 
   @override
@@ -197,13 +218,7 @@ class _TradeDetailScreenState extends ConsumerState<TradeDetailScreen> {
           child: ElevatedButton(
             onPressed: isBusy || destinationMissing || tonnageMissing
                 ? null
-                : () => ref
-                      .read(serviceRequestControllerProvider.notifier)
-                      .submit(
-                        category,
-                        destinationAddress: _destinationController.text.trim(),
-                        loadDetails: _selectedTonnage,
-                      ),
+                : _requestNow,
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
