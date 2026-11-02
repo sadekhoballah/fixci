@@ -121,6 +121,25 @@ describe('UsersService', () => {
     expect(dataSource.transaction).not.toHaveBeenCalled();
   });
 
+  it('registers a client with no ID document and no OTP, as phoneVerified=false', async () => {
+    await service.register({
+      phone: '+2250700000015',
+      role: UserRole.CLIENT,
+      fullName: 'Aya Kone',
+      districtId: 'district-1',
+    });
+
+    expect(tokensService.verifyRegistrationToken).not.toHaveBeenCalled();
+    expect(manager.create).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ phone: '+2250700000015', phoneVerified: false }),
+    );
+    expect(manager.create).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ idCardStorageKey: null }),
+    );
+  });
+
   it('creates a craftsman profile with the service category and id card key', async () => {
     await service.register({
       phone: '+2250700000014',

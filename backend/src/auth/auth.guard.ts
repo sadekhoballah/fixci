@@ -24,7 +24,8 @@ export class AuthGuard extends AccessTokenGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
-    const { phone, userId } = await this.resolveAuth(request);
+    const { phone, userId, issuedBeforeVerification } =
+      await this.resolveAuth(request);
     request.authPhone = phone;
     request.authUserId = userId ?? undefined;
 
@@ -45,10 +46,22 @@ export class AuthGuard extends AccessTokenGuard implements CanActivate {
     if (!user) {
       throw new UnauthorizedException('No account for this phone number');
     }
+    // This session predates the number's OTP confirmation — whoever holds
+    // it may not own the number (a client registers without OTP), so it's
+    // void now that the owner has proven it. The refresh that the app
+    // attempts next is refused for the same reason (AuthController).
+    if (issuedBeforeVerification && user.phoneVerified) {
+      throw new UnauthorizedException('Session expired — please log in again');
+    }
     // Non-null assertion is safe here: a deleted account (phone set to NULL
     // by UsersService.deleteAccount) is excluded by the deletedAt/phone
     // lookups above, so `user.phone` is always still set at this point.
-    request.user = { id: user.id, phone: user.phone!, role: user.role };
+    request.user = {
+      id: user.id,
+      phone: user.phone!,
+      role: user.role,
+      phoneVerified: user.phoneVerified,
+    };
     return true;
   }
 }

@@ -366,5 +366,9 @@
   "noBlockedUsersMessage": "لم تحظر أي أحد بعد.",
   "unblockButton": "إلغاء الحظر",
   "userUnblockedMessage": "تم إلغاء حظر المستخدم.",
-  "termsOfServiceButton": "شروط الاستخدام"
+  "termsOfServiceButton": "شروط الاستخدام",
+  "phoneCheckTitle": "أكّد رقمك",
+  "phoneCheckServiceRequestMessage": "لإتمام طلبك، أكّد رقم هاتفك بالرمز الذي سنرسله إليك عبر واتساب أو رسالة نصية. هذا التحقق يتم مرة واحدة فقط.",
+  "phoneCheckMissionMessage": "للمتابعة، أكّد رقم هاتفك بالرمز الذي سنرسله إليك عبر واتساب أو رسالة نصية. هذا التحقق يتم مرة واحدة فقط.",
+  "phoneCheckSendCodeButton": "استلام الرمز"
 }

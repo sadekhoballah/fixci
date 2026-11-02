@@ -262,6 +262,9 @@ class OnboardingController extends Notifier<OnboardingState> {
         final storage = ref.read(sessionStorageProvider);
         await storage.saveRole(outcome.role);
         await storage.savePhone(phone);
+        // The code just checked out — that is the number's verification
+        // (POST /auth/otp/check marks the account verified server-side).
+        await storage.savePhoneVerified(true);
         if (outcome.subscriptionTier != null) {
           await storage.saveTier(outcome.subscriptionTier!);
         }
@@ -292,7 +295,11 @@ class OnboardingController extends Notifier<OnboardingState> {
   }
 
   Future<bool> submitRegistration() async {
-    state = state.copyWith(isSubmitting: true, clearSubmissionError: true);
+    state = state.copyWith(
+      isSubmitting: true,
+      clearSubmissionError: true,
+      phoneAlreadyRegistered: false,
+    );
     final l10n = ref.read(l10nProvider);
     try {
       final tokens = await ref
@@ -307,9 +314,20 @@ class OnboardingController extends Notifier<OnboardingState> {
       final storage = ref.read(sessionStorageProvider);
       await storage.saveRole(state.role!);
       await storage.savePhone(state.phone.trim());
+      await storage.savePhoneVerified(tokens.phoneVerified);
       state = state.copyWith(isSubmitting: false, registrationSucceeded: true);
       return true;
     } on ApiException catch (e) {
+      // Only reachable without OTP (a client's registration): the number
+      // already has an account, so RegistrationScreen logs them into it via
+      // the OTP screen rather than showing an error.
+      if (e.statusCode == 409 && state.registrationToken == null) {
+        state = state.copyWith(
+          isSubmitting: false,
+          phoneAlreadyRegistered: true,
+        );
+        return false;
+      }
       state = state.copyWith(isSubmitting: false, submissionError: e.message);
       return false;
     } catch (_) {

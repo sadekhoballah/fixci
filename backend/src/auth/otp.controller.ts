@@ -90,6 +90,17 @@ export class OtpController {
       where: { phone: dto.phone },
     });
     if (user && !user.deletedAt) {
+      // A client who registered without OTP has just proven the number —
+      // this is the one and only time they're asked (see
+      // assertPhoneVerified). Flipping it also voids any session opened
+      // before now (see AccessTokenPayload.pv).
+      if (!user.phoneVerified) {
+        await this.userRepository.update(
+          { id: user.id },
+          { phoneVerified: true },
+        );
+        user.phoneVerified = true;
+      }
       const tokens = await this.tokensService.issueTokens(user);
       // Mirrors GET /users/lookup: the mobile client needs the craftsman's
       // subscription tier up front to route straight to their dashboard
@@ -110,6 +121,7 @@ export class OtpController {
           phone: user.phone,
           fullName: user.fullName,
           role: user.role,
+          phoneVerified: user.phoneVerified,
           subscriptionTier,
         },
       };

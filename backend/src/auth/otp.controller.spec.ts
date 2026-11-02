@@ -28,7 +28,7 @@ describe('OtpController', () => {
     issueTokens: jest.Mock;
     issueRegistrationToken: jest.Mock;
   };
-  let userRepository: { findOne: jest.Mock };
+  let userRepository: { findOne: jest.Mock; update: jest.Mock };
   let craftsmanProfileRepository: { findOne: jest.Mock };
   let blacklistedPhoneRepository: { findOne: jest.Mock };
 
@@ -53,7 +53,10 @@ describe('OtpController', () => {
         .mockResolvedValue({ accessToken: 'a', refreshToken: 'r' }),
       issueRegistrationToken: jest.fn().mockResolvedValue('reg-token'),
     };
-    userRepository = { findOne: jest.fn().mockResolvedValue(null) };
+    userRepository = {
+      findOne: jest.fn().mockResolvedValue(null),
+      update: jest.fn().mockResolvedValue(undefined),
+    };
     craftsmanProfileRepository = { findOne: jest.fn().mockResolvedValue(null) };
     blacklistedPhoneRepository = { findOne: jest.fn().mockResolvedValue(null) };
 
@@ -115,6 +118,7 @@ describe('OtpController', () => {
         phone: PHONE,
         fullName: 'Kofi Yao',
         role: UserRole.CRAFTSMAN,
+        phoneVerified: true,
         deletedAt: null,
       });
       craftsmanProfileRepository.findOne.mockResolvedValue({
@@ -132,6 +136,31 @@ describe('OtpController', () => {
           role: UserRole.CRAFTSMAN,
           subscriptionTier: 'silver',
         },
+      });
+    });
+
+    it('marks a client registered without OTP as verified, once, and logs them in', async () => {
+      userRepository.findOne.mockResolvedValue({
+        id: 'u-2',
+        phone: PHONE,
+        fullName: 'Aya Kone',
+        role: UserRole.CLIENT,
+        phoneVerified: false,
+        deletedAt: null,
+      });
+
+      const result = await controller.check({ phone: PHONE, code: '123456' });
+
+      expect(userRepository.update).toHaveBeenCalledWith(
+        { id: 'u-2' },
+        { phoneVerified: true },
+      );
+      expect(tokensService.issueTokens).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'u-2', phoneVerified: true }),
+      );
+      expect(result).toMatchObject({
+        status: 'existing',
+        user: { id: 'u-2', role: UserRole.CLIENT, phoneVerified: true },
       });
     });
 

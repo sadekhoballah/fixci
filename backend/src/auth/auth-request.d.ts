@@ -5,6 +5,10 @@ export interface AuthenticatedUser {
   id: string;
   phone: string;
   role: UserRole;
+  // False only for a client who registered without OTP and hasn't yet
+  // confirmed their number (see assertPhoneVerified). Always true for a
+  // craftsman, who verifies before the account even exists.
+  phoneVerified: boolean;
 }
 
 export interface AuthenticatedAdmin {

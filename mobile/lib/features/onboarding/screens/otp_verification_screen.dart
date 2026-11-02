@@ -12,9 +12,17 @@ import 'registration_success_screen.dart';
 import 'tier_selection_screen.dart';
 
 class OtpVerificationScreen extends ConsumerStatefulWidget {
-  const OtpVerificationScreen({super.key, required this.phone});
+  const OtpVerificationScreen({
+    super.key,
+    required this.phone,
+    this.popOnSuccess = false,
+  });
 
   final String phone;
+  // One-time confirmation of an already logged-in client's number (see
+  // ensurePhoneVerified): on success, pop back with `true` so the caller
+  // carries on with what it was doing, instead of routing to a shell.
+  final bool popOnSuccess;
 
   @override
   ConsumerState<OtpVerificationScreen> createState() =>
@@ -71,6 +79,10 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     }
 
     final state = ref.read(onboardingControllerProvider);
+    if (widget.popOnSuccess) {
+      Navigator.of(context).pop(true);
+      return;
+    }
     if (state.loggedIntoExistingAccount) {
       final destination = switch (state.role) {
         UserRole.craftsman when state.selectedTier == null =>

@@ -113,12 +113,16 @@ export class UsersService {
 
     // Verified outside the transaction: throws UnauthorizedException if the
     // token is invalid/expired or wasn't issued for this exact phone (see
-    // TokensService.verifyRegistrationToken) — registration can't proceed
-    // without having passed OTP verification via POST /auth/otp/check first.
-    await this.tokensService.verifyRegistrationToken(
-      dto.registrationToken,
-      dto.phone,
-    );
+    // TokensService.verifyRegistrationToken). A craftsman can't get here
+    // without one (RegisterUserDto); a client without one registers
+    // unverified and confirms the number later (see assertPhoneVerified).
+    const phoneVerified = dto.registrationToken != null;
+    if (dto.registrationToken != null) {
+      await this.tokensService.verifyRegistrationToken(
+        dto.registrationToken,
+        dto.phone,
+      );
+    }
 
     // An OTP_TEST_PHONES number (Play Store review / pilot) registers with no
     // KYC document at all — see RegisterUserDto. Mark it verified up front so
@@ -144,7 +148,7 @@ export class UsersService {
 
     try {
       return await this.dataSource.transaction(async (manager) => {
-        // phoneVerified: the registrationToken above is proof Twilio Verify
+        // phoneVerified: a registrationToken above is proof Twilio Verify
         // approved a code sent to this exact number.
         const user = await manager.save(
           manager.create(User, {
@@ -152,7 +156,7 @@ export class UsersService {
             fullName: dto.fullName ?? null,
             role: dto.role,
             districtId: dto.districtId,
-            phoneVerified: true,
+            phoneVerified,
           }),
         );
 

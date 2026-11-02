@@ -366,5 +366,9 @@
   "noBlockedUsersMessage": "You haven't blocked anyone.",
   "unblockButton": "Unblock",
   "userUnblockedMessage": "User unblocked.",
-  "termsOfServiceButton": "Terms of Service"
+  "termsOfServiceButton": "Terms of Service",
+  "phoneCheckTitle": "Confirm your number",
+  "phoneCheckServiceRequestMessage": "To complete your request, confirm your phone number with the code we'll send you by WhatsApp or SMS. You only need to do this once.",
+  "phoneCheckMissionMessage": "To continue, confirm your phone number with the code we'll send you by WhatsApp or SMS. You only need to do this once.",
+  "phoneCheckSendCodeButton": "Get the code"
 }

@@ -26,15 +26,21 @@ describe('TokensService', () => {
       id: 'user-1',
       phone: '+2250700000001',
       role: UserRole.CLIENT,
+      phoneVerified: true,
     });
 
     expect(jwtService.signAsync).toHaveBeenCalledWith(
-      { sub: 'user-1', phone: '+2250700000001', role: UserRole.CLIENT },
+      {
+        sub: 'user-1',
+        phone: '+2250700000001',
+        role: UserRole.CLIENT,
+        pv: true,
+      },
       expect.objectContaining({ expiresIn: '15m' }),
     );
     expect(jwtService.signAsync).toHaveBeenCalledWith(
-      { sub: 'user-1', type: 'refresh' },
-      expect.objectContaining({ expiresIn: '30d' }),
+      { sub: 'user-1', type: 'refresh', pv: true },
+      expect.objectContaining({ expiresIn: '365d' }),
     );
     const [, accessOpts] = jwtService.signAsync.mock.calls[0] as [
       unknown,
@@ -45,6 +51,20 @@ describe('TokensService', () => {
       { secret: string },
     ];
     expect(accessOpts.secret).not.toBe(refreshOpts.secret);
+  });
+
+  it('keeps the 30-day refresh token for craftsmen (clients get 365 days)', async () => {
+    await service.issueTokens({
+      id: 'user-2',
+      phone: '+2250700000002',
+      role: UserRole.CRAFTSMAN,
+      phoneVerified: true,
+    });
+
+    expect(jwtService.signAsync).toHaveBeenCalledWith(
+      { sub: 'user-2', type: 'refresh', pv: true },
+      expect.objectContaining({ expiresIn: '30d' }),
+    );
   });
 
   it('verifyAccessToken returns the payload on success', async () => {
@@ -77,6 +97,7 @@ describe('TokensService', () => {
       id: 'user-1',
       phone: '+2250700000001',
       role: UserRole.CLIENT,
+      phoneVerified: true,
     });
     const [, accessOpts] = jwtService.signAsync.mock.calls[0] as [
       unknown,

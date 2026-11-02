@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/auth/phone_verification_gate.dart';
 import '../../../l10n/app_localizations.dart';
 import '../missions_board_controller.dart';
 import '../missions_unseen_count_controller.dart';
@@ -42,6 +43,12 @@ class _MissionsHomeScreenState extends ConsumerState<MissionsHomeScreen>
   }
 
   Future<void> _openCreateForm() async {
+    // Before the form, not after it — no point filling it in only to be
+    // stopped on submit. See ensurePhoneVerified.
+    if (!await ensurePhoneVerified(context, ref, PhoneCheckReason.mission)) {
+      return;
+    }
+    if (!mounted) return;
     await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => const MissionFormScreen()));
