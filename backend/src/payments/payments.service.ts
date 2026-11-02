@@ -13,6 +13,7 @@ import { SubscriptionPayment } from '../database/entities/subscription-payment.e
 import { UserRole } from '../database/enums/user-role.enum';
 import {
   Currency,
+  CURRENCY_BY_COUNTRY,
   getSubscriptionPrice,
   SubscriptionTier,
 } from '../database/enums/subscription-tier.enum';
@@ -60,6 +61,14 @@ export class PaymentsService {
     });
     if (!user) {
       throw new NotFoundException('No craftsman account for this user');
+    }
+
+    // Paid plans exist only where a payment channel does (Wave in CI, Whish
+    // in LB); every other launched country is free-tier only for now.
+    if (!CURRENCY_BY_COUNTRY[user.district.countryCode]) {
+      throw new BadRequestException(
+        'Les abonnements payants ne sont pas encore disponibles dans votre pays.',
+      );
     }
 
     const { amount, currency } = getSubscriptionPrice(

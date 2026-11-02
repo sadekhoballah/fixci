@@ -5,7 +5,24 @@ import { IsIn, IsNotEmpty, IsString, MaxLength } from 'class-validator';
 // districts at all yet (registration is blocked client-side with a
 // "coming soon" notice instead), so it's deliberately not a valid choice
 // here until that actually launches.
-const LAUNCHED_COUNTRY_CODES = ['CI', 'LB'];
+// The 2026-11 African wave (SN … GN) launches artisan-side first: their
+// cities are seeded with client ordering closed until each has enough
+// verified craftsmen (see AddAfricanCountries1791300000000).
+const LAUNCHED_COUNTRY_CODES = [
+  'CI',
+  'LB',
+  'SN',
+  'CM',
+  'BJ',
+  'TG',
+  'GH',
+  'NG',
+  'CG',
+  'CD',
+  'BF',
+  'ML',
+  'GN',
+];
 
 export class CreateDistrictDto {
   @IsNotEmpty()

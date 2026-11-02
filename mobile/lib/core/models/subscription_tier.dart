@@ -61,9 +61,15 @@ extension SubscriptionTierLocalization on SubscriptionTier {
   // screen uses to pick the matching payment instructions/copy).
   String priceLabel(AppLocalizations l10n, String countryCode) =>
       countryCode == 'LB'
-          ? l10n.priceUsdPerMonth(priceUsd)
-          : l10n.priceCfaPerMonth(priceCfa);
+      ? l10n.priceUsdPerMonth(priceUsd)
+      : l10n.priceCfaPerMonth(priceCfa);
 }
+
+// Countries with a payment channel (Wave in CI, Whish in LB) — mirrors the
+// backend's CURRENCY_BY_COUNTRY. Every other launched country is free-tier
+// only: no paid plan is offered and the backend refuses to charge one.
+bool paidPlansAvailableIn(String countryCode) =>
+    countryCode == 'CI' || countryCode == 'LB';
 
 enum PaymentProvider {
   wave,

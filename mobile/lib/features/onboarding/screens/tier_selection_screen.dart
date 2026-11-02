@@ -26,9 +26,14 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
   SubscriptionTier? _selected;
   bool _continuing = false;
 
-  List<SubscriptionTier> get _availableTiers => widget.isChangingPlan
-      ? SubscriptionTier.values.where((tier) => tier.isPaid).toList()
-      : SubscriptionTier.values;
+  List<SubscriptionTier> _availableTiers(String countryCode) {
+    if (!paidPlansAvailableIn(countryCode)) {
+      return widget.isChangingPlan ? const [] : [SubscriptionTier.free];
+    }
+    return widget.isChangingPlan
+        ? SubscriptionTier.values.where((tier) => tier.isPaid).toList()
+        : SubscriptionTier.values;
+  }
 
   // During onboarding the country comes from the phone field the craftsman
   // just filled in; when changing an already-active plan there's no
@@ -71,12 +76,11 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final countryCode = _countryCode(ref);
+    final availableTiers = _availableTiers(countryCode);
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.isChangingPlan
-              ? l10n.changePlanTitle
-              : l10n.chooseTierTitle,
+          widget.isChangingPlan ? l10n.changePlanTitle : l10n.chooseTierTitle,
         ),
       ),
       body: SafeArea(
@@ -87,7 +91,10 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
             children: [
               Text(
                 l10n.chooseTierHeading,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -102,11 +109,11 @@ class _TierSelectionScreenState extends ConsumerState<TierSelectionScreen> {
               const SizedBox(height: 24),
               Expanded(
                 child: ListView.separated(
-                  itemCount: _availableTiers.length,
+                  itemCount: availableTiers.length,
                   separatorBuilder: (context, index) =>
                       const SizedBox(height: 12),
                   itemBuilder: (context, index) {
-                    final tier = _availableTiers[index];
+                    final tier = availableTiers[index];
                     return _TierOption(
                       tier: tier,
                       countryCode: countryCode,

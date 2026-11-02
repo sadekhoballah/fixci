@@ -330,7 +330,7 @@ class _PhoneFieldState extends ConsumerState<_PhoneField> {
           ? null
           : (phoneNumber) => ref
                 .read(onboardingControllerProvider.notifier)
-                .setPhone(phoneNumber.completeNumber),
+                .setPhone(toE164(phoneNumber)),
       onCountryChanged: state.phoneLocked
           ? null
           : (country) => ref

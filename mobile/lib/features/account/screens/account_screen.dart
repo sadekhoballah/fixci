@@ -110,15 +110,19 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.accountTab)),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const TierSelectionScreen(isChangingPlan: true),
-          ),
-        ),
-        icon: const Icon(Icons.workspace_premium_rounded),
-        label: Text(l10n.changePlanTitle),
-      ),
+      // No paid plan to switch to outside CI/LB (see paidPlansAvailableIn).
+      floatingActionButton: paidPlansAvailableIn(home.countryCode)
+          ? FloatingActionButton.extended(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      const TierSelectionScreen(isChangingPlan: true),
+                ),
+              ),
+              icon: const Icon(Icons.workspace_premium_rounded),
+              label: Text(l10n.changePlanTitle),
+            )
+          : null,
       body: SafeArea(
         child: ListView(
           // Extra bottom padding clears the extended FAB ("Changer de
@@ -326,7 +330,10 @@ class _VerificationStatusCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -337,7 +344,11 @@ class _VerificationStatusCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: fg),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: fg,
+                  ),
                 ),
               ),
             ],
@@ -349,7 +360,9 @@ class _VerificationStatusCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: isResubmitting ? null : () => _showSourceSheet(context),
+                onPressed: isResubmitting
+                    ? null
+                    : () => _showSourceSheet(context),
                 icon: isResubmitting
                     ? const SizedBox(
                         width: 16,

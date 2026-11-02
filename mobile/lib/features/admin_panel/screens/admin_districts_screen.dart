@@ -5,7 +5,21 @@ import '../admin_districts_state.dart';
 
 // Matches CreateDistrictDto's LAUNCHED_COUNTRY_CODES — kept in sync with the
 // dropdown in _showCreateDialog below.
-const _countryLabels = {'CI': "Côte d'Ivoire", 'LB': 'Liban'};
+const _countryLabels = {
+  'CI': "Côte d'Ivoire",
+  'SN': 'Sénégal',
+  'CM': 'Cameroun',
+  'BJ': 'Bénin',
+  'TG': 'Togo',
+  'BF': 'Burkina Faso',
+  'ML': 'Mali',
+  'GN': 'Guinée',
+  'GH': 'Ghana',
+  'NG': 'Nigeria',
+  'CG': 'Congo-Brazzaville',
+  'CD': 'RD Congo',
+  'LB': 'Liban',
+};
 
 class AdminDistrictsScreen extends ConsumerStatefulWidget {
   const AdminDistrictsScreen({super.key});
@@ -64,11 +78,8 @@ class _AdminDistrictsScreenState extends ConsumerState<AdminDistrictsScreen> {
                           isProcessing: state.processingDistrictIds.contains(
                             district.id,
                           ),
-                          onToggleArtisan: (value) =>
-                              controller.toggleArtisanRegistration(
-                                district.id,
-                                value,
-                              ),
+                          onToggleArtisan: (value) => controller
+                              .toggleArtisanRegistration(district.id, value),
                           onToggleClient: (value) => controller
                               .toggleClientOrdering(district.id, value),
                         ),
@@ -109,10 +120,8 @@ class _AdminDistrictsScreenState extends ConsumerState<AdminDistrictsScreen> {
                 decoration: const InputDecoration(labelText: 'Pays'),
                 items: _countryLabels.entries
                     .map(
-                      (e) => DropdownMenuItem(
-                        value: e.key,
-                        child: Text(e.value),
-                      ),
+                      (e) =>
+                          DropdownMenuItem(value: e.key, child: Text(e.value)),
                     )
                     .toList(),
                 onChanged: (value) {
@@ -215,10 +224,7 @@ class _DistrictCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 2,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(999),
