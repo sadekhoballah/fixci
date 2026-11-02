@@ -50,6 +50,8 @@ class PendingVerification {
     required this.role,
     required this.fullName,
     required this.phone,
+    required this.districtName,
+    required this.countryCode,
     required this.serviceCategory,
     required this.experienceDetails,
     required this.licenseVerified,
@@ -62,6 +64,9 @@ class PendingVerification {
   final VerificationRole role;
   final String phone;
   final String? fullName;
+  // Where the document comes from — the queue spans every launched country.
+  final String districtName;
+  final String countryCode;
   // Craftsman-only — null for a client entry.
   final ServiceCategory? serviceCategory;
   final String? experienceDetails;

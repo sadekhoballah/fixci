@@ -6,6 +6,7 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -27,6 +28,7 @@ import {
 import { DeactivateAccountDto } from './dto/deactivate-account.dto';
 import { RejectMissionDto } from './dto/reject-mission.dto';
 import { ResolveReportDto } from './dto/resolve-report.dto';
+import { CountryFilterDto } from '../districts/dto/country-filter.dto';
 
 @Controller('admin')
 @UseGuards(AdminJwtGuard)
@@ -42,8 +44,10 @@ export class AdminController {
   ) {}
 
   @Get('verifications')
-  async getPendingVerifications() {
-    return { items: await this.adminService.getPendingVerifications() };
+  async getPendingVerifications(@Query() { country }: CountryFilterDto) {
+    return {
+      items: await this.adminService.getPendingVerifications(country),
+    };
   }
 
   @Patch('craftsmen/:id/verify')

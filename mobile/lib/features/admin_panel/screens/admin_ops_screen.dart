@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/service_category.dart';
+import '../admin_countries.dart';
 import '../admin_ops_controller.dart';
 import '../admin_ops_state.dart';
 
@@ -28,9 +29,13 @@ class AdminOpsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(adminOpsControllerProvider);
     final controller = ref.read(adminOpsControllerProvider.notifier);
+    final country = ref.watch(adminCountryFilterProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Live Ops')),
+      appBar: AppBar(
+        title: const Text('Live Ops'),
+        actions: const [AdminCountryFilterButton()],
+      ),
       body: SafeArea(
         child: state.isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -82,6 +87,57 @@ class AdminOpsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 28),
                       const Text(
+                        'Contact direct après 75 s sans réponse',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _CountGrid(
+                        entries: [
+                          MapEntry(
+                            'Demandes expirées',
+                            stats.directContact.expired,
+                          ),
+                          MapEntry(
+                            'Clients ayant contacté un artisan',
+                            stats.directContact.contactedRequests,
+                          ),
+                          MapEntry(
+                            'Contacts WhatsApp',
+                            stats.directContact.whatsappContacts,
+                          ),
+                          MapEntry(
+                            'Appels',
+                            stats.directContact.callContacts,
+                          ),
+                        ],
+                      ),
+                      if (country == null) ...[
+                        const SizedBox(height: 28),
+                        const Text(
+                          'Par pays',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _CountGrid(
+                          entries: stats.byCountry
+                              .map(
+                                (c) => MapEntry(
+                                  countryWithFlag(c.name),
+                                  c.count,
+                                ),
+                              )
+                              .toList(),
+                          emptyLabel: 'Aucune demande sur cette période.',
+                        ),
+                      ],
+                      const SizedBox(height: 28),
+                      const Text(
                         'Par district',
                         style: TextStyle(
                           fontSize: 16,
@@ -91,7 +147,12 @@ class AdminOpsScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                       _CountGrid(
                         entries: stats.byDistrict
-                            .map((d) => MapEntry(d.name, d.count))
+                            .map(
+                              (d) => MapEntry(
+                                '${countryFlag(d.countryCode ?? '')} ${d.name}',
+                                d.count,
+                              ),
+                            )
                             .toList(),
                         emptyLabel: 'Aucune demande sur cette période.',
                       ),
@@ -193,7 +254,9 @@ class _PresenceTable extends StatelessWidget {
                     DataCell(Text(c.fullName ?? '—')),
                     DataCell(Text(c.phone)),
                     DataCell(Text(_categoryLabel(c.category))),
-                    DataCell(Text(c.districtName)),
+                    DataCell(
+                      Text('${countryFlag(c.countryCode)} ${c.districtName}'),
+                    ),
                     DataCell(Text(_formatSince(c.onlineSince))),
                   ],
                 ),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'admin_api_client.dart';
 import 'admin_auth_controller.dart';
+import 'admin_countries.dart';
 import 'admin_directory_repository.dart';
 import 'admin_directory_state.dart';
 
@@ -16,6 +17,7 @@ class AdminDirectoryController extends Notifier<AdminDirectoryState> {
   AdminDirectoryState build() {
     Future.microtask(refresh);
     ref.onDispose(() => _debounceTimer?.cancel());
+    ref.listen(adminCountryFilterProvider, (_, _) => refresh());
     return const AdminDirectoryState();
   }
 
@@ -39,21 +41,31 @@ class AdminDirectoryController extends Notifier<AdminDirectoryState> {
     refresh();
   }
 
+  // Bumped per fetch so a slow response for stale filters (tab, search,
+  // country) can't overwrite a newer one.
+  int _generation = 0;
+
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true, clearError: true);
+    final generation = ++_generation;
+    final country = ref.read(adminCountryFilterProvider);
     try {
       final repository = ref.read(adminDirectoryRepositoryProvider);
       final entries = state.tab == DirectoryTab.clients
-          ? await repository.getClients(search: state.search)
+          ? await repository.getClients(search: state.search, country: country)
           : await repository.getCraftsmen(
               search: state.search,
               category: state.category,
+              country: country,
             );
+      if (generation != _generation) return;
       state = state.copyWith(isLoading: false, entries: entries);
     } on AdminApiException catch (e) {
+      if (generation != _generation) return;
       await _handlePossibleAuthFailure(e);
       state = state.copyWith(isLoading: false, errorMessage: e.message);
     } catch (_) {
+      if (generation != _generation) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: "Impossible de charger l'annuaire.",

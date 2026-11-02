@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../admin_countries.dart';
 import '../../../core/models/service_category.dart';
 import '../admin_directory_controller.dart';
 import '../admin_directory_state.dart';
@@ -21,7 +22,10 @@ class AdminDirectoryScreen extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Annuaire')),
+      appBar: AppBar(
+        title: const Text('Annuaire'),
+        actions: const [AdminCountryFilterButton()],
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -55,7 +59,7 @@ class AdminDirectoryScreen extends ConsumerWidget {
                     // than this widget's own internal TextEditingValue.
                     key: ValueKey(state.tab),
                     decoration: const InputDecoration(
-                      labelText: 'Rechercher par téléphone',
+                      labelText: 'Rechercher par nom ou téléphone',
                       prefixIcon: Icon(Icons.search_rounded),
                     ),
                     keyboardType: TextInputType.phone,
@@ -200,6 +204,12 @@ class _DirectoryCard extends StatelessWidget {
   final bool isProcessing;
   final VoidCallback onDelete;
 
+  List<String> get _warnings => [
+    if (!entry.phoneVerified) 'Numéro non vérifié',
+    if (entry.idVerified == false) 'Pièce non vérifiée',
+    if (entry.isActive == false) 'Désactivé',
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -236,7 +246,7 @@ class _DirectoryCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   [
-                    entry.districtName,
+                    '${countryFlag(entry.countryCode)} ${entry.districtName}',
                     if (entry.serviceCategory != null)
                       _categoryLabel(entry.serviceCategory!),
                   ].join(' · '),
@@ -245,6 +255,34 @@ class _DirectoryCard extends StatelessWidget {
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
+                if (_warnings.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final warning in _warnings)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            warning,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.deepOrange,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
                 // ratingsCount is only ever populated for craftsmen (see
                 // AdminDirectoryRepository._parseItems) — absent on the
                 // clients tab.

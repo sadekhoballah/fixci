@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../admin_countries.dart';
 import '../admin_history_controller.dart';
 import '../admin_history_state.dart';
 import 'admin_history_widgets.dart';
@@ -27,7 +28,10 @@ class AdminMissionHistoryScreen extends ConsumerWidget {
     final controller = ref.read(adminMissionHistoryControllerProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Missions effectuées')),
+      appBar: AppBar(
+        title: const Text('Missions effectuées'),
+        actions: const [AdminCountryFilterButton()],
+      ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: controller.refresh,

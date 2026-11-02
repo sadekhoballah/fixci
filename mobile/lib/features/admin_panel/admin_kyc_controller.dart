@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'admin_api_client.dart';
 import 'admin_auth_controller.dart';
+import 'admin_countries.dart';
 import 'admin_kyc_repository.dart';
 import 'admin_kyc_state.dart';
 
@@ -8,17 +9,27 @@ class AdminKycController extends Notifier<AdminKycState> {
   @override
   AdminKycState build() {
     Future.microtask(refresh);
+    ref.listen(adminCountryFilterProvider, (_, _) => refresh());
     return const AdminKycState();
   }
 
+  // Bumped per fetch so a slow response for the previous country can't
+  // overwrite a newer one.
+  int _generation = 0;
+
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true, clearError: true);
+    final generation = ++_generation;
     try {
       final entries = await ref
           .read(adminKycRepositoryProvider)
-          .getPendingVerifications();
+          .getPendingVerifications(
+            country: ref.read(adminCountryFilterProvider),
+          );
+      if (generation != _generation) return;
       state = state.copyWith(isLoading: false, entries: entries);
     } on AdminApiException catch (e) {
+      if (generation != _generation) return;
       await _handlePossibleAuthFailure(e);
       state = state.copyWith(isLoading: false, errorMessage: e.message);
     } catch (_) {

@@ -5,6 +5,7 @@ class OnlineCraftsman {
     required this.phone,
     required this.category,
     required this.districtName,
+    required this.countryCode,
     required this.onlineSince,
   });
 
@@ -13,6 +14,7 @@ class OnlineCraftsman {
   final String phone;
   final String category;
   final String districtName;
+  final String countryCode;
   final DateTime? onlineSince;
 }
 
@@ -24,10 +26,29 @@ class StatusCount {
 }
 
 class NamedCount {
-  const NamedCount({required this.name, required this.count});
+  const NamedCount({required this.name, required this.count, this.countryCode});
 
   final String name;
   final int count;
+  // Set for district rows, so they can carry their country's flag.
+  final String? countryCode;
+}
+
+// After the 75 s window closed with nobody accepting: how many of those
+// requests ended with the client reaching a craftsman from the "contact
+// directly" list, and through which channel.
+class DirectContactStats {
+  const DirectContactStats({
+    required this.expired,
+    required this.contactedRequests,
+    required this.whatsappContacts,
+    required this.callContacts,
+  });
+
+  final int expired;
+  final int contactedRequests;
+  final int whatsappContacts;
+  final int callContacts;
 }
 
 enum OpsStatsRange { today, week, all }
@@ -51,11 +72,16 @@ class OpsStats {
     required this.byStatus,
     required this.byDistrict,
     required this.byCategory,
+    required this.byCountry,
+    required this.directContact,
   });
 
   final List<StatusCount> byStatus;
   final List<NamedCount> byDistrict;
   final List<NamedCount> byCategory;
+  // name = country code.
+  final List<NamedCount> byCountry;
+  final DirectContactStats directContact;
 }
 
 class AdminOpsState {
@@ -77,6 +103,7 @@ class AdminOpsState {
     OpsStatsRange? range,
     List<OnlineCraftsman>? online,
     OpsStats? stats,
+    bool clearStats = false,
     bool? isLoading,
     String? errorMessage,
     bool clearError = false,
@@ -84,7 +111,7 @@ class AdminOpsState {
     return AdminOpsState(
       range: range ?? this.range,
       online: online ?? this.online,
-      stats: stats ?? this.stats,
+      stats: clearStats ? null : (stats ?? this.stats),
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );

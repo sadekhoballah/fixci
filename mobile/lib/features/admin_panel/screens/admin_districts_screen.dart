@@ -1,25 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../admin_countries.dart';
 import '../admin_districts_controller.dart';
 import '../admin_districts_state.dart';
 
-// Matches CreateDistrictDto's LAUNCHED_COUNTRY_CODES — kept in sync with the
-// dropdown in _showCreateDialog below.
-const _countryLabels = {
-  'CI': "Côte d'Ivoire",
-  'SN': 'Sénégal',
-  'CM': 'Cameroun',
-  'BJ': 'Bénin',
-  'TG': 'Togo',
-  'BF': 'Burkina Faso',
-  'ML': 'Mali',
-  'GN': 'Guinée',
-  'GH': 'Ghana',
-  'NG': 'Nigeria',
-  'CG': 'Congo-Brazzaville',
-  'CD': 'RD Congo',
-  'LB': 'Liban',
-};
+// Verified craftsmen a waitlisted city should have before its client
+// ordering is switched on — below that, clients would mostly hit the empty
+// "nobody accepted" outcome. A guide shown on each card, not enforced.
+const kCityReadyThreshold = 20;
 
 class AdminDistrictsScreen extends ConsumerStatefulWidget {
   const AdminDistrictsScreen({super.key});
@@ -30,21 +18,23 @@ class AdminDistrictsScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminDistrictsScreenState extends ConsumerState<AdminDistrictsScreen> {
-  // null = no country filter, show every district.
-  String? _countryFilter;
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(adminDistrictsControllerProvider);
     final controller = ref.read(adminDistrictsControllerProvider.notifier);
-    final districts = _countryFilter == null
+    // The panel-wide country filter (AppBar), shared with the other tabs.
+    final countryFilter = ref.watch(adminCountryFilterProvider);
+    final districts = countryFilter == null
         ? state.districts
         : state.districts
-              .where((d) => d.countryCode == _countryFilter)
+              .where((d) => d.countryCode == countryFilter)
               .toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Districts')),
+      appBar: AppBar(
+        title: const Text('Districts'),
+        actions: const [AdminCountryFilterButton()],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showCreateDialog(context, controller),
         child: const Icon(Icons.add_rounded),
@@ -57,12 +47,6 @@ class _AdminDistrictsScreenState extends ConsumerState<AdminDistrictsScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
-                    _CountryFilterField(
-                      value: _countryFilter,
-                      onChanged: (value) =>
-                          setState(() => _countryFilter = value),
-                    ),
-                    const SizedBox(height: 16),
                     if (state.errorMessage != null) ...[
                       Text(
                         state.errorMessage!,
@@ -97,7 +81,7 @@ class _AdminDistrictsScreenState extends ConsumerState<AdminDistrictsScreen> {
     AdminDistrictsController controller,
   ) async {
     final nameController = TextEditingController();
-    var countryCode = 'CI';
+    var countryCode = ref.read(adminCountryFilterProvider) ?? 'CI';
     final result = await showDialog<(String, String)>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -118,10 +102,12 @@ class _AdminDistrictsScreenState extends ConsumerState<AdminDistrictsScreen> {
               DropdownButtonFormField<String>(
                 initialValue: countryCode,
                 decoration: const InputDecoration(labelText: 'Pays'),
-                items: _countryLabels.entries
+                items: adminCountries.keys
                     .map(
-                      (e) =>
-                          DropdownMenuItem(value: e.key, child: Text(e.value)),
+                      (code) => DropdownMenuItem(
+                        value: code,
+                        child: Text(countryWithFlag(code)),
+                      ),
                     )
                     .toList(),
                 onChanged: (value) {
@@ -149,33 +135,6 @@ class _AdminDistrictsScreenState extends ConsumerState<AdminDistrictsScreen> {
     if (result != null && result.$1.isNotEmpty) {
       await controller.createDistrict(result.$1, result.$2);
     }
-  }
-}
-
-// Country filter shown above the district list — value is null for "all
-// countries", matching the current (unfiltered) behavior.
-class _CountryFilterField extends StatelessWidget {
-  const _CountryFilterField({required this.value, required this.onChanged});
-
-  final String? value;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<String?>(
-      initialValue: value,
-      decoration: const InputDecoration(
-        labelText: 'Filtrer par pays',
-        prefixIcon: Icon(Icons.search_rounded),
-      ),
-      items: [
-        const DropdownMenuItem(value: null, child: Text('Tous les pays')),
-        ..._countryLabels.entries.map(
-          (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
-        ),
-      ],
-      onChanged: onChanged,
-    );
   }
 }
 
@@ -230,7 +189,7 @@ class _DistrictCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  district.countryCode,
+                  countryWithFlag(district.countryCode),
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -242,9 +201,10 @@ class _DistrictCard extends StatelessWidget {
           const SizedBox(height: 12),
           _ToggleRow(
             label: 'Inscription artisans',
-            countLabel: district.isArtisanRegistrationActive
-                ? '${district.artisansCount} actifs'
-                : '${district.artisansCount} en attente',
+            countLabel:
+                '${district.artisansCount} '
+                '${district.isArtisanRegistrationActive ? 'inscrits' : 'en attente'}'
+                ' · ${district.verifiedArtisansCount} vérifiés',
             value: district.isArtisanRegistrationActive,
             onChanged: isProcessing ? null : onToggleArtisan,
           ),
@@ -257,6 +217,10 @@ class _DistrictCard extends StatelessWidget {
             value: district.isClientOrderingActive,
             onChanged: isProcessing ? null : onToggleClient,
           ),
+          if (!district.isClientOrderingActive) ...[
+            const SizedBox(height: 8),
+            _ReadinessHint(verified: district.verifiedArtisansCount),
+          ],
         ],
       ),
     );
@@ -298,6 +262,39 @@ class _ToggleRow extends StatelessWidget {
         ),
         Switch(value: value, onChanged: onChanged),
       ],
+    );
+  }
+}
+
+// For a city still closed to clients: how far it is from
+// kCityReadyThreshold verified craftsmen.
+class _ReadinessHint extends StatelessWidget {
+  const _ReadinessHint({required this.verified});
+
+  final int verified;
+
+  @override
+  Widget build(BuildContext context) {
+    final ready = verified >= kCityReadyThreshold;
+    final color = ready ? Colors.green : Colors.orange;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        ready
+            ? '✅ $verified artisans vérifiés — prêt à ouvrir aux clients'
+            : '⏳ $verified / $kCityReadyThreshold artisans vérifiés avant '
+                  "l'ouverture aux clients",
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: ready ? Colors.green.shade800 : Colors.orange.shade900,
+        ),
+      ),
     );
   }
 }

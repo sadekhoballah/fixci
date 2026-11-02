@@ -5,6 +5,7 @@ class BroadcastHistoryEntry {
     required this.body,
     required this.targetRole,
     required this.targetServiceCategory,
+    required this.targetCountryCode,
     required this.targetDistrictName,
     required this.waitlistOnly,
     required this.recipientCount,
@@ -16,6 +17,7 @@ class BroadcastHistoryEntry {
   final String body;
   final String? targetRole;
   final String? targetServiceCategory;
+  final String? targetCountryCode;
   final String? targetDistrictName;
   final bool waitlistOnly;
   final int recipientCount;

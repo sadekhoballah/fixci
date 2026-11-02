@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'admin_api_client.dart';
 import 'admin_auth_controller.dart';
+import 'admin_countries.dart';
 import 'admin_ops_repository.dart';
 import 'admin_ops_state.dart';
 
@@ -9,12 +10,19 @@ const _refreshInterval = Duration(seconds: 10);
 
 class AdminOpsController extends Notifier<AdminOpsState> {
   Timer? _refreshTimer;
+  // Bumped per fetch so a slow response for the previous country (or
+  // range) can't overwrite a newer one.
+  int _generation = 0;
 
   @override
   AdminOpsState build() {
     Future.microtask(refresh);
     _refreshTimer = Timer.periodic(_refreshInterval, (_) => refresh());
     ref.onDispose(() => _refreshTimer?.cancel());
+    ref.listen(adminCountryFilterProvider, (_, _) {
+      state = state.copyWith(isLoading: true, clearStats: true);
+      refresh();
+    });
     return const AdminOpsState();
   }
 
@@ -28,15 +36,18 @@ class AdminOpsController extends Notifier<AdminOpsState> {
   // surfaces errors — a background poll failing shouldn't look like success.
   Future<void> refresh() async {
     final isFirstLoad = state.stats == null;
+    final country = ref.read(adminCountryFilterProvider);
+    final generation = ++_generation;
     if (isFirstLoad) {
       state = state.copyWith(isLoading: true, clearError: true);
     }
     try {
       final repository = ref.read(adminOpsRepositoryProvider);
       final results = await Future.wait([
-        repository.getPresence(),
-        repository.getStats(state.range),
+        repository.getPresence(country: country),
+        repository.getStats(state.range, country: country),
       ]);
+      if (generation != _generation) return;
       state = state.copyWith(
         isLoading: false,
         clearError: true,
@@ -44,9 +55,11 @@ class AdminOpsController extends Notifier<AdminOpsState> {
         stats: results[1] as OpsStats,
       );
     } on AdminApiException catch (e) {
+      if (generation != _generation) return;
       await _handlePossibleAuthFailure(e);
       state = state.copyWith(isLoading: false, errorMessage: e.message);
     } catch (_) {
+      if (generation != _generation) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Impossible de charger les données.',

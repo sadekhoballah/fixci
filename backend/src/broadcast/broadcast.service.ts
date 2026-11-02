@@ -91,6 +91,7 @@ export class BroadcastService {
         body: dto.body,
         targetRole: dto.role ?? null,
         targetServiceCategory: dto.serviceCategory ?? null,
+        targetCountryCode: dto.countryCode ?? null,
         targetDistrictId: dto.districtId ?? null,
         waitlistOnly: dto.waitlistOnly ?? false,
         recipientCount: tokens.length,
@@ -108,6 +109,11 @@ export class BroadcastService {
 
     if (dto.role) {
       qb.andWhere('user.role = :role', { role: dto.role });
+    }
+    if (dto.countryCode) {
+      qb.andWhere('district.countryCode = :countryCode', {
+        countryCode: dto.countryCode,
+      });
     }
     if (dto.districtId) {
       qb.andWhere('user.districtId = :districtId', {

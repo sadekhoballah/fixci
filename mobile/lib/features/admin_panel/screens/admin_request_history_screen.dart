@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../admin_countries.dart';
 import '../admin_history_controller.dart';
 import '../admin_history_state.dart';
 import '../admin_ops_state.dart';
@@ -40,7 +41,10 @@ class AdminRequestHistoryScreen extends ConsumerWidget {
     final controller = ref.read(adminRequestHistoryControllerProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ops live détaillée')),
+      appBar: AppBar(
+        title: const Text('Ops live détaillée'),
+        actions: const [AdminCountryFilterButton()],
+      ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: controller.refresh,
@@ -74,9 +78,22 @@ class AdminRequestHistoryScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              HistoryDateFilter(
-                date: state.date,
-                onChanged: controller.setDate,
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  HistoryDateFilter(
+                    date: state.date,
+                    onChanged: controller.setDate,
+                  ),
+                  FilterChip(
+                    avatar: const Icon(Icons.chat_outlined, size: 18),
+                    label: const Text('Contact direct (WhatsApp / appel)'),
+                    selected: state.contactedOnly,
+                    onSelected: controller.setContactedOnly,
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               _StatsTiles(byStatus: state.byStatus),
@@ -233,6 +250,10 @@ class _RequestHistoryCard extends StatelessWidget {
           HistoryInfoLine(
             label: 'Client',
             value: _person(r.client.displayName, r.client.phone),
+          ),
+          HistoryInfoLine(
+            label: 'Lieu',
+            value: '${countryWithFlag(r.countryCode)} · ${r.districtName}',
           ),
           HistoryInfoLine(
             label: 'Artisan',

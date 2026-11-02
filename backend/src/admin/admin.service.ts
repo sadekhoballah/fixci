@@ -24,6 +24,9 @@ export interface PendingVerification {
   role: 'craftsman' | 'client';
   fullName: string | null;
   phone: string | null;
+  // Where the ID document comes from — the queue now spans 13 countries.
+  districtName: string;
+  countryCode: string;
   // Craftsman-only fields — absent for client entries.
   serviceCategory: string | null;
   experienceDetails: string | null;
@@ -60,7 +63,9 @@ export class AdminService {
   // screen to check. Deactivated accounts (isActive: false) are deliberately
   // excluded from both halves — rejecting is how a review gets resolved, so
   // a rejected account shouldn't keep reappearing in the queue.
-  async getPendingVerifications(): Promise<PendingVerification[]> {
+  async getPendingVerifications(
+    country?: string,
+  ): Promise<PendingVerification[]> {
     // Craftsman queue is an OR of two conditions: the normal "ID card not
     // yet verified" case (every category), plus — taxi/camion only — "ID
     // card verified but the license isn't yet", so those two categories
@@ -78,7 +83,7 @@ export class AdminService {
           licenseStorageKey: Not(IsNull()),
         },
       ],
-      relations: { user: true },
+      relations: { user: { district: true } },
       order: { createdAt: 'ASC' },
     });
     const dedupedCraftsmanProfiles = [
@@ -93,7 +98,7 @@ export class AdminService {
         isActive: true,
         idCardStorageKey: Not(IsNull()),
       },
-      relations: { user: true },
+      relations: { user: { district: true } },
       order: { createdAt: 'ASC' },
     });
 
@@ -103,6 +108,8 @@ export class AdminService {
         role: 'craftsman' as const,
         fullName: profile.user.fullName,
         phone: profile.user.phone,
+        districtName: profile.user.district.name,
+        countryCode: profile.user.district.countryCode,
         serviceCategory: profile.serviceCategory,
         experienceDetails: profile.experienceDetails,
         idCardStorageKey: profile.idCardStorageKey!,
@@ -117,6 +124,8 @@ export class AdminService {
         role: 'client' as const,
         fullName: profile.user.fullName,
         phone: profile.user.phone,
+        districtName: profile.user.district.name,
+        countryCode: profile.user.district.countryCode,
         serviceCategory: null,
         experienceDetails: null,
         idCardStorageKey: profile.idCardStorageKey!,
@@ -128,9 +137,9 @@ export class AdminService {
       })),
     ];
 
-    return entries.sort(
-      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
-    );
+    return entries
+      .filter((entry) => !country || entry.countryCode === country)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   }
 
   // A single "Approuver" action covers both documents at once — there's no
@@ -291,9 +300,8 @@ export class AdminService {
 
   async resolveReport(reportId: string, dto: ResolveReportDto): Promise<void> {
     if (dto.action === 'deactivate_reported') {
-      const reportedUserId = await this.safetyService.getReportedUserId(
-        reportId,
-      );
+      const reportedUserId =
+        await this.safetyService.getReportedUserId(reportId);
       await this.suspendReportedUser(reportedUserId, dto.note);
     }
     await this.safetyService.markReportResolved(

@@ -14,6 +14,7 @@ export interface DistrictWithCounts {
   isArtisanRegistrationActive: boolean;
   isClientOrderingActive: boolean;
   artisansCount: number;
+  verifiedArtisansCount: number;
   clientsCount: number;
 }
 
@@ -44,31 +45,44 @@ export class DistrictsService {
     return this.districtRepository.find({ order: { name: 'ASC' } });
   }
 
+  // One grouped query (not two COUNTs per district). Deleted accounts are
+  // left out; verifiedArtisansCount (ID approved, account active) is what
+  // tells whether a waitlisted city has enough craftsmen to open to clients.
   async listWithCounts(): Promise<DistrictWithCounts[]> {
-    const districts = await this.districtRepository.find({
-      order: { name: 'ASC' },
-    });
-    return Promise.all(
-      districts.map(async (district) => {
-        const [artisansCount, clientsCount] = await Promise.all([
-          this.craftsmanProfileRepository.count({
-            where: { user: { districtId: district.id } },
-          }),
-          this.clientProfileRepository.count({
-            where: { user: { districtId: district.id } },
-          }),
-        ]);
-        return {
-          id: district.id,
-          name: district.name,
-          countryCode: district.countryCode,
-          isArtisanRegistrationActive: district.isArtisanRegistrationActive,
-          isClientOrderingActive: district.isClientOrderingActive,
-          artisansCount,
-          clientsCount,
-        };
-      }),
+    const rows: Array<{
+      id: string;
+      name: string;
+      country_code: string;
+      is_artisan_registration_active: boolean;
+      is_client_ordering_active: boolean;
+      artisans_count: number;
+      verified_artisans_count: number;
+      clients_count: number;
+    }> = await this.districtRepository.query(
+      `SELECT d.id, d.name, d.country_code,
+              d.is_artisan_registration_active, d.is_client_ordering_active,
+              COUNT(cp.user_id)::int AS artisans_count,
+              COUNT(cp.user_id) FILTER (
+                WHERE cp.id_verified AND cp.is_active)::int
+                AS verified_artisans_count,
+              COUNT(kp.user_id)::int AS clients_count
+       FROM districts d
+       LEFT JOIN users u ON u.district_id = d.id AND u.deleted_at IS NULL
+       LEFT JOIN craftsman_profiles cp ON cp.user_id = u.id
+       LEFT JOIN client_profiles kp ON kp.user_id = u.id
+       GROUP BY d.id
+       ORDER BY d.name`,
     );
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      countryCode: row.country_code,
+      isArtisanRegistrationActive: row.is_artisan_registration_active,
+      isClientOrderingActive: row.is_client_ordering_active,
+      artisansCount: row.artisans_count,
+      verifiedArtisansCount: row.verified_artisans_count,
+      clientsCount: row.clients_count,
+    }));
   }
 
   // Defaults both toggles closed: unlike the seeded districts (presumed

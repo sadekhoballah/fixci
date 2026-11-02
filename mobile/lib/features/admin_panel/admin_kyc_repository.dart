@@ -9,8 +9,12 @@ class AdminKycRepository {
 
   final AdminApiClient _apiClient;
 
-  Future<List<PendingVerification>> getPendingVerifications() async {
-    final response = await _apiClient.get('/admin/verifications');
+  Future<List<PendingVerification>> getPendingVerifications({
+    String? country,
+  }) async {
+    final response = await _apiClient.get(
+      '/admin/verifications${country == null ? '' : '?country=$country'}',
+    );
     return (response['items'] as List).map((raw) {
       final json = raw as Map<String, dynamic>;
       final role = json['role'] == 'client'
@@ -21,6 +25,8 @@ class AdminKycRepository {
         role: role,
         fullName: json['fullName'] as String?,
         phone: json['phone'] as String,
+        districtName: json['districtName'] as String,
+        countryCode: json['countryCode'] as String,
         serviceCategory: json['serviceCategory'] == null
             ? null
             : _parseCategory(json['serviceCategory'] as String),

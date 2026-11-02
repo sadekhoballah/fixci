@@ -19,6 +19,7 @@ import { MatchingService } from '../matching/matching.service';
 import { MatchingGateway } from '../matching/matching.gateway';
 import { UsersService } from '../users/users.service';
 import { AdminDeleteAccountDto } from './dto/admin-delete-account.dto';
+import { CountryFilterDto } from '../districts/dto/country-filter.dto';
 
 @Controller('admin/directory')
 @UseGuards(AdminJwtGuard)
@@ -31,12 +32,16 @@ export class AdminDirectoryController {
   ) {}
 
   @Get('clients')
-  async clients(@Query('search') search?: string) {
-    return { items: await this.directoryService.listClients(search) };
+  async clients(
+    @Query() { country }: CountryFilterDto,
+    @Query('search') search?: string,
+  ) {
+    return { items: await this.directoryService.listClients(search, country) };
   }
 
   @Get('craftsmen')
   async craftsmen(
+    @Query() { country }: CountryFilterDto,
     @Query('search') search?: string,
     @Query('category') category?: string,
   ) {
@@ -50,6 +55,7 @@ export class AdminDirectoryController {
       items: await this.directoryService.listCraftsmen(
         search,
         category as ServiceCategory | undefined,
+        country,
       ),
     };
   }

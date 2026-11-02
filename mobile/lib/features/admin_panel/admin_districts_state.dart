@@ -6,6 +6,7 @@ class DistrictWithCounts {
     required this.isArtisanRegistrationActive,
     required this.isClientOrderingActive,
     required this.artisansCount,
+    required this.verifiedArtisansCount,
     required this.clientsCount,
   });
 
@@ -15,6 +16,9 @@ class DistrictWithCounts {
   final bool isArtisanRegistrationActive;
   final bool isClientOrderingActive;
   final int artisansCount;
+  // ID approved and account active — what tells whether a waitlisted city
+  // can be opened to clients (see kCityReadyThreshold).
+  final int verifiedArtisansCount;
   final int clientsCount;
 
   DistrictWithCounts copyWith({
@@ -30,6 +34,7 @@ class DistrictWithCounts {
       isClientOrderingActive:
           isClientOrderingActive ?? this.isClientOrderingActive,
       artisansCount: artisansCount,
+      verifiedArtisansCount: verifiedArtisansCount,
       clientsCount: clientsCount,
     );
   }

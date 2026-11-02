@@ -19,6 +19,7 @@ class AdminDistrictsRepository {
             json['isArtisanRegistrationActive'] as bool,
         isClientOrderingActive: json['isClientOrderingActive'] as bool,
         artisansCount: json['artisansCount'] as int,
+        verifiedArtisansCount: json['verifiedArtisansCount'] as int? ?? 0,
         clientsCount: json['clientsCount'] as int,
       );
     }).toList();

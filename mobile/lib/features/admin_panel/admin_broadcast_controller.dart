@@ -34,6 +34,7 @@ class AdminBroadcastController extends Notifier<AdminBroadcastState> {
     required String body,
     String? role,
     String? serviceCategory,
+    String? countryCode,
     String? districtId,
     bool waitlistOnly = false,
   }) async {
@@ -50,6 +51,7 @@ class AdminBroadcastController extends Notifier<AdminBroadcastState> {
             body: body,
             role: role,
             serviceCategory: serviceCategory,
+            countryCode: countryCode,
             districtId: districtId,
             waitlistOnly: waitlistOnly,
           );

@@ -11,6 +11,7 @@ import {
   MissionHistoryQueryDto,
   RequestHistoryQueryDto,
 } from './dto/ops-history-query.dto';
+import { CountryFilterDto } from '../districts/dto/country-filter.dto';
 
 const VALID_RANGES: OpsStatsRange[] = ['today', 'week', 'all'];
 
@@ -20,16 +21,19 @@ export class AdminOpsController {
   constructor(private readonly opsService: OpsService) {}
 
   @Get('presence')
-  async getPresence() {
-    return { items: await this.opsService.getPresence() };
+  async getPresence(@Query() { country }: CountryFilterDto) {
+    return { items: await this.opsService.getPresence(country) };
   }
 
   @Get('stats')
-  async getStats(@Query('range') range = 'today') {
+  async getStats(
+    @Query() { country }: CountryFilterDto,
+    @Query('range') range = 'today',
+  ) {
     if (!VALID_RANGES.includes(range as OpsStatsRange)) {
       throw new BadRequestException('range must be one of: today, week, all');
     }
-    return this.opsService.getStats(range as OpsStatsRange);
+    return this.opsService.getStats(range as OpsStatsRange, country);
   }
 
   // "Missions effectuées" tab — read-only.

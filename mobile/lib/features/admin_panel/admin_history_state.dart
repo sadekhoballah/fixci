@@ -65,6 +65,8 @@ class RequestHistoryItem {
     required this.id,
     required this.category,
     required this.status,
+    required this.districtName,
+    required this.countryCode,
     required this.client,
     required this.craftsman,
     required this.createdAt,
@@ -80,6 +82,9 @@ class RequestHistoryItem {
   final String id;
   final String category;
   final String status;
+  // The client's district — a request carries a GPS point, not a district.
+  final String districtName;
+  final String countryCode;
   final HistoryUser client;
   final HistoryUser? craftsman;
   final DateTime createdAt;
@@ -134,6 +139,7 @@ class AdminHistoryState<T> {
     this.search = '',
     this.client = '',
     this.artisan = '',
+    this.contactedOnly = false,
     this.isLoading = true,
     this.isLoadingMore = false,
     this.errorMessage,
@@ -149,6 +155,9 @@ class AdminHistoryState<T> {
   // Requests tab: client and artisan name-or-phone.
   final String client;
   final String artisan;
+  // Requests tab: only those where the client used the "contact directly"
+  // list (WhatsApp / call) after the 75 s window.
+  final bool contactedOnly;
   final bool isLoading;
   final bool isLoadingMore;
   final String? errorMessage;
@@ -166,6 +175,7 @@ class AdminHistoryState<T> {
     String? search,
     String? client,
     String? artisan,
+    bool? contactedOnly,
     bool? isLoading,
     bool? isLoadingMore,
     String? errorMessage,
@@ -180,6 +190,7 @@ class AdminHistoryState<T> {
       search: search ?? this.search,
       client: client ?? this.client,
       artisan: artisan ?? this.artisan,
+      contactedOnly: contactedOnly ?? this.contactedOnly,
       isLoading: isLoading ?? this.isLoading,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),

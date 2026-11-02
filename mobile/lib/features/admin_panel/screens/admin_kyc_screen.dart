@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../admin_countries.dart';
 import '../admin_auth_controller.dart';
 import '../admin_kyc_controller.dart';
 import '../admin_kyc_repository.dart';
@@ -24,6 +25,7 @@ class AdminKycScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Vérifications en attente'),
         actions: [
+          const AdminCountryFilterButton(),
           IconButton(
             tooltip: 'Se déconnecter',
             icon: const Icon(Icons.logout_rounded),
@@ -176,9 +178,11 @@ class _VerificationCard extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            entry.serviceCategory != null
-                ? '${entry.serviceCategory!.label} · ${entry.phone}'
-                : 'Client · ${entry.phone}',
+            [
+              entry.serviceCategory?.label ?? 'Client',
+              entry.phone,
+              '${countryWithFlag(entry.countryCode)} · ${entry.districtName}',
+            ].join(' · '),
             style: TextStyle(
               fontSize: 13,
               color: colorScheme.onSurfaceVariant,

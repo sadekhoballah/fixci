@@ -4,8 +4,12 @@ class DirectoryEntry {
     required this.fullName,
     required this.phone,
     required this.districtName,
+    required this.countryCode,
     required this.isOnline,
+    required this.phoneVerified,
     this.serviceCategory,
+    this.idVerified,
+    this.isActive,
     this.averageRating,
     this.ratingsCount,
     this.completedCount,
@@ -16,13 +20,19 @@ class DirectoryEntry {
   final String? fullName;
   final String phone;
   final String districtName;
+  final String countryCode;
   final bool isOnline;
+  // False for a client who signed up but hasn't confirmed their number yet
+  // (they do it once, at their first request).
+  final bool phoneVerified;
   // Everything below is craftsmen-only — null for clients.
   final String? serviceCategory;
   final double? averageRating;
   final int? ratingsCount;
   final int? completedCount;
   final int? assignedCount;
+  final bool? idVerified;
+  final bool? isActive;
 }
 
 enum DirectoryTab { clients, craftsmen }

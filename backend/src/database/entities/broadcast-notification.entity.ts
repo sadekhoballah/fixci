@@ -42,6 +42,14 @@ export class BroadcastNotification {
   })
   targetServiceCategory: ServiceCategory | null;
 
+  @Column({
+    name: 'target_country_code',
+    type: 'varchar',
+    length: 2,
+    nullable: true,
+  })
+  targetCountryCode: string | null;
+
   @Column({ name: 'target_district_id', type: 'uuid', nullable: true })
   targetDistrictId: string | null;
 

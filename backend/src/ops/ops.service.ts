@@ -19,6 +19,7 @@ export interface OnlineCraftsmanRow {
   phone: string;
   category: ServiceCategory;
   districtName: string;
+  countryCode: string;
   onlineSince: Date | null;
 }
 
@@ -27,8 +28,24 @@ export type OpsStatsRange = 'today' | 'week' | 'all';
 export interface OpsStats {
   range: OpsStatsRange;
   byStatus: { status: ServiceRequestStatus; count: number }[];
-  byDistrict: { districtId: string; districtName: string; count: number }[];
+  byDistrict: {
+    districtId: string;
+    districtName: string;
+    countryCode: string;
+    count: number;
+  }[];
   byCategory: { category: ServiceCategory; count: number }[];
+  byCountry: { countryCode: string; count: number }[];
+  // What happened after the 75 s window closed with nobody accepting: how
+  // many of those expired requests led the client to reach a craftsman
+  // from the "contact directly" list, and through which channel (taps,
+  // one per craftsman and channel — see FallbackContactsService).
+  directContact: {
+    expired: number;
+    contactedRequests: number;
+    whatsappContacts: number;
+    callContacts: number;
+  };
 }
 
 export interface HistoryUser {
@@ -66,6 +83,9 @@ export interface RequestHistoryRow {
   id: string;
   category: ServiceCategory;
   status: ServiceRequestStatus;
+  // The client's district (requests carry a GPS point, not a district).
+  districtName: string;
+  countryCode: string;
   client: HistoryUser;
   craftsman: HistoryUser | null;
   createdAt: Date;
@@ -129,6 +149,8 @@ interface RequestHistoryDbRow {
   id: string;
   category: ServiceCategory;
   status: ServiceRequestStatus;
+  district_name: string;
+  country_code: string;
   created_at: Date;
   assigned_at: Date | null;
   started_at: Date | null;
@@ -162,7 +184,7 @@ export class OpsService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async getPresence(): Promise<OnlineCraftsmanRow[]> {
+  async getPresence(country?: string): Promise<OnlineCraftsmanRow[]> {
     const online = await this.presenceService.listOnline();
     if (online.length === 0) return [];
 
@@ -178,12 +200,14 @@ export class OpsService {
       .map((entry) => {
         const user = userById.get(entry.craftsmanId);
         if (!user) return null;
+        if (country && user.district.countryCode !== country) return null;
         return {
           craftsmanId: entry.craftsmanId,
           fullName: user.fullName,
           phone: user.phone,
           category: entry.category,
           districtName: user.district.name,
+          countryCode: user.district.countryCode,
           onlineSince: entry.onlineSince,
         };
       })
@@ -194,46 +218,81 @@ export class OpsService {
       );
   }
 
-  async getStats(range: OpsStatsRange): Promise<OpsStats> {
+  // Requests are attributed to the client's district (and so country).
+  async getStats(range: OpsStatsRange, country?: string): Promise<OpsStats> {
     const since = this.rangeStart(range);
+    const params: unknown[] = [since, country ?? null];
+    const from = `
+      FROM service_requests sr
+      JOIN users c ON c.id = sr.client_id
+      JOIN districts d ON d.id = c.district_id
+      WHERE ($1::timestamptz IS NULL OR sr.created_at >= $1)
+        AND ($2::text IS NULL OR d.country_code = $2)`;
 
-    const [statusRows, districtRows, categoryRows] = await Promise.all([
-      this.serviceRequestRepository
-        .createQueryBuilder('sr')
-        .select('sr.status', 'status')
-        .addSelect('COUNT(*)', 'count')
-        .where(since ? 'sr.createdAt >= :since' : '1=1', { since })
-        .groupBy('sr.status')
-        .getRawMany<{ status: ServiceRequestStatus; count: string }>(),
-      this.serviceRequestRepository
-        .createQueryBuilder('sr')
-        .innerJoin('sr.client', 'client')
-        .innerJoin('client.district', 'district')
-        .select('district.id', 'districtId')
-        .addSelect('district.name', 'districtName')
-        .addSelect('COUNT(*)', 'count')
-        .where(since ? 'sr.createdAt >= :since' : '1=1', { since })
-        .groupBy('district.id')
-        .addGroupBy('district.name')
-        .orderBy('count', 'DESC')
-        .getRawMany<{
-          districtId: string;
-          districtName: string;
-          count: string;
-        }>(),
-      this.serviceRequestRepository
-        .createQueryBuilder('sr')
-        .select('sr.serviceCategory', 'category')
-        .addSelect('COUNT(*)', 'count')
-        .where(since ? 'sr.createdAt >= :since' : '1=1', { since })
-        .groupBy('sr.serviceCategory')
-        .orderBy('count', 'DESC')
-        .getRawMany<{ category: ServiceCategory; count: string }>(),
-    ]);
+    const [statusRows, districtRows, categoryRows, countryRows, contactRows] =
+      await Promise.all([
+        this.dataSource.query<
+          { status: ServiceRequestStatus; count: number }[]
+        >(
+          `SELECT sr.status::text AS status, COUNT(*)::int AS count ${from}
+           GROUP BY sr.status`,
+          params,
+        ),
+        this.dataSource.query<
+          {
+            districtId: string;
+            districtName: string;
+            countryCode: string;
+            count: number;
+          }[]
+        >(
+          `SELECT d.id AS "districtId", d.name AS "districtName",
+                  d.country_code AS "countryCode", COUNT(*)::int AS count
+           ${from}
+           GROUP BY d.id, d.name, d.country_code
+           ORDER BY count DESC`,
+          params,
+        ),
+        this.dataSource.query<{ category: ServiceCategory; count: number }[]>(
+          `SELECT sr.service_category::text AS category, COUNT(*)::int AS count
+           ${from}
+           GROUP BY sr.service_category
+           ORDER BY count DESC`,
+          params,
+        ),
+        this.dataSource.query<{ countryCode: string; count: number }[]>(
+          `SELECT d.country_code AS "countryCode", COUNT(*)::int AS count
+           ${from}
+           GROUP BY d.country_code
+           ORDER BY count DESC`,
+          params,
+        ),
+        this.dataSource.query<
+          {
+            expired: number;
+            contacted_requests: number;
+            whatsapp_contacts: number;
+            call_contacts: number;
+          }[]
+        >(
+          `SELECT
+             COUNT(*) FILTER (WHERE sr.status = 'expired')::int AS expired,
+             COUNT(*) FILTER (WHERE EXISTS (
+               SELECT 1 FROM service_request_contacts k
+               WHERE k.service_request_id = sr.id))::int AS contacted_requests,
+             COALESCE(SUM((SELECT COUNT(*) FROM service_request_contacts k
+               WHERE k.service_request_id = sr.id
+                 AND k.channel = 'whatsapp')), 0)::int AS whatsapp_contacts,
+             COALESCE(SUM((SELECT COUNT(*) FROM service_request_contacts k
+               WHERE k.service_request_id = sr.id
+                 AND k.channel = 'call')), 0)::int AS call_contacts
+           ${from}`,
+          params,
+        ),
+      ]);
 
-    const countByStatus = new Map(
-      statusRows.map((r) => [r.status, Number(r.count)]),
-    );
+    const countByStatus = new Map(statusRows.map((r) => [r.status, r.count]));
+    const contacts = contactRows[0];
 
     return {
       range,
@@ -241,15 +300,15 @@ export class OpsService {
         status,
         count: countByStatus.get(status) ?? 0,
       })),
-      byDistrict: districtRows.map((r) => ({
-        districtId: r.districtId,
-        districtName: r.districtName,
-        count: Number(r.count),
-      })),
-      byCategory: categoryRows.map((r) => ({
-        category: r.category,
-        count: Number(r.count),
-      })),
+      byDistrict: districtRows,
+      byCategory: categoryRows,
+      byCountry: countryRows,
+      directContact: {
+        expired: contacts?.expired ?? 0,
+        contactedRequests: contacts?.contacted_requests ?? 0,
+        whatsappContacts: contacts?.whatsapp_contacts ?? 0,
+        callContacts: contacts?.call_contacts ?? 0,
+      },
     };
   }
 
@@ -274,9 +333,14 @@ export class OpsService {
           OR a.full_name ILIKE $${n} OR a.phone ILIKE $${n})`,
       );
     }
+    if (query.country) {
+      params.push(query.country);
+      conditions.push(`pd.country_code = $${params.length}`);
+    }
     const from = `
       FROM missions m
       JOIN users p ON p.id = m.poster_id
+      JOIN districts pd ON pd.id = p.district_id
       LEFT JOIN mission_applications sel ON sel.id = m.selected_application_id
       LEFT JOIN users a ON a.id = sel.applicant_id`;
 
@@ -382,9 +446,20 @@ export class OpsService {
       const n = params.length;
       conditions.push(`(a.full_name ILIKE $${n} OR a.phone ILIKE $${n})`);
     }
+    if (query.country) {
+      params.push(query.country);
+      conditions.push(`cd.country_code = $${params.length}`);
+    }
+    if (query.contacted) {
+      conditions.push(
+        `EXISTS (SELECT 1 FROM service_request_contacts k
+                 WHERE k.service_request_id = sr.id)`,
+      );
+    }
     const from = `
       FROM service_requests sr
       JOIN users c ON c.id = sr.client_id
+      JOIN districts cd ON cd.id = c.district_id
       LEFT JOIN users a ON a.id = sr.craftsman_id`;
 
     const statusRows: Array<{ status: ServiceRequestStatus; count: number }> =
@@ -405,6 +480,7 @@ export class OpsService {
     const rows: RequestHistoryDbRow[] = await this.dataSource.query(
       `SELECT
          sr.id, sr.service_category AS category, sr.status::text AS status,
+         cd.name AS district_name, cd.country_code,
          sr.created_at, sr.assigned_at, sr.started_at, sr.completed_at,
          sr.cancelled_at,
          CASE sr.status::text
@@ -449,6 +525,8 @@ export class OpsService {
         id: r.id,
         category: r.category,
         status: r.status,
+        districtName: r.district_name,
+        countryCode: r.country_code,
         client: {
           id: r.client_id,
           fullName: r.client_name,

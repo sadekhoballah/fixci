@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'admin_api_client.dart';
 import 'admin_auth_controller.dart';
+import 'admin_countries.dart';
 import 'admin_history_repository.dart';
 import 'admin_history_state.dart';
 
@@ -40,6 +41,7 @@ abstract class _AdminHistoryController<T>
       _debounceTimer?.cancel();
       _liveTimer?.cancel();
     });
+    ref.listen(adminCountryFilterProvider, (_, _) => refresh());
     return AdminHistoryState<T>();
   }
 
@@ -59,6 +61,14 @@ abstract class _AdminHistoryController<T>
   void setClient(String value) => _debounced(state.copyWith(client: value));
 
   void setArtisan(String value) => _debounced(state.copyWith(artisan: value));
+
+  void setContactedOnly(bool value) {
+    if (value == state.contactedOnly) return;
+    state = state.copyWith(contactedOnly: value);
+    refresh();
+  }
+
+  String? get country => ref.read(adminCountryFilterProvider);
 
   void _debounced(AdminHistoryState<T> next) {
     state = next;
@@ -138,6 +148,7 @@ class AdminMissionHistoryController
       status: state.status,
       date: state.date,
       search: state.search,
+      country: country,
       limit: limit,
       offset: offset,
     );
@@ -160,6 +171,8 @@ class AdminRequestHistoryController
       date: state.date,
       client: state.client,
       artisan: state.artisan,
+      country: country,
+      contactedOnly: state.contactedOnly,
       limit: limit,
       offset: offset,
     );

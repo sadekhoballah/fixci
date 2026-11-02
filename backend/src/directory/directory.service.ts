@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, ILike, IsNull, Repository } from 'typeorm';
+import { Brackets, DataSource, Repository } from 'typeorm';
 import { User } from '../database/entities/user.entity';
 import { CraftsmanProfile } from '../database/entities/craftsman-profile.entity';
 import { UserRole } from '../database/enums/user-role.enum';
@@ -12,7 +12,11 @@ export interface DirectoryEntry {
   fullName: string | null;
   phone: string | null;
   districtName: string;
+  countryCode: string;
   isOnline: boolean;
+  // Clients now sign up without a code and confirm their number once, at
+  // their first request (see assertPhoneVerified) — false until then.
+  phoneVerified: boolean;
 }
 
 export interface CraftsmanDirectoryEntry extends DirectoryEntry {
@@ -27,6 +31,8 @@ export interface CraftsmanDirectoryEntry extends DirectoryEntry {
   // regardless of what happened after (completed, cancelled post-assignment,
   // etc.) — how often they get matched, not just how often they finish.
   assignedCount: number;
+  idVerified: boolean;
+  isActive: boolean;
 }
 
 @Injectable()
@@ -39,31 +45,35 @@ export class DirectoryService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async listClients(search?: string): Promise<DirectoryEntry[]> {
+  // search matches the phone or the name.
+  async listClients(
+    search?: string,
+    country?: string,
+  ): Promise<DirectoryEntry[]> {
     const onlineIds = new Set(await this.presenceService.listOnlineClientIds());
-    const users = await this.userRepository.find({
-      where: search
-        ? {
-            role: UserRole.CLIENT,
-            phone: ILike(`%${search}%`),
-            deletedAt: IsNull(),
-          }
-        : { role: UserRole.CLIENT, deletedAt: IsNull() },
-      relations: { district: true },
-      order: { fullName: 'ASC' },
-    });
+    const qb = this.userRepository
+      .createQueryBuilder('user')
+      .innerJoinAndSelect('user.district', 'district')
+      .where('user.role = :role', { role: UserRole.CLIENT })
+      .andWhere('user.deletedAt IS NULL')
+      .orderBy('user.fullName', 'ASC');
+    this.applySearchAndCountry(qb, search, country);
+    const users = await qb.getMany();
     return users.map((user) => ({
       userId: user.id,
       fullName: user.fullName,
       phone: user.phone,
       districtName: user.district.name,
+      countryCode: user.district.countryCode,
       isOnline: onlineIds.has(user.id),
+      phoneVerified: user.phoneVerified,
     }));
   }
 
   async listCraftsmen(
     search?: string,
     category?: ServiceCategory,
+    country?: string,
   ): Promise<CraftsmanDirectoryEntry[]> {
     // "Online" here reuses the same Redis presence PresenceService.listOnline
     // already exposes for the Live Ops roster (module 4) — a craftsman is
@@ -77,9 +87,7 @@ export class DirectoryService {
       .innerJoinAndSelect('user.district', 'district')
       .where('user.deletedAt IS NULL')
       .orderBy('user.fullName', 'ASC');
-    if (search) {
-      qb.andWhere('user.phone ILIKE :search', { search: `%${search}%` });
-    }
+    this.applySearchAndCountry(qb, search, country);
     if (category) {
       qb.andWhere('cp.serviceCategory = :category', { category });
     }
@@ -95,8 +103,12 @@ export class DirectoryService {
         fullName: profile.user.fullName,
         phone: profile.user.phone,
         districtName: profile.user.district.name,
+        countryCode: profile.user.district.countryCode,
         serviceCategory: profile.serviceCategory,
         isOnline: onlineIds.has(profile.userId),
+        phoneVerified: profile.user.phoneVerified,
+        idVerified: profile.idVerified,
+        isActive: profile.isActive,
         averageRating:
           profile.averageRating === null ? null : Number(profile.averageRating),
         ratingsCount: profile.ratingsCount,
@@ -104,6 +116,29 @@ export class DirectoryService {
         assignedCount: counts?.assignedCount ?? 0,
       };
     });
+  }
+
+  private applySearchAndCountry(
+    qb: {
+      andWhere: (condition: Brackets | string, params?: object) => unknown;
+    },
+    search?: string,
+    country?: string,
+  ): void {
+    const term = search?.trim();
+    if (term) {
+      const pattern = `%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+      qb.andWhere(
+        new Brackets((sub) => {
+          sub
+            .where('user.phone ILIKE :search', { search: pattern })
+            .orWhere('user.fullName ILIKE :search', { search: pattern });
+        }),
+      );
+    }
+    if (country) {
+      qb.andWhere('district.countryCode = :country', { country });
+    }
   }
 
   // One grouped query for every craftsman in the current page rather than

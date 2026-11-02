@@ -1,5 +1,6 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -10,6 +11,7 @@ import {
   Min,
 } from 'class-validator';
 import { ServiceRequestStatus } from '../../database/enums/service-request-status.enum';
+import { LAUNCHED_COUNTRY_CODES } from '../../districts/launched-countries';
 
 // Terminal states of a Missions/Freelance board post: COMPLETED (done by the
 // selected applicant), ARCHIVED (poster withdrew it — the board has no
@@ -40,6 +42,11 @@ class PagedQueryDto {
   @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'date must be YYYY-MM-DD' })
   date?: string;
+
+  // Country of the client (requests) / poster (missions), by district.
+  @IsOptional()
+  @IsIn(LAUNCHED_COUNTRY_CODES)
+  country?: string;
 }
 
 export class MissionHistoryQueryDto extends PagedQueryDto {
@@ -70,4 +77,11 @@ export class RequestHistoryQueryDto extends PagedQueryDto {
   @IsString()
   @MaxLength(100)
   artisan?: string;
+
+  // Only requests where the client used the post-window "contact directly"
+  // list (WhatsApp / call — see FallbackContactsService).
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  contacted?: boolean;
 }

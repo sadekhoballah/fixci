@@ -7,10 +7,16 @@ class AdminDirectoryRepository {
 
   final AdminApiClient _apiClient;
 
-  Future<List<DirectoryEntry>> getClients({String? search}) async {
-    final query = (search != null && search.isNotEmpty)
-        ? '?search=${Uri.encodeQueryComponent(search)}'
-        : '';
+  Future<List<DirectoryEntry>> getClients({
+    String? search,
+    String? country,
+  }) async {
+    final params = <String>[
+      if (search != null && search.isNotEmpty)
+        'search=${Uri.encodeQueryComponent(search)}',
+      if (country != null) 'country=$country',
+    ];
+    final query = params.isEmpty ? '' : '?${params.join('&')}';
     final response = await _apiClient.get('/admin/directory/clients$query');
     return _parseItems(response, includeCategory: false);
   }
@@ -18,11 +24,13 @@ class AdminDirectoryRepository {
   Future<List<DirectoryEntry>> getCraftsmen({
     String? search,
     String? category,
+    String? country,
   }) async {
     final params = <String>[
       if (search != null && search.isNotEmpty)
         'search=${Uri.encodeQueryComponent(search)}',
       if (category != null) 'category=${Uri.encodeQueryComponent(category)}',
+      if (country != null) 'country=$country',
     ];
     final query = params.isEmpty ? '' : '?${params.join('&')}';
     final response = await _apiClient.get(
@@ -59,7 +67,11 @@ class AdminDirectoryRepository {
         fullName: json['fullName'] as String?,
         phone: json['phone'] as String,
         districtName: json['districtName'] as String,
+        countryCode: json['countryCode'] as String,
         isOnline: json['isOnline'] as bool,
+        phoneVerified: json['phoneVerified'] as bool? ?? true,
+        idVerified: includeCategory ? json['idVerified'] as bool? : null,
+        isActive: includeCategory ? json['isActive'] as bool? : null,
         serviceCategory: includeCategory
             ? json['serviceCategory'] as String?
             : null,

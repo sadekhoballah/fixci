@@ -18,6 +18,7 @@ class AdminBroadcastRepository {
         body: json['body'] as String,
         targetRole: json['targetRole'] as String?,
         targetServiceCategory: json['targetServiceCategory'] as String?,
+        targetCountryCode: json['targetCountryCode'] as String?,
         targetDistrictName: district?['name'] as String?,
         waitlistOnly: json['waitlistOnly'] as bool,
         recipientCount: json['recipientCount'] as int,
@@ -31,6 +32,7 @@ class AdminBroadcastRepository {
     required String body,
     String? role,
     String? serviceCategory,
+    String? countryCode,
     String? districtId,
     bool waitlistOnly = false,
   }) async {
@@ -39,6 +41,7 @@ class AdminBroadcastRepository {
       'body': body,
       'role': ?role,
       'serviceCategory': ?serviceCategory,
+      'countryCode': ?countryCode,
       'districtId': ?districtId,
       'waitlistOnly': waitlistOnly,
     });

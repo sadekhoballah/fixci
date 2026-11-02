@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/service_category.dart';
 import '../admin_broadcast_controller.dart';
 import '../admin_broadcast_state.dart';
+import '../admin_countries.dart';
 import '../admin_districts_controller.dart';
 
 const _roleLabels = {'client': 'Clients', 'craftsman': 'Artisans'};
@@ -27,6 +28,7 @@ class _AdminBroadcastScreenState extends ConsumerState<AdminBroadcastScreen> {
   final _bodyController = TextEditingController();
   String? _role;
   ServiceCategory? _serviceCategory;
+  String? _countryCode;
   String? _districtId;
   bool _waitlistOnly = false;
 
@@ -106,6 +108,31 @@ class _AdminBroadcastScreenState extends ConsumerState<AdminBroadcastScreen> {
               ],
               const SizedBox(height: 8),
               DropdownButtonFormField<String?>(
+                initialValue: _countryCode,
+                decoration: const InputDecoration(labelText: 'Pays'),
+                items: [
+                  const DropdownMenuItem(
+                    value: null,
+                    child: Text('🌍 Tous les pays'),
+                  ),
+                  ...adminCountries.keys.map(
+                    (code) => DropdownMenuItem(
+                      value: code,
+                      child: Text(countryWithFlag(code)),
+                    ),
+                  ),
+                ],
+                onChanged: (value) => setState(() {
+                  _countryCode = value;
+                  // A district from another country would match nobody.
+                  _districtId = null;
+                }),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String?>(
+                // Re-created per country so it never keeps a district that
+                // is no longer in its list.
+                key: ValueKey('district-$_countryCode'),
                 initialValue: _districtId,
                 decoration: const InputDecoration(labelText: 'District'),
                 items: [
@@ -113,7 +140,13 @@ class _AdminBroadcastScreenState extends ConsumerState<AdminBroadcastScreen> {
                     value: null,
                     child: Text('Tous les districts'),
                   ),
-                  ...districts.map(
+                  ...districts
+                      .where(
+                        (d) =>
+                            _countryCode == null ||
+                            d.countryCode == _countryCode,
+                      )
+                      .map(
                     (d) => DropdownMenuItem(
                       value: d.id,
                       child: Text(d.name),
@@ -190,6 +223,7 @@ class _AdminBroadcastScreenState extends ConsumerState<AdminBroadcastScreen> {
       body: body,
       role: _role,
       serviceCategory: _serviceCategory?.wireValue,
+      countryCode: _countryCode,
       districtId: _districtId,
       waitlistOnly: _waitlistOnly,
     );
@@ -230,6 +264,8 @@ class _HistoryCard extends StatelessWidget {
       if (entry.targetRole != null) _roleLabels[entry.targetRole]!,
       if (entry.targetServiceCategory != null)
         _categoryLabel(entry.targetServiceCategory!),
+      if (entry.targetCountryCode != null)
+        countryWithFlag(entry.targetCountryCode!),
       if (entry.targetDistrictName != null) entry.targetDistrictName!,
       if (entry.waitlistOnly) "Liste d'attente uniquement",
     ];
