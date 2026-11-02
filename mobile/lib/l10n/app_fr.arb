@@ -551,5 +551,29 @@
   "fallbackNewCraftsman": "Nouveau",
   "fallbackOnlineBadge": "En ligne",
   "fallbackCallButton": "Appeler",
-  "fallbackRetryButton": "Relancer la recherche"
+  "fallbackRetryButton": "Relancer la recherche",
+  "updateRequiredTitle": "Mise à jour requise",
+  "@updateRequiredTitle": {
+    "description": "App update gate (core/update/app_update_gate.dart)"
+  },
+  "updateRequiredBody": "Une nouvelle version de Fix Pro est disponible. Mettez l'application à jour pour continuer à l'utiliser.",
+  "@updateRequiredBody": {
+    "description": "App update gate (core/update/app_update_gate.dart)"
+  },
+  "updateAvailableTitle": "Nouvelle version disponible",
+  "@updateAvailableTitle": {
+    "description": "App update gate (core/update/app_update_gate.dart)"
+  },
+  "updateAvailableBody": "Mettez à jour Fix Pro pour profiter des dernières nouveautés.",
+  "@updateAvailableBody": {
+    "description": "App update gate (core/update/app_update_gate.dart)"
+  },
+  "updateNowButton": "Mettre à jour",
+  "@updateNowButton": {
+    "description": "App update gate (core/update/app_update_gate.dart)"
+  },
+  "updateLaterButton": "Plus tard",
+  "@updateLaterButton": {
+    "description": "App update gate (core/update/app_update_gate.dart)"
+  }
 }

@@ -25,6 +25,7 @@ import { AuthModule } from './auth/auth.module';
 import { MissionsModule } from './missions/missions.module';
 import { SafetyModule } from './safety/safety.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { AppVersionController } from './app-version/app-version.controller';
 
 @Module({
   imports: [
@@ -53,7 +54,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     SafetyModule,
     AnalyticsModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, AppVersionController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

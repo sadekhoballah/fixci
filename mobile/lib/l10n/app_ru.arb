@@ -384,5 +384,11 @@
   "fallbackNewCraftsman": "Новый",
   "fallbackOnlineBadge": "В сети",
   "fallbackCallButton": "Позвонить",
-  "fallbackRetryButton": "Искать снова"
+  "fallbackRetryButton": "Искать снова",
+  "updateRequiredTitle": "Требуется обновление",
+  "updateRequiredBody": "Доступна новая версия Fix Pro. Обновите приложение, чтобы продолжить им пользоваться.",
+  "updateAvailableTitle": "Доступна новая версия",
+  "updateAvailableBody": "Обновите Fix Pro, чтобы получить последние улучшения.",
+  "updateNowButton": "Обновить",
+  "updateLaterButton": "Позже"
 }

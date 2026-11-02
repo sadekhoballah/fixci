@@ -384,5 +384,11 @@
   "fallbackNewCraftsman": "جديد",
   "fallbackOnlineBadge": "متصل",
   "fallbackCallButton": "اتصال",
-  "fallbackRetryButton": "إعادة البحث"
+  "fallbackRetryButton": "إعادة البحث",
+  "updateRequiredTitle": "التحديث مطلوب",
+  "updateRequiredBody": "يتوفر إصدار جديد من Fix Pro. يرجى تحديث التطبيق لمتابعة استخدامه.",
+  "updateAvailableTitle": "يتوفر إصدار جديد",
+  "updateAvailableBody": "حدّث Fix Pro للاستفادة من أحدث التحسينات.",
+  "updateNowButton": "تحديث",
+  "updateLaterButton": "لاحقاً"
 }

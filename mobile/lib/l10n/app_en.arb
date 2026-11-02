@@ -384,5 +384,11 @@
   "fallbackNewCraftsman": "New",
   "fallbackOnlineBadge": "Online",
   "fallbackCallButton": "Call",
-  "fallbackRetryButton": "Search again"
+  "fallbackRetryButton": "Search again",
+  "updateRequiredTitle": "Update required",
+  "updateRequiredBody": "A new version of Fix Pro is available. Please update the app to keep using it.",
+  "updateAvailableTitle": "New version available",
+  "updateAvailableBody": "Update Fix Pro to get the latest improvements.",
+  "updateNowButton": "Update",
+  "updateLaterButton": "Later"
 }

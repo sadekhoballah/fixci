@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/localization/locale_controller.dart';
 import 'core/navigation/navigator_key.dart';
 import 'core/theme/app_theme.dart';
+import 'core/update/app_update_gate.dart';
 import 'features/onboarding/screens/splash_screen.dart';
 import 'l10n/app_localizations.dart';
 
@@ -20,6 +21,8 @@ class FixCiApp extends ConsumerWidget {
       locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
+      builder: (context, child) =>
+          AppUpdateGate(child: child ?? const SizedBox.shrink()),
       home: const SplashScreen(),
     );
   }
