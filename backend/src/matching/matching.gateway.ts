@@ -568,6 +568,7 @@ export class MatchingGateway
             : `Une demande de ${categoryLabel} à ${km} km de vous.`,
         },
         { event: 'request:new', requestId: request.id },
+        { ringUntil: new Date(deadline) },
       );
     }
 
@@ -595,6 +596,7 @@ export class MatchingGateway
           body: `Une demande de ${categoryLabel} à ${(candidate.distanceMeters / 1000).toFixed(1)} km de vous. Ouvrez l'application dans la minute pour l'accepter.`,
         },
         { event: 'request:new', requestId: request.id },
+        { ringUntil: new Date(deadline) },
       );
     }
   }
@@ -631,6 +633,7 @@ export class MatchingGateway
         .to(craftsmanRoom(craftsmanId))
         .emit('request:unavailable', { requestId });
     }
+    void this.notificationsService.cancelRing([...craftsmanIds], requestId);
   }
 
   // The client app reacts to request:no_craftsman_available by fetching the
@@ -709,6 +712,9 @@ export class MatchingGateway
           .emit('request:unavailable', { requestId: request.id });
       }
     }
+    // The winner too: they may have accepted from the app without touching
+    // the notification, which would otherwise keep ringing.
+    void this.notificationsService.cancelRing(otherCandidateIds, request.id);
     return true;
   }
 

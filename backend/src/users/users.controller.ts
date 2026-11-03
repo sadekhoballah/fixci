@@ -87,7 +87,11 @@ export class UsersController {
     @CurrentUser() user: { id: string },
     @Body() dto: UpdateFcmTokenDto,
   ) {
-    await this.usersService.updateFcmToken(user.id, dto.fcmToken);
+    await this.usersService.updateFcmToken(
+      user.id,
+      dto.fcmToken,
+      dto.ringCapable === true,
+    );
     return { ok: true };
   }
 

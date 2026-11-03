@@ -11,6 +11,7 @@ import '../models/user_role.dart';
 import '../navigation/navigator_key.dart';
 import '../platform/firebase_support.dart';
 import 'push_token_repository.dart';
+import 'ring_notifications.dart';
 import '../../features/client_home/screens/client_shell_screen.dart';
 import '../../features/craftsman_home/screens/artisan_shell_screen.dart';
 import '../../features/missions/screens/mission_detail_screen.dart';
@@ -43,6 +44,9 @@ class PushNotificationService {
   final Ref _ref;
   final _localNotifications = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  // Kept alive for the app's lifetime (this service is a singleton).
+  // ignore: unused_field
+  AppLifecycleListener? _lifecycleListener;
 
   bool get _isSupportedPlatform =>
       kIsWeb || Platform.isAndroid || Platform.isIOS;
@@ -72,6 +76,7 @@ class PushNotificationService {
           AndroidFlutterLocalNotificationsPlugin
         >()
         ?.createNotificationChannel(_androidChannel);
+    await createRingChannel(_localNotifications);
     await _localNotifications.initialize(
       const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
@@ -81,13 +86,29 @@ class PushNotificationService {
           _handleTapPayload(response.payload, role),
     );
 
+    // The app is now on screen, so its own offer cards take over from any
+    // ringing notification — on launch and every time it comes back.
+    unawaited(cancelAllRinging(_localNotifications));
+    _lifecycleListener = AppLifecycleListener(
+      onResume: () => unawaited(cancelAllRinging(_localNotifications)),
+    );
+
     unawaited(_registerToken());
     FirebaseMessaging.instance.onTokenRefresh.listen((_) => _registerToken());
 
     // Foreground messages never auto-display (that's an OS behavior for
     // background/terminated only) — show one ourselves so a request update
     // isn't silently invisible just because the app happened to be open.
-    FirebaseMessaging.onMessage.listen((message) => _showLocalNotification(message));
+    // Ringing offers are data-only: while the app is open the in-app card
+    // already shows them, so only the "offer over" stop is handled here.
+    FirebaseMessaging.onMessage.listen((message) {
+      if (message.data['ring'] == '1') return;
+      if (message.data['event'] == 'request:unavailable') {
+        unawaited(handleRingMessage(_localNotifications, message.data));
+        return;
+      }
+      _showLocalNotification(message);
+    });
 
     // App was backgrounded (not killed) and the user tapped the system
     // notification — the Dart isolate is already alive, so this fires

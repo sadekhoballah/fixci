@@ -67,8 +67,17 @@ export class UsersService {
   // refreshed token — always overwrites rather than merging, since a device
   // switch or reinstall means the old token is dead anyway (see the fcmToken
   // column comment on the entity).
-  async updateFcmToken(userId: string, fcmToken: string): Promise<void> {
-    await this.userRepository.update({ id: userId }, { fcmToken });
+  // ringCapable is overwritten too: going back to an older build must turn
+  // ringing pushes off again, or that phone would get nothing at all.
+  async updateFcmToken(
+    userId: string,
+    fcmToken: string,
+    ringCapable = false,
+  ): Promise<void> {
+    await this.userRepository.update(
+      { id: userId },
+      { fcmToken, pushRingCapable: ringCapable },
+    );
   }
 
   // Only meaningful for a craftsman — used by GET /users/lookup so a

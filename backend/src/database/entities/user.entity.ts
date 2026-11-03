@@ -46,6 +46,11 @@ export class User {
   @Column({ name: 'fcm_token', type: 'varchar', length: 255, nullable: true })
   fcmToken: string | null;
 
+  // Whether the build behind fcmToken can ring for new requests — reported
+  // by the app with each token registration (see NotificationsService).
+  @Column({ name: 'push_ring_capable', type: 'boolean', default: false })
+  pushRingCapable: boolean;
+
   // Backs the Missions bottom-nav badge — incremented once per mission:*
   // notifyUser call targeting this user (see MissionsController), zeroed by
   // MissionsService.markMissionsSeen when they open the Missions tab.

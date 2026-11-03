@@ -16,7 +16,7 @@ describe('MatchingGateway.runMatchingLoop', () => {
     expireRequest: jest.Mock;
   };
   let presenceService: { findNearest: jest.Mock };
-  let notificationsService: { sendToUser: jest.Mock };
+  let notificationsService: { sendToUser: jest.Mock; cancelRing: jest.Mock };
 
   const request = (
     serviceCategory = ServiceCategory.ELECTRICIAN,
@@ -62,6 +62,7 @@ describe('MatchingGateway.runMatchingLoop', () => {
     };
     notificationsService = {
       sendToUser: jest.fn().mockResolvedValue(undefined),
+      cancelRing: jest.fn().mockResolvedValue(undefined),
     };
     gateway = new MatchingGateway(
       matchingService as never,
@@ -195,6 +196,20 @@ describe('MatchingGateway.runMatchingLoop', () => {
     await loop;
     // The woken-up craftsman is withdrawn like everyone else.
     expect(emitted('request:unavailable', 'craftsman:S')).toHaveLength(1);
+    // Offers ring until the window closes, and the ringing is stopped
+    // for everyone once the search ends.
+    const offerPushes = notificationsService.sendToUser.mock.calls.filter(
+      (call: unknown[]) =>
+        (call[2] as { event: string }).event === 'request:new',
+    );
+    expect(offerPushes.length).toBeGreaterThan(0);
+    for (const call of offerPushes as unknown[][]) {
+      expect((call[3] as { ringUntil?: Date }).ringUntil).toBeInstanceOf(Date);
+    }
+    expect(notificationsService.cancelRing).toHaveBeenCalledWith(
+      expect.arrayContaining(['A', 'B', 'S']),
+      expect.any(String),
+    );
 
     matchingService.findNearestByLastKnownLocation.mockClear();
     const taxi = gateway.runMatchingLoop(request(ServiceCategory.TAXI));
